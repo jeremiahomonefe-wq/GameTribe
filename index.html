@@ -288,12 +288,42 @@
     border:3px solid var(--ink);
     box-shadow:inset 0 0 0 2px rgba(255,246,229,0.4);
     background:var(--cream);
+    position:relative;
   }
   .pdf-modal iframe{
     width:100%;
     height:100%;
     border:none;
     display:block;
+  }
+  .pdf-modal-fallback{
+    position:absolute;
+    inset:0;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    background:var(--cream);
+    text-align:center;
+    padding:20px;
+  }
+  .pdf-modal-fallback.show{
+    display:flex;
+  }
+  .pdf-modal-fallback p{
+    font-family:'Poppins', sans-serif;
+    color:var(--ink);
+    font-size:14px;
+    max-width:320px;
+  }
+  .pdf-modal-fallback a{
+    background:var(--red);
+    color:var(--cream);
+    text-decoration:none;
+    font-weight:700;
+    padding:10px 22px;
+    border-radius:999px;
   }
 
   .social-row{
@@ -467,6 +497,10 @@
     </div>
     <div class="pdf-modal-frame-wrap">
       <iframe id="pdfModalFrame" src="" title="Proposal PDF"></iframe>
+      <div class="pdf-modal-fallback" id="pdfModalFallback">
+        <p>Can't display the PDF here — your browser may be blocking the inline preview.</p>
+        <a href="proposal.pdf" target="_blank" rel="noopener">Open proposal in a new tab</a>
+      </div>
     </div>
   </div>
 </div>
@@ -475,17 +509,34 @@
   function openPdfModal(){
     var overlay = document.getElementById('pdfModalOverlay');
     var frame = document.getElementById('pdfModalFrame');
+    var fallback = document.getElementById('pdfModalFallback');
+    fallback.classList.remove('show');
     if(!frame.src || frame.src === 'about:blank' || frame.src === ''){
-      frame.src = 'iOS_App_Store_Upload_Checklist.pdf';
+      frame.src = 'proposal.pdf';
     }
     overlay.classList.add('active');
     document.body.style.overflow = 'hidden';
+    // If the iframe hasn't rendered a real PDF document shortly after loading, show the fallback link
+    setTimeout(function(){
+      try{
+        var loadedOk = frame.contentDocument && frame.contentDocument.body && frame.contentDocument.body.innerText.trim().length > 0;
+        if(!loadedOk) fallback.classList.add('show');
+      }catch(e){
+        // Cross-origin or blocked access usually means the PDF viewer IS handling it — leave as is
+      }
+    }, 1200);
   }
   function closePdfModal(){
     document.getElementById('pdfModalOverlay').classList.remove('active');
     document.body.style.overflow = '';
   }
 
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') closePdfModal();
+  });
+</script>
+
+<script>
   var VIDEO_SRC = 'bandicam 2025-06-04 17-13-40-037.mp4';
 
   function playInlineVideo(){
@@ -495,10 +546,6 @@
     visual.style.cursor = 'default';
     visual.onclick = null;
   }
-
-  document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape') closePdfModal();
-  });
 </script>
 
 </body>
