@@ -96,15 +96,9 @@
   }
 
   .wordmark-logo{
-    width:min(460px,72vw);
+    width:min(440px,72vw);
     filter:drop-shadow(4px 6px 0 rgba(0,0,0,0.25));
   }
-  /* .badge-logo{
-    width:56px;
-    display:block;
-    transform:rotate(-6deg);
-    filter:drop-shadow(2px 3px 0 rgba(0,0,0,0.25));
-  } */
 
   .signature{
     font-family:'Caveat',cursive;
@@ -381,6 +375,121 @@
   .pill-red{background:var(--red);}
   .pill-green{background:#25D366;}
 
+  /* guest count ticker */
+  .guest-ticker{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    margin-top:18px;
+    padding:8px 18px;
+    border-radius:999px;
+    background:rgba(28,20,16,0.35);
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:0.3px;
+  }
+  .guest-ticker .dot-live{
+    width:8px;height:8px;
+    border-radius:50%;
+    background:#25D366;
+    animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(37,211,102,0.55);}
+    70%{box-shadow:0 0 0 8px rgba(37,211,102,0);}
+    100%{box-shadow:0 0 0 0 rgba(37,211,102,0);}
+  }
+
+  /* photo gallery strip */
+  .gallery{
+    margin-top:46px;
+    text-align:center;
+  }
+  .gallery h3{
+    font-family:'Anton',sans-serif;
+    font-weight:400;
+    letter-spacing:0.5px;
+    font-size:20px;
+    margin-bottom:14px;
+  }
+  .gallery-row{
+    overflow:hidden;
+    width:100%;
+    margin-top:12px;
+    -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
+    mask-image:linear-gradient(90deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
+  }
+  .gallery-track{
+    display:flex;
+    gap:12px;
+    width:max-content;
+    will-change:transform;
+    animation:marquee-left 32s linear infinite;
+  }
+  .gallery-track.reverse{
+    animation-name:marquee-right;
+  }
+  @keyframes marquee-left{
+    from{ transform:translateX(0); }
+    to{ transform:translateX(-50%); }
+  }
+  @keyframes marquee-right{
+    from{ transform:translateX(-50%); }
+    to{ transform:translateX(0); }
+  }
+  .gallery-item{
+    flex:0 0 auto;
+    width:220px;
+    height:150px;
+    border-radius:12px;
+    overflow:hidden;
+    border:3px solid var(--ink);
+    box-shadow:0 6px 0 rgba(0,0,0,0.2);
+    background:linear-gradient(135deg,#2a1f18,#100c09 70%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:30px;
+  }
+  .gallery-item img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
+  /* map / location */
+  .map-section{
+    margin-top:46px;
+    text-align:center;
+  }
+  .map-section h3{
+    font-family:'Anton',sans-serif;
+    font-weight:400;
+    letter-spacing:0.5px;
+    font-size:20px;
+    margin-bottom:6px;
+  }
+  .map-address{
+    font-size:13px;
+    opacity:0.9;
+    margin-bottom:14px;
+  }
+  .map-frame-wrap{
+    max-width:560px;
+    margin:0 auto;
+    border-radius:14px;
+    overflow:hidden;
+    border:4px solid var(--ink);
+    box-shadow:0 10px 0 rgba(0,0,0,0.18);
+  }
+  .map-frame-wrap iframe{
+    width:100%;
+    height:260px;
+    border:none;
+    display:block;
+  }
+
   /* spinning badge signature element, carries the flyer's own tagline */
   .spin-badge{
     position:fixed;
@@ -451,16 +560,57 @@
       <button class="cta-btn" type="button" onclick="openPdfModal()">View our proposal</button>
     </div>
 
+    <div class="guest-ticker">
+      <span class="dot-live"></span>
+      <span id="guestCount">128</span>&nbsp;people going
+    </div>
+
     <div class="social-row">
-      <a href="#" aria-label="Instagram">
+      <a href="https://www.instagram.com/gametribe_abraka/" aria-label="Instagram">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
       </a>
-      <a href="#" aria-label="TikTok">
+      <a href="https://www.tiktok.com/@gametribe_abraka" aria-label="TikTok">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3c.5 2.4 2 4 4.7 4.2V10c-1.7 0-3.2-.5-4.7-1.6v6.7c0 3.3-2.7 6-6 6s-6-2.7-6-6 2.7-6 6-6c.3 0 .7 0 1 .1v2.9a3 3 0 1 0 2 2.8V3h3z"/></svg>
       </a>
-      <a href="#" aria-label="YouTube">
+      <a href="https://www.tiktok.com/@gametribe_abraka" aria-label="YouTube">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23 12s0-3.6-.5-5.3c-.3-1-.9-1.6-1.9-1.9C18.9 4.3 12 4.3 12 4.3s-6.9 0-8.6.5c-1 .3-1.6.9-1.9 1.9C1 8.4 1 12 1 12s0 3.6.5 5.3c.3 1 .9 1.6 1.9 1.9 1.7.5 8.6.5 8.6.5s6.9 0 8.6-.5c1-.3 1.6-.9 1.9-1.9.5-1.7.5-5.3.5-5.3zM9.8 15.5V8.5L15.8 12l-6 3.5z"/></svg>
       </a>
+    </div>
+
+    <div class="gallery">
+      <h3>Moments from Game Tribe</h3>
+      <div class="gallery-row">
+        <div class="gallery-track" id="galleryTrack1">
+          <div class="gallery-item"><img src="gallery-1.jpg" alt="Game Tribe moment 1" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🎲'}))"></div>
+          <div class="gallery-item"><img src="gallery-2.jpg" alt="Game Tribe moment 2" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🎉'}))"></div>
+          <div class="gallery-item"><img src="gallery-3.jpg" alt="Game Tribe moment 3" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'📸'}))"></div>
+          <div class="gallery-item"><img src="gallery-4.jpg" alt="Game Tribe moment 4" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🕹️'}))"></div>
+          <div class="gallery-item"><img src="gallery-5.jpg" alt="Game Tribe moment 5" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🎮'}))"></div>
+          <div class="gallery-item"><img src="gallery-6.jpg" alt="Game Tribe moment 6" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🏆'}))"></div>
+          <div class="gallery-item"><img src="gallery-7.jpg" alt="Game Tribe moment 7" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🎊'}))"></div>
+          <div class="gallery-item"><img src="gallery-8.jpg" alt="Game Tribe moment 8" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'✨'}))"></div>
+        </div>
+      </div>
+      <div class="gallery-row">
+        <div class="gallery-track reverse" id="galleryTrack2">
+          <div class="gallery-item"><img src="gallery-9.jpg" alt="Game Tribe moment 9" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🎲'}))"></div>
+          <div class="gallery-item"><img src="gallery-10.jpg" alt="Game Tribe moment 10" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🎉'}))"></div>
+          <div class="gallery-item"><img src="gallery-11.jpg" alt="Game Tribe moment 11" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'📸'}))"></div>
+          <div class="gallery-item"><img src="gallery-12.jpg" alt="Game Tribe moment 12" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🕹️'}))"></div>
+          <div class="gallery-item"><img src="gallery-13.jpg" alt="Game Tribe moment 13" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🎮'}))"></div>
+          <div class="gallery-item"><img src="gallery-14.jpg" alt="Game Tribe moment 14" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🏆'}))"></div>
+          <div class="gallery-item"><img src="gallery-15.jpg" alt="Game Tribe moment 15" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🎊'}))"></div>
+          <div class="gallery-item"><img src="gallery-16.jpg" alt="Game Tribe moment 16" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'✨'}))"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="map-section">
+      <h3>Find Us</h3>
+      <p class="map-address">Ojeta Primary School, Campus 2 Road, Abraka, Delta State</p>
+      <div class="map-frame-wrap">
+        <iframe src="https://www.google.com/maps?q=5.7910656,6.1026971&z=17&output=embed" loading="lazy" allowfullscreen title="Event location map"></iframe>
+      </div>
     </div>
 
     <div class="contact">
@@ -469,7 +619,7 @@
     </div>
 
     <div class="dual-btn-row">
-      <a class="pill-btn pill-red" href="https://tix.africa/gametribeabraka" target="_blank" rel="noopener">Reserve Your Spot</a>
+      <a class="pill-btn pill-red" href="https://tix.africa/discover/gametribeabraka" target="_blank" rel="noopener">Reserve Your Spot</a>
       <a class="pill-btn pill-green" href="https://chat.whatsapp.com/GbSblslBHcdJGbShVafLt3?mode=gi_t" target="_blank" rel="noopener">Join Our WhatsApp</a>
     </div>
   </section>
@@ -546,6 +696,17 @@
     visual.style.cursor = 'default';
     visual.onclick = null;
   }
+</script>
+
+<script>
+  (function(){
+    // Duplicate each track's items once so the CSS marquee animation loops seamlessly
+    ['galleryTrack1','galleryTrack2'].forEach(function(id){
+      var track = document.getElementById(id);
+      if(!track) return;
+      track.innerHTML += track.innerHTML;
+    });
+  })();
 </script>
 
 </body>
