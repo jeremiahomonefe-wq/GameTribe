@@ -375,6 +375,79 @@
   .pill-red{background:var(--red);}
   .pill-green{background:#25D366;}
 
+  /* countdown timer */
+  .countdown{
+    display:flex;
+    justify-content:center;
+    gap:12px;
+    margin-top:22px;
+    flex-wrap:wrap;
+  }
+  .countdown-unit{
+    background:rgba(28,20,16,0.35);
+    border-radius:12px;
+    padding:10px 14px;
+    min-width:64px;
+    text-align:center;
+  }
+  .countdown-unit .num{
+    font-family:'Anton',sans-serif;
+    font-size:26px;
+    line-height:1;
+    display:block;
+  }
+  .countdown-unit .label{
+    font-size:10px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    opacity:0.85;
+  }
+
+  /* limited spots stamp */
+  .pill-btn-wrap{
+    position:relative;
+    display:inline-block;
+  }
+  .limited-stamp{
+    position:absolute;
+    top:-14px;
+    right:-14px;
+    background:var(--gold);
+    color:var(--ink);
+    font-family:'Anton',sans-serif;
+    font-weight:400;
+    font-size:11px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    padding:5px 10px;
+    border-radius:999px;
+    border:2px solid var(--ink);
+    transform:rotate(-10deg);
+    box-shadow:0 3px 0 rgba(0,0,0,0.25);
+    animation:stampPulse 2s infinite;
+    pointer-events:none;
+    white-space:nowrap;
+  }
+  @keyframes stampPulse{
+    0%,100%{transform:rotate(-10deg) scale(1);}
+    50%{transform:rotate(-10deg) scale(1.08);}
+  }
+
+  /* confetti burst */
+  .confetti-piece{
+    position:fixed;
+    top:-20px;
+    z-index:200;
+    pointer-events:none;
+    border-radius:2px;
+  }
+  @keyframes confettiFall{
+    to{
+      transform:translateY(110vh) rotate(540deg);
+      opacity:0.9;
+    }
+  }
+
   /* guest count ticker */
   .guest-ticker{
     display:inline-flex;
@@ -546,6 +619,13 @@
       brands, and entertainment lovers in one venue.
     </p>
 
+    <div class="countdown" id="countdownTimer">
+      <div class="countdown-unit"><span class="num" id="cdDays">--</span><span class="label">Days</span></div>
+      <div class="countdown-unit"><span class="num" id="cdHours">--</span><span class="label">Hrs</span></div>
+      <div class="countdown-unit"><span class="num" id="cdMins">--</span><span class="label">Min</span></div>
+      <div class="countdown-unit"><span class="num" id="cdSecs">--</span><span class="label">Sec</span></div>
+    </div>
+
     <div class="media-card">
       <div class="media-visual" id="mediaVisual" onclick="playInlineVideo()">
         <div class="play-btn"></div>
@@ -557,7 +637,7 @@
     </div>
 
     <div class="cta-wrap">
-      <button class="cta-btn" type="button" onclick="openPdfModal()">View our proposal</button>
+      <button class="cta-btn" type="button" onclick="openPdfModal(); fireConfetti();">View our proposal</button>
     </div>
 
     <div class="guest-ticker">
@@ -619,7 +699,10 @@
     </div>
 
     <div class="dual-btn-row">
-      <a class="pill-btn pill-red" href="https://tix.africa/discover/gametribeabraka" target="_blank" rel="noopener">Reserve Your Spot</a>
+      <span class="pill-btn-wrap">
+        <a class="pill-btn pill-red" href="https://tix.africa/discover/gametribeabraka" target="_blank" rel="noopener" onclick="fireConfetti()">Reserve Your Spot</a>
+        <span class="limited-stamp">Limited Spots!</span>
+      </span>
       <a class="pill-btn pill-green" href="https://chat.whatsapp.com/GbSblslBHcdJGbShVafLt3?mode=gi_t" target="_blank" rel="noopener">Join Our WhatsApp</a>
     </div>
   </section>
@@ -707,6 +790,65 @@
       track.innerHTML += track.innerHTML;
     });
   })();
+</script>
+
+<script>
+  // Countdown timer to 27 Nov 2026 (assumed 5:00 PM WAT event start)
+  var EVENT_DATE = new Date('2026-11-27T17:00:00+01:00').getTime();
+  function updateCountdown(){
+    var now = new Date().getTime();
+    var diff = EVENT_DATE - now;
+    var el = document.getElementById('countdownTimer');
+    if(!el) return;
+    if(diff <= 0){
+      document.getElementById('cdDays').textContent = '00';
+      document.getElementById('cdHours').textContent = '00';
+      document.getElementById('cdMins').textContent = '00';
+      document.getElementById('cdSecs').textContent = '00';
+      return;
+    }
+    var d = Math.floor(diff / (1000*60*60*24));
+    var h = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
+    var m = Math.floor((diff % (1000*60*60)) / (1000*60));
+    var s = Math.floor((diff % (1000*60)) / 1000);
+    document.getElementById('cdDays').textContent = String(d);
+    document.getElementById('cdHours').textContent = String(h).padStart(2,'0');
+    document.getElementById('cdMins').textContent = String(m).padStart(2,'0');
+    document.getElementById('cdSecs').textContent = String(s).padStart(2,'0');
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+
+  // Confetti / dice burst
+  var CONFETTI_EMOJI = ['🎲','🎉','🎯','🃏','✨'];
+  var CONFETTI_COLORS = ['#E8342A','#F5891F','#FBB614'];
+  function fireConfetti(count){
+    count = count || 60;
+    for(var i=0;i<count;i++){
+      (function(){
+        var piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        var useEmoji = Math.random() < 0.4;
+        if(useEmoji){
+          piece.textContent = CONFETTI_EMOJI[Math.floor(Math.random()*CONFETTI_EMOJI.length)];
+          piece.style.fontSize = (14 + Math.random()*14) + 'px';
+        } else {
+          piece.style.width = piece.style.height = (6 + Math.random()*8) + 'px';
+          piece.style.background = CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)];
+        }
+        piece.style.left = (Math.random()*100) + 'vw';
+        var duration = 2.2 + Math.random()*1.8;
+        piece.style.animation = 'confettiFall ' + duration + 's ease-in forwards';
+        piece.style.opacity = '0';
+        document.body.appendChild(piece);
+        requestAnimationFrame(function(){ piece.style.opacity = '1'; });
+        setTimeout(function(){ piece.remove(); }, duration*1000 + 200);
+      })();
+    }
+  }
+  window.addEventListener('load', function(){
+    setTimeout(function(){ fireConfetti(45); }, 400);
+  });
 </script>
 
 </body>
