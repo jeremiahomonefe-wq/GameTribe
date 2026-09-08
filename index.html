@@ -1526,11 +1526,11 @@ canvas {
     </div>
 
     <div class="cta-wrap">
-      <a class="cta-btn attend-btn" href="https://tix.africa/discover/gametribeabraka" target="_blank" rel="noopener" onclick="fireConfetti()">Buy Your Tickets</a>
+      <button class="cta-btn attend-btn" type="button" onclick="openTicketModal(); fireConfetti();">Buy Your Tickets</button>
       <button class="cta-btn attend-btn" type="button" onclick="openFlyerModal(); fireConfetti();">I Am Attending</button>
       <button class="cta-btn vendor-apply-btn" type="button" onclick="openVendorModal(); fireConfetti();">Get Vendor Space</button>
       <a class="cta-btn" href="https://chat.whatsapp.com/GbSblslBHcdJGbShVafLt3?mode=gi_t" target="_blank" rel="noopener">Join Our WhatsApp</a>
-      <button class="cta-btn" type="button" onclick="openPdfModal(); fireConfetti();">View Sponsorship Proposal</button>
+      <button class="cta-btn" type="button" onclick="openPdfModal(); fireConfetti();">View Our Proposal</button>
     </div>
 
     <div class="guest-ticker">
@@ -1841,6 +1841,28 @@ canvas {
 </footer>
 </div>
 
+<div id="ticketPurchaseOverlay" onclick="if(event.target===this) closeTicketModal()" aria-hidden="true" style="display:none;position:fixed;inset:0;z-index:130;padding:20px;overflow-y:auto;background:rgba(21,16,11,.82);backdrop-filter:blur(3px);align-items:center;justify-content:center;">
+  <div role="dialog" aria-modal="true" aria-labelledby="ticketPurchaseTitle" style="width:min(100%,560px);margin:auto;color:var(--ink);background:var(--cream);border:4px solid var(--ink);box-shadow:10px 10px 0 var(--gold);">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:24px;color:var(--cream);background:var(--red);"><div><h2 id="ticketPurchaseTitle" style="font-family:Anton,sans-serif;font-size:31px;line-height:1;margin:0;">RESERVE YOUR SPOT</h2><p style="margin:7px 0 0;font-size:13px;">Choose a ticket, then pay securely with Paystack.</p></div><button type="button" onclick="closeTicketModal()" aria-label="Close ticket reservation" style="background:none;color:var(--cream);border:0;font-size:30px;cursor:pointer;">×</button></div>
+    <form id="ticketPurchaseForm" style="padding:22px 24px 26px;">
+      <label style="display:block;margin:10px 0;font-size:12px;font-weight:700;">Full name<input id="ticketName" type="text" autocomplete="name" required style="width:100%;margin-top:6px;padding:12px;"></label>
+      <label style="display:block;margin:10px 0;font-size:12px;font-weight:700;">Email address<input id="ticketEmail" type="email" autocomplete="email" required style="width:100%;margin-top:6px;padding:12px;"></label>
+      <label style="display:block;margin:10px 0;font-size:12px;font-weight:700;">Phone number<input id="ticketPhone" type="tel" autocomplete="tel" required style="width:100%;margin-top:6px;padding:12px;"></label>
+      <label style="display:block;margin:10px 0;font-size:12px;font-weight:700;">Ticket type<select id="ticketType" style="width:100%;margin-top:6px;padding:12px;"><option value="early_single">Early Bird — Single · ₦5,000</option><option value="early_group">Early Bird — Group of 4 · ₦18,000</option><option value="wave_single">First Wave — Single · ₦7,000</option><option value="wave_group">First Wave — Group of 4 · ₦26,000</option></select></label>
+      <button id="ticketPayButton" type="submit" style="width:100%;margin-top:14px;border:3px solid var(--ink);padding:14px;cursor:pointer;color:var(--cream);background:var(--ink);font-weight:700;">Proceed to Payment</button>
+      <div id="ticketStatus" role="status" style="margin-top:14px;font-size:13px;"></div>
+    </form>
+  </div>
+</div>
+<script src="https://js.paystack.co/v2/inline.js"></script>
+
+<div class="pdf-modal-overlay" id="pdfModalOverlay" onclick="if(event.target===this) closePdfModal()">
+  <div class="pdf-modal" role="dialog" aria-modal="true" aria-labelledby="proposalTitle">
+    <div class="pdf-modal-header"><span id="proposalTitle">Game Tribe Proposal</span><button class="pdf-modal-close" type="button" onclick="closePdfModal()" aria-label="Close proposal">×</button></div>
+    <div class="pdf-modal-frame-wrap"><iframe id="proposalPdfFrame" title="Game Tribe proposal" style="display:block;width:100%;height:100%;border:0;"></iframe></div>
+  </div>
+</div>
+
 <div class="vendor-modal-overlay" id="vendorModalOverlay" onclick="if(event.target===this) closeVendorModal()">
   <div class="ticket-modal" style="max-width:420px;">
     <div class="ticket-modal-header">
@@ -2105,16 +2127,9 @@ canvas {
   }
 
   function openPdfModal(){
-    var overlay = document.getElementById('pdfModalOverlay');
-    var fallback = document.getElementById('pdfModalFallback');
-    var fallbackLink = document.getElementById('pdfModalFallbackLink');
-    fallback.classList.remove('show');
-    fallbackLink.href = getProposalBlobUrl();
-    overlay.classList.add('active');
+    document.getElementById('proposalPdfFrame').src = getProposalBlobUrl();
+    document.getElementById('pdfModalOverlay').classList.add('active');
     document.body.style.overflow = 'hidden';
-    if(!proposalPdfRendered){
-      renderProposalPdf();
-    }
   }
   function closePdfModal(){
     document.getElementById('pdfModalOverlay').classList.remove('active');
@@ -2255,5 +2270,11 @@ document.querySelectorAll('.video-card').forEach(function(card){
 });
 </script>
 
+<script>
+  var TICKET_SETTINGS={paystackPublicKey:'pk_live_9fc882239cf6a6cd6832b2e100781f3ae93117b6',early_single:{price:5000},early_group:{price:18000},wave_single:{price:7000},wave_group:{price:26000}};
+  function openTicketModal(){var modal=document.getElementById('ticketPurchaseOverlay');modal.style.display='flex';modal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';}
+  function closeTicketModal(){var modal=document.getElementById('ticketPurchaseOverlay');modal.style.display='none';modal.setAttribute('aria-hidden','true');document.body.style.overflow='';}
+  document.getElementById('ticketPurchaseForm').addEventListener('submit',function(event){event.preventDefault();var type=document.getElementById('ticketType').value,ticket=TICKET_SETTINGS[type],name=document.getElementById('ticketName').value.trim(),email=document.getElementById('ticketEmail').value.trim(),phone=document.getElementById('ticketPhone').value.trim(),status=document.getElementById('ticketStatus'),button=document.getElementById('ticketPayButton');if(typeof PaystackPop==='undefined'){status.textContent='Paystack could not load. Check your internet connection and try again.';return;}button.disabled=true;button.textContent='Opening secure checkout…';var reference='GT-'+Date.now()+'-'+Math.random().toString(36).slice(2,8).toUpperCase();new PaystackPop().newTransaction({key:TICKET_SETTINGS.paystackPublicKey,email:email,amount:ticket.price*100,currency:'NGN',firstName:name.split(' ')[0],lastName:name.split(' ').slice(1).join(' '),phone:phone,reference:reference,metadata:{ticket_type:type,customer_name:name},onSuccess:function(transaction){button.disabled=false;button.textContent='Proceed to Payment';status.textContent='Payment was submitted. Reference: '+transaction.reference+'.';if(typeof fireConfetti==='function')fireConfetti(80);},onCancel:function(){button.disabled=false;button.textContent='Proceed to Payment';status.textContent='Checkout was cancelled. No payment was completed.';}});});
+</script>
 </body>
 </html>
