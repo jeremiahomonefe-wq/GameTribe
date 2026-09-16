@@ -1,4 +1,4 @@
-vconst TICKETS = {
+const TICKETS = {
   early_single: {
     label: 'Early Bird — Single',
     amount: 5000
