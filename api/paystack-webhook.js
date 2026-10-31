@@ -1,6 +1,10 @@
 import crypto from 'crypto';
 
 const TICKETS = {
+  sponsored_single: {
+    label: 'Sponsored Tickets — Single',
+    amount: 3000
+  },
   early_single: {
     label: 'Early Bird — Single',
     amount: 5000
