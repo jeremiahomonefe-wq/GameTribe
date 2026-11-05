@@ -1,25 +1,4 @@
-const TICKETS = {
-  sponsored_single: {
-    label: 'Sponsored Tickets — Single',
-    amount: 3000
-  },
-  early_single: {
-    label: 'Early Bird — Single',
-    amount: 5000
-  },
-  early_group: {
-    label: 'Early Bird — Group of 4',
-    amount: 18000
-  },
-  wave_single: {
-    label: 'First Wave — Single',
-    amount: 7000
-  },
-  wave_group: {
-    label: 'First Wave — Group of 4',
-    amount: 26000
-  }
-};
+import { getTicketMap, recordSale } from './_lib/store.js';
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>'"]/g, (character) => ({
@@ -221,6 +200,8 @@ export default async function handler(req, res) {
       transaction.metadata &&
       transaction.metadata.ticket_type;
 
+    /* Prices now come from the admin dashboard (Supabase), with built-in fallback. */
+    const TICKETS = await getTicketMap();
     const ticket = TICKETS[ticketType];
 
     if (!ticket) {
@@ -271,12 +252,28 @@ export default async function handler(req, res) {
     /*
      * Send ticket email.
      */
+
+    /* Record the paid ticket for the admin dashboard (before the email, so a failed email never hides a sale). */
+    const saleRow = {
+      reference: transaction.reference,
+      ticket_number: 'GT-' + transaction.reference,
+      name,
+      email,
+      phone: buyer.phone || (transaction.customer && transaction.customer.phone),
+      ticket_type: ticketType,
+      ticket_label: ticket.label,
+      amount: ticket.amount,
+      paid_at: transaction.paid_at,
+      source: 'browser'
+    };
+    await recordSale({ ...saleRow, email_sent: false });
     const ticketNumber = await sendTicketEmail({
       email,
       name,
       ticket,
       reference: transaction.reference
     });
+    await recordSale({ reference: transaction.reference, email_sent: true });
 
     return res.status(200).json({
       verified: true,
