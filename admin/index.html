@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Game Tribe Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--red:#E8342A;--red-dark:#B8231B;--gold:#FBB614;--cream:#FFF6E5;--ink:#1C1410;--bg:#F6F2EA;--card:#fff;--line:#E7DFCF;--muted:#6B6258;--ok:#1E8E4E;
+--display:'Bowlby One',Impact,sans-serif;--body:'Nunito',system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--body);background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+[hidden]{display:none!important}
+
+/* login */
+.login{min-height:100vh;display:grid;place-items:center;padding:24px;background:var(--ink)}
+.login-card{width:100%;max-width:380px;background:var(--cream);border-radius:24px;padding:32px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.login-card h1{font-family:var(--display);text-transform:uppercase;font-size:28px;line-height:1;margin:0 0 6px}
+.login-card p{margin:0 0 22px;color:var(--muted)}
+.login-card .err{color:var(--red);font-weight:700;font-size:14px;min-height:20px;margin:10px 0 0}
+
+/* buttons / inputs */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border-radius:999px;border:1.5px solid transparent;font-weight:800;font-size:14px;cursor:pointer;transition:all .15s;background:none;text-decoration:none;white-space:nowrap}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-red{background:var(--red);color:#fff}.btn-red:hover:not(:disabled){background:var(--red-dark)}
+.btn-ink{background:var(--ink);color:#fff}.btn-ink:hover:not(:disabled){background:#000}
+.btn-line{border-color:var(--ink);color:var(--ink)}.btn-line:hover:not(:disabled){background:var(--ink);color:#fff}
+.btn-ghost{color:var(--muted);padding:8px 12px}.btn-ghost:hover{color:var(--ink);background:rgba(0,0,0,.05)}
+.btn.sm{padding:6px 12px;font-size:12px}
+.btn.danger{color:var(--red)}.btn.danger:hover{background:rgba(232,52,42,.1)}
+input[type=text],input[type=password],input[type=number],input[type=datetime-local],input[type=search],textarea,select{width:100%;padding:10px 12px;border:1.5px solid #D6CCB8;border-radius:12px;background:#fff;font-weight:600}
+input:focus,textarea:focus,select:focus{border-color:var(--ink);outline:none;box-shadow:0 0 0 3px rgba(251,182,20,.45)}
+textarea{min-height:92px;resize:vertical}
+
+/* shell */
+.shell{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+.side{background:var(--ink);color:#fff;padding:20px 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{font-family:var(--display);text-transform:uppercase;font-size:20px;line-height:1;padding:6px 10px 18px}
+.brand small{display:block;font-family:var(--body);font-size:11px;letter-spacing:.2em;color:var(--gold);margin-top:6px;font-weight:800}
+.nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;margin-bottom:2px;border:0;border-radius:12px;background:none;color:rgba(255,255,255,.75);font-weight:700;font-size:14px;cursor:pointer}
+.nav button:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav button[aria-current=true]{background:var(--gold);color:var(--ink)}
+.nav .sep{height:1px;background:rgba(255,255,255,.12);margin:10px 6px}
+.nav .ico{width:22px;text-align:center}
+.main{min-width:0}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 28px;background:rgba(246,242,234,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top h2{font-family:var(--display);text-transform:uppercase;font-size:20px;margin:0;flex:1;min-width:160px}
+.status{font-size:13px;font-weight:700;color:var(--muted)}
+.status.dirty{color:var(--red)}.status.ok{color:var(--ok)}
+.content{padding:24px 28px 80px;max-width:980px}
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr}
+  .side{position:static;height:auto;padding:12px}
+  .brand{padding:4px 8px 10px}
+  .nav{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+  .nav button{width:auto;white-space:nowrap;margin:0}
+  .nav .sep{display:none}
+  .top{padding:10px 14px}.content{padding:16px 14px 80px}
+}
+
+/* cards & fields */
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:18px}
+.card>h3{font-family:var(--display);text-transform:uppercase;font-size:15px;margin:0 0 4px}
+.card>.help{margin:0 0 16px;color:var(--muted);font-size:14px}
+.grid{display:grid;gap:14px}
+@media(min-width:700px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:repeat(3,1fr)}}
+.field label{display:block;font-weight:800;font-size:13px;margin-bottom:5px}
+.field .help{font-size:12px;color:var(--muted);margin-top:4px}
+.field.full{grid-column:1/-1}
+
+/* media field */
+.media{display:flex;gap:12px;align-items:flex-start}
+.thumb{flex:0 0 84px;width:84px;height:64px;border-radius:12px;background:#EFE8D8 center/cover no-repeat;border:1px solid var(--line);display:grid;place-items:center;font-size:11px;color:var(--muted);font-weight:800;overflow:hidden}
+.thumb video{width:100%;height:100%;object-fit:cover}
+.thumb.contain{background-size:contain;background-color:#fff}
+.media-body{flex:1;min-width:0}
+.media-actions{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.bar{height:6px;border-radius:6px;background:#E7DFCF;overflow:hidden;width:120px}.bar i{display:block;height:100%;width:0;background:var(--red);transition:width .1s}
+.msg{font-size:12px;font-weight:700}.msg.err{color:var(--red)}
+
+/* list items */
+.item{border:1.5px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;background:#FDFBF6}
+.item-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.item-head b{flex:1;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.tile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.tile-grid .item{margin:0}
+.switch{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:13px;cursor:pointer}
+.switch input{width:18px;height:18px;accent-color:var(--red)}
+
+/* sales */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px}
+.kpi b{display:block;font-family:var(--display);font-size:26px;line-height:1.1;color:var(--red)}
+.kpi span{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{position:sticky;top:0;background:var(--ink);color:#fff;text-align:left;padding:10px 12px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+tr:hover td{background:#FFFBF0}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800}
+.badge.ok{background:#DDF3E5;color:var(--ok)}.badge.warn{background:#FDE0DD;color:var(--red)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.toolbar input{max-width:300px}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+.notice{background:#FFF1C9;border:1px solid #F0D27A;border-radius:14px;padding:12px 14px;font-size:14px;margin-bottom:16px;font-weight:600}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:999px;font-weight:800;font-size:14px;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.toast.err{background:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login" id="login" hidden>
+  <form class="login-card" id="loginForm">
+    <h1>Game Tribe<br>Admin</h1>
+    <p>Enter your admin password to edit the website.</p>
+    <label for="pw" style="font-weight:800;font-size:13px">Password</label>
+    <input type="password" id="pw" autocomplete="current-password" required autofocus>
+    <p class="err" id="loginErr" role="alert"></p>
+    <button class="btn btn-red" style="width:100%;margin-top:12px" id="loginBtn">Log in</button>
+  </form>
+</div>
+
+<!-- APP -->
+<div class="shell" id="app" hidden>
+  <aside class="side">
+    <div class="brand">Game Tribe<small>ADMIN</small></div>
+    <nav class="nav" id="nav" aria-label="Sections"></nav>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <h2 id="pageTitle"></h2>
+      <span class="status" id="status" aria-live="polite"></span>
+      <a class="btn btn-line sm" href="/" target="_blank" rel="noopener">View website</a>
+      <button class="btn btn-ghost sm" id="logoutBtn" type="button">Log out</button>
+      <button class="btn btn-red" id="saveBtn" type="button" disabled>Publish changes</button>
+    </header>
+    <div class="content" id="view"></div>
+  </div>
+</div>
+<div id="toastHost" aria-live="polite"></div>
+
+<script>
+/* ============================================================
+   Field definitions. This drives everything you see on screen.
+   ============================================================ */
+var T='text',TA='textarea',IMG='image',VID='video',DT='datetime',NUM='number';
+var SECTIONS=[
+ {id:'event',icon:'📅',title:'Event & countdown',blocks:[
+  {title:'Date and venue',help:'The countdown on the website counts down to the start time below (Nigeria time).',fields:[
+   {path:'event.date',label:'Event start (Nigeria time)',type:DT,full:true},
+   {path:'event.guestCount',label:'“People going” number',type:T,help:'Shown as “200+ people going”.'},
+   {path:'event.venueName',label:'Venue section heading',type:T},
+   {path:'event.address',label:'Venue address',type:TA,full:true},
+   {path:'event.mapLat',label:'Map latitude',type:NUM,step:'any',help:'In Google Maps, right-click the venue and click the two numbers to copy them.'},
+   {path:'event.mapLng',label:'Map longitude',type:NUM,step:'any'}]},
+  {title:'Countdown heading',fields:[
+   {path:'countdown.kicker',label:'Small text above',type:T},
+   {path:'countdown.title',label:'Heading',type:T}]}]},
+
+ {id:'hero',icon:'🏠',title:'Top of page',blocks:[
+  {title:'Headline',fields:[
+   {path:'hero.pillBrand',label:'Yellow tag',type:T},
+   {path:'hero.pillDate',label:'Date tag',type:T,help:'Written by hand (e.g. “📅 27 Nov 2026”). Change it when you change the date.'},
+   {path:'hero.pillPlace',label:'Place tag',type:T},
+   {path:'hero.titleA',label:'Big title, first word (yellow)',type:T},
+   {path:'hero.titleB',label:'Big title, second word (red)',type:T},
+   {path:'hero.tagHighlight',label:'Line under title, highlighted word',type:T},
+   {path:'hero.tagRest',label:'Line under title, rest',type:T},
+   {path:'hero.subtitle',label:'Sentence under the title',type:T,full:true},
+   {path:'hero.buttonTickets',label:'Ticket button text',type:T},
+   {path:'hero.buttonAttending',label:'“I am attending” button text',type:T}]},
+  {title:'Background photos',help:'Six photos shown as tilted prints behind the title.',cols:3,fields:[
+   {path:'hero.photos.0',label:'Photo 1',type:IMG},{path:'hero.photos.1',label:'Photo 2',type:IMG},{path:'hero.photos.2',label:'Photo 3',type:IMG},
+   {path:'hero.photos.3',label:'Photo 4',type:IMG},{path:'hero.photos.4',label:'Photo 5',type:IMG},{path:'hero.photos.5',label:'Photo 6',type:IMG}]},
+  {title:'Scrolling yellow strip',help:'Short messages that scroll across the page.',list:{path:'marquee',strings:true,itemLabel:'Message',blank:''}}]},
+
+ {id:'intro',icon:'🎬',title:'Intro & highlight video',blocks:[
+  {title:'Intro text',fields:[
+   {path:'intro.pill',label:'Yellow tag',type:T},
+   {path:'intro.headingA',label:'Heading (white)',type:T},
+   {path:'intro.headingB',label:'Heading (yellow)',type:T},
+   {path:'intro.body',label:'Paragraph',type:TA,full:true},
+   {path:'intro.goldLine',label:'Yellow line',type:T,full:true}]},
+  {title:'Highlight video',fields:[
+   {path:'intro.poster',label:'Cover photo',type:IMG,full:true},
+   {path:'intro.video',label:'Video',type:VID,full:true},
+   {path:'intro.caption',label:'Caption under the video',type:T,full:true}]}]},
+
+ {id:'expecting',icon:'📈',title:'Expected numbers',blocks:[
+  {title:'Heading',fields:[
+   {path:'expecting.kicker',label:'Small text above',type:T},
+   {path:'expecting.title',label:'Heading',type:T},
+   {path:'expecting.subtitle',label:'Sentence below',type:TA,full:true}]},
+  {title:'Numbers',list:{path:'expecting.stats',itemLabel:'Number',max:4,blank:{value:'',label:''},fields:[
+   {key:'value',label:'Number (e.g. 500+)',type:T},{key:'label',label:'What it counts',type:T}]}}]},
+
+ {id:'videos',icon:'🎥',title:'Moments videos',blocks:[
+  {title:'Heading',fields:[
+   {path:'videos.kicker',label:'Small text above',type:T},
+   {path:'videos.title',label:'Heading',type:T},
+   {path:'videos.subtitle',label:'Sentence below',type:T,full:true}]},
+  {title:'Videos',help:'Upload phone videos (MP4 works best, up to 50 MB each).',grid:true,list:{path:'videos.items',itemLabel:'Video',blank:{src:''},fields:[
+   {key:'src',label:'Video',type:VID}]}}]},
+
+ {id:'sponsors',icon:'🤝',title:'Sponsors & vendors',blocks:[
+  {title:'Heading',fields:[
+   {path:'sponsors.kicker',label:'Small text above',type:T},
+   {path:'sponsors.title',label:'Heading',type:T},
+   {path:'sponsors.subtitle',label:'Sentence below',type:TA,full:true}]},
+  {title:'Sponsor logos',grid:true,list:{path:'sponsors.sponsors',itemLabel:'Sponsor',blank:{image:'',name:'',link:''},fields:[
+   {key:'image',label:'Logo',type:IMG,contain:true},{key:'name',label:'Name',type:T},{key:'link',label:'Website (optional)',type:T}]}},
+  {title:'Vendor logos',grid:true,list:{path:'sponsors.vendors',itemLabel:'Vendor',blank:{image:'',name:'',link:''},fields:[
+   {key:'image',label:'Logo',type:IMG,contain:true},{key:'name',label:'Name',type:T},{key:'link',label:'Website (optional)',type:T}]}}]},
+
+ {id:'vendorBand',icon:'🛍️',title:'Vendor invitation',blocks:[
+  {title:'Red vendor section',fields:[
+   {path:'vendorBand.pill',label:'Tag',type:T},
+   {path:'vendorBand.headingA',label:'Heading (white)',type:T},
+   {path:'vendorBand.headingB',label:'Heading (yellow)',type:T},
+   {path:'vendorBand.body',label:'Paragraph',type:TA,full:true},
+   {path:'vendorBand.goldLine',label:'Yellow line',type:T},
+   {path:'vendorBand.button',label:'Button text',type:T},
+   {path:'vendorBand.image',label:'Photo',type:IMG,full:true}]}]},
+
+ {id:'games',icon:'🎲',title:'Games',blocks:[
+  {title:'Heading',fields:[
+   {path:'games.kicker',label:'Small text above',type:T},
+   {path:'games.title',label:'Heading',type:T},
+   {path:'games.subtitle',label:'Sentence below',type:TA,full:true}]},
+  {title:'Games on the day',help:'They appear in this order, alternating left and right.',list:{path:'games.items',itemLabel:'Game',blank:{emoji:'🎮',kicker:'',name:'',description:'',image:''},fields:[
+   {key:'name',label:'Game name',type:T},{key:'emoji',label:'Emoji',type:T},{key:'kicker',label:'Small label above name',type:T},
+   {key:'description',label:'Description',type:TA,full:true},{key:'image',label:'Photo',type:IMG,full:true}]}}]},
+
+ {id:'gallery',icon:'📸',title:'Gallery',blocks:[
+  {title:'Heading',fields:[
+   {path:'gallery.kicker',label:'Small text above',type:T},
+   {path:'gallery.title',label:'Heading',type:T}]},
+  {title:'Photos',help:'The first photo is shown large. The page looks best with 16 photos.',grid:true,list:{path:'gallery.items',itemLabel:'Photo',blank:{image:''},fields:[{key:'image',label:'Photo',type:IMG}]}}]},
+
+ {id:'tickets',icon:'🎟️',title:'Tickets & prices',custom:'tickets'},
+ {id:'sales',icon:'💰',title:'Sales & attendees',custom:'sales'},
+
+ {id:'links',icon:'🔗',title:'Links, contact & footer',blocks:[
+  {title:'Contact and links',fields:[
+   {path:'links.email',label:'Contact email',type:T},
+   {path:'links.whatsapp',label:'WhatsApp group link',type:T,full:true},
+   {path:'links.vendorWhatsapp',label:'WhatsApp link for vendor enquiries',type:T,full:true,help:'Opens when someone taps “Message us on WhatsApp” in the vendor window.'},
+   {path:'links.instagram',label:'Instagram',type:T},{path:'links.tiktok',label:'TikTok',type:T}]},
+  {title:'“Need a quick answer?” section',fields:[
+   {path:'quick.kicker',label:'Small text above',type:T},{path:'quick.title',label:'Heading',type:T},{path:'quick.text',label:'Sentence',type:TA,full:true}]},
+  {title:'“Ways to join” section',fields:[
+   {path:'join.kicker',label:'Small text above',type:T},{path:'join.title',label:'Heading',type:T}]},
+  {title:'Footer',fields:[
+   {path:'footer.about',label:'Line under the logo',type:T,full:true},
+   {path:'footer.copyright',label:'Copyright line',type:T},{path:'footer.tagline',label:'Right-hand line',type:T}]},
+  {title:'Google & social sharing',help:'What people see in Google results and when the link is shared.',fields:[
+   {path:'meta.title',label:'Page title',type:T,full:true},{path:'meta.description',label:'Description',type:TA,full:true}]}]},
+
+ {id:'files',icon:'📄',title:'Flyers & documents',blocks:[
+  {title:'Replace built-in files',help:'Leave these empty to keep the files that come with the website.',fields:[
+   {path:'files.vendorFlyer',label:'Vendor package flyer (shown in the vendor window)',type:IMG,full:true,contain:true},
+   {path:'files.proposalPdf',label:'Proposal PDF (opened by “View our proposal”)',type:'pdf',full:true}]},
+  {title:'Not editable here',help:'The “I am attending” flyer maker uses a design template that is measured to the pixel, so it is kept in the website code.'}]}
+];
+
+/* ============================================================ */
+var state={content:null,saved:'',dirty:false,section:'event',sales:null};
+var $=function(s,r){return (r||document).querySelector(s);};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function getP(o,p){return p.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
+function setP(o,p,v){var k=p.split('.'),last=k.pop(),t=k.reduce(function(a,x){if(a[x]==null)a[x]=isNaN(x)?{}:[];return a[x];},o);t[last]=v;}
+function clone(x){return JSON.parse(JSON.stringify(x));}
+function api(action,opt){
+  opt=opt||{};
+  return fetch('/api/admin?action='+action,{method:opt.body?'POST':'GET',credentials:'same-origin',headers:opt.body?{'Content-Type':'application/json'}:{},body:opt.body?JSON.stringify(opt.body):undefined})
+   .then(function(r){return r.json().catch(function(){return {};}).then(function(d){if(!r.ok){var e=new Error(d.message||('Error '+r.status));e.status=r.status;throw e;}return d;});});
+}
+function toast(msg,err){var t=document.createElement('div');t.className='toast'+(err?' err':'');t.textContent=msg;$('#toastHost').appendChild(t);setTimeout(function(){t.remove();},err?5000:2400);}
+function srcUrl(v){v=String(v||'');return /^(https?:|data:|\/)/.test(v)?v:(v?'/'+v:'');}
+
+/* ---------- dirty tracking ---------- */
+function markDirty(){
+  state.dirty=JSON.stringify(state.content)!==state.saved;
+  var s=$('#status');
+  if(state.dirty){s.textContent='Unpublished changes';s.className='status dirty';}
+  else if(!s.dataset.keep){s.textContent='';s.className='status';}
+  $('#saveBtn').disabled=!state.dirty;
+}
+window.addEventListener('beforeunload',function(e){if(state.dirty){e.preventDefault();e.returnValue='';}});
+document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();if(state.dirty)save();}});
+
+function save(){
+  var b=$('#saveBtn');b.disabled=true;b.textContent='Publishing…';
+  api('save',{body:{content:state.content}}).then(function(){
+    state.saved=JSON.stringify(state.content);state.dirty=false;
+    var s=$('#status');s.textContent='Published ✓ — live in a few seconds';s.className='status ok';s.dataset.keep='1';
+    setTimeout(function(){delete s.dataset.keep;markDirty();},6000);
+  }).catch(function(e){
+    if(e.status===401){showLogin();return;}
+    toast(e.message,true);
+  }).then(function(){b.textContent='Publish changes';b.disabled=!state.dirty;});
+}
+
+/* ---------- uploads ---------- */
+function resizeImage(file,maxW){
+  return new Promise(function(resolve){
+    if(!/^image\/(jpeg|png|webp)$/.test(file.type)){resolve(file);return;}
+    var img=new Image(),u=URL.createObjectURL(file);
+    img.onload=function(){
+      URL.revokeObjectURL(u);
+      if(img.width<=maxW){resolve(file);return;}
+      var c=document.createElement('canvas');c.width=maxW;c.height=Math.round(img.height*maxW/img.width);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      var type=file.type==='image/png'?'image/png':'image/jpeg';
+      c.toBlob(function(b){resolve(b?new File([b],file.name,{type:type}):file);},type,.86);
+    };
+    img.onerror=function(){resolve(file);};
+    img.src=u;
+  });
+}
+function uploadFile(file,folder,onProgress){
+  return resizeImage(file,file.type==='image/png'?1400:1800).then(function(f){
+    return api('sign-upload',{body:{filename:f.name,contentType:f.type,folder:folder}}).then(function(sig){
+      return new Promise(function(resolve,reject){
+        var fd=new FormData();fd.append('cacheControl','3600');fd.append('',f);
+        var x=new XMLHttpRequest();x.open('PUT',sig.uploadUrl);
+        if(sig.anonKey){x.setRequestHeader('apikey',sig.anonKey);x.setRequestHeader('Authorization','Bearer '+sig.anonKey);}
+        x.setRequestHeader('x-upsert','false');
+        x.upload.onprogress=function(e){if(e.lengthComputable)onProgress(e.loaded/e.total);};
+        x.onload=function(){
+          if(x.status>=200&&x.status<300)resolve(sig.publicUrl);
+          else{var m='Upload failed ('+x.status+').';try{m=JSON.parse(x.responseText).message||m;}catch(e){}reject(new Error(m));}
+        };
+        x.onerror=function(){reject(new Error('Upload failed. Check your internet connection.'));};
+        x.send(fd);
+      });
+    });
+  });
+}
+
+/* ---------- field rendering ---------- */
+var uid=0;
+function fieldHtml(f,value,bind){
+  var id='f'+(++uid),lab='<label for="'+id+'">'+esc(f.label)+'</label>',help=f.help?'<div class="help">'+esc(f.help)+'</div>':'';
+  var cls='field'+(f.full?' full':'');
+  var b=' data-bind="'+esc(bind)+'" data-type="'+f.type+'"';
+  if(f.type===TA)return '<div class="'+cls+'">'+lab+'<textarea id="'+id+'"'+b+'>'+esc(value)+'</textarea>'+help+'</div>';
+  if(f.type===NUM)return '<div class="'+cls+'">'+lab+'<input id="'+id+'" type="number" step="'+(f.step||'1')+'" value="'+esc(value)+'"'+b+'>'+help+'</div>';
+  if(f.type===DT){
+    var v='';if(value){var ms=Date.parse(value);if(!isNaN(ms))v=new Date(ms+3600000).toISOString().slice(0,16);}
+    return '<div class="'+cls+'">'+lab+'<input id="'+id+'" type="datetime-local" value="'+v+'"'+b+'>'+help+'</div>';
+  }
+  if(f.type===IMG||f.type===VID||f.type==='pdf'){
+    var isImg=f.type===IMG,s=srcUrl(value);
+    var th=isImg&&s?'<div class="thumb'+(f.contain?' contain':'')+'" style="background-image:url(\''+esc(s).replace(/'/g,'%27')+'\')"></div>'
+      :(f.type===VID&&s?'<div class="thumb"><video src="'+esc(s)+'" muted preload="metadata"></video></div>':'<div class="thumb">'+(f.type==='pdf'?'PDF':(value?'':'None'))+'</div>');
+    var accept=isImg?'image/jpeg,image/png,image/webp,image/gif':(f.type===VID?'video/mp4,video/webm,video/quicktime':'application/pdf');
+    return '<div class="'+cls+'">'+lab+'<div class="media">'+th+'<div class="media-body"><input id="'+id+'" type="text" placeholder="Upload a file or paste a link" value="'+esc(value)+'"'+b+'>'+
+      '<div class="media-actions"><button class="btn btn-line sm" type="button" data-upload="'+accept+'" data-kind="'+f.type+'">Upload</button>'+
+      (value?'<button class="btn btn-ghost sm danger" type="button" data-clear>Remove</button>':'')+
+      '<span class="bar" hidden><i></i></span><span class="msg"></span></div></div></div>'+help+'</div>';
+  }
+  return '<div class="'+cls+'">'+lab+'<input id="'+id+'" type="text" value="'+esc(value)+'"'+b+'>'+help+'</div>';
+}
+
+function listHtml(block){
+  var L=block.list,arr=getP(state.content,L.path)||[];
+  var out='<div class="'+(block.grid?'tile-grid':'')+'">';
+  arr.forEach(function(it,i){
+    out+='<div class="item"><div class="item-head"><b>'+esc(L.itemLabel)+' '+(i+1)+'</b>'+
+      '<button class="btn btn-ghost sm" type="button" data-move="'+L.path+'|'+i+'|-1" '+(i===0?'disabled':'')+' aria-label="Move up">↑</button>'+
+      '<button class="btn btn-ghost sm" type="button" data-move="'+L.path+'|'+i+'|1" '+(i===arr.length-1?'disabled':'')+' aria-label="Move down">↓</button>'+
+      '<button class="btn btn-ghost sm danger" type="button" data-del="'+L.path+'|'+i+'">Delete</button></div>';
+    if(L.strings)out+=fieldHtml({label:L.itemLabel,type:T,full:true},it,L.path+'.'+i);
+    else out+='<div class="grid">'+L.fields.map(function(f){return fieldHtml(f,it[f.key],L.path+'.'+i+'.'+f.key);}).join('')+'</div>';
+    out+='</div>';
+  });
+  out+='</div>';
+  if(!arr.length)out+='<div class="empty" style="padding:16px">Nothing here yet.</div>';
+  if(!L.max||arr.length<L.max)out+='<button class="btn btn-line" type="button" data-add="'+L.path+'">+ Add '+esc(L.itemLabel.toLowerCase())+'</button>';
+  return out;
+}
+
+function blockHtml(b){
+  var h='<section class="card"><h3>'+esc(b.title||'')+'</h3>'+(b.help?'<p class="help">'+esc(b.help)+'</p>':'');
+  if(b.fields)h+='<div class="grid '+(b.cols===3?'three':'two')+'">'+b.fields.map(function(f){return fieldHtml(f,getP(state.content,f.path),f.path);}).join('')+'</div>';
+  if(b.list)h+=listHtml(b);
+  return h+'</section>';
+}
+
+/* ---------- tickets view ---------- */
+function ticketsHtml(){
+  var arr=state.content.tickets||[];
+  var h='<div class="notice">⚠ The price you set here is what Paystack will charge. The server checks every payment against these prices, so a changed price takes effect as soon as you publish.</div>';
+  h+='<section class="card"><h3>Ticket types</h3><p class="help">Turn a ticket <b>off</b> to stop selling it. Avoid deleting a ticket someone may already be paying for.</p>';
+  arr.forEach(function(t,i){
+    h+='<div class="item"><div class="item-head"><b>'+esc(t.id)+'</b>'+
+      '<label class="switch"><input type="checkbox" data-tk="'+i+'" data-tkf="active" '+(t.active?'checked':'')+'> On sale</label>'+
+      '<button class="btn btn-ghost sm danger" type="button" data-tkdel="'+i+'">Delete</button></div>'+
+      '<div class="grid two"><div class="field"><label>Name shown to buyers</label><input type="text" data-tk="'+i+'" data-tkf="label" value="'+esc(t.label)+'"></div>'+
+      '<div class="field"><label>Price (₦, whole number)</label><input type="number" min="100" step="1" data-tk="'+i+'" data-tkf="price" value="'+esc(t.price)+'"></div></div></div>';
+  });
+  h+='<button class="btn btn-line" type="button" id="addTicket">+ Add ticket type</button></section>';
+  return h;
+}
+
+/* ---------- sales view ---------- */
+function naira(n){return '₦'+Number(n||0).toLocaleString('en-NG');}
+function salesHtml(){
+  var d=state.sales;
+  if(!d)return '<div class="empty">Loading sales…</div>';
+  if(d.configured===false)return '<div class="notice">Supabase is not connected yet, so sales cannot be listed. Follow step 2 in the README, then reload.</div>';
+  var rows=d.sales||[],total=rows.reduce(function(s,r){return s+Number(r.amount||0);},0),notSent=rows.filter(function(r){return !r.email_sent;}).length;
+  var by={};rows.forEach(function(r){var k=r.ticket_label||r.ticket_type||'Other';by[k]=(by[k]||0)+1;});
+  var h='<div class="kpis"><div class="kpi"><b>'+rows.length+'</b><span>Tickets sold</span></div><div class="kpi"><b>'+naira(total)+'</b><span>Total paid</span></div>'+
+    '<div class="kpi"><b style="'+(notSent?'':'color:var(--ok)')+'">'+notSent+'</b><span>Emails not sent</span></div></div>';
+  var bk=Object.keys(by);
+  if(bk.length)h+='<section class="card"><h3>By ticket type</h3><div class="grid two">'+bk.map(function(k){return '<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0"><span>'+esc(k)+'</span><b>'+by[k]+'</b></div>';}).join('')+'</div></section>';
+  h+='<div class="toolbar"><input type="search" id="salesSearch" placeholder="Search name, email, phone, ticket no."><button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button><button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button></div>';
+  h+='<div class="table-wrap"><table><thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Phone</th><th>Ticket</th><th>Paid</th><th>Ticket no.</th><th>Email</th></tr></thead><tbody id="salesBody"></tbody></table></div>';
+  return h;
+}
+function salesRows(q){
+  var rows=(state.sales.sales||[]).filter(function(r){q=(q||'').toLowerCase();return !q||[r.name,r.email,r.phone,r.ticket_number,r.ticket_label].join(' ').toLowerCase().indexOf(q)>-1;});
+  if(!rows.length)return '<tr><td colspan="8"><div class="empty">No tickets yet.</div></td></tr>';
+  return rows.map(function(r){
+    var dt=new Date(r.paid_at||r.created_at);
+    return '<tr><td>'+esc(isNaN(dt)?'':dt.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.email)+'</td><td>'+esc(r.phone)+'</td><td>'+esc(r.ticket_label||r.ticket_type)+'</td><td>'+naira(r.amount)+'</td><td><code>'+esc(r.ticket_number)+'</code></td><td>'+(r.email_sent?'<span class="badge ok">Sent</span>':'<span class="badge warn">Not sent</span>')+'</td></tr>';
+  }).join('');
+}
+function loadSales(){
+  state.sales=null;render();
+  api('sales').then(function(d){state.sales=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
+}
+function csvDownload(){
+  var q=function(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  var head=['Date','Name','Email','Phone','Ticket','Amount (NGN)','Ticket number','Reference','Email sent'];
+  var lines=[head.join(',')].concat((state.sales.sales||[]).map(function(r){return [r.paid_at||r.created_at,r.name,r.email,r.phone,r.ticket_label||r.ticket_type,r.amount,r.ticket_number,r.reference,r.email_sent?'yes':'no'].map(q).join(',');}));
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv'}));a.download='game-tribe-tickets.csv';a.click();
+}
+
+/* ---------- main render ---------- */
+function render(){
+  var sec=SECTIONS.filter(function(s){return s.id===state.section;})[0]||SECTIONS[0];
+  $('#pageTitle').textContent=sec.title;
+  $('#nav').innerHTML=SECTIONS.map(function(s){return (s.id==='tickets'?'<div class="sep"></div>':'')+'<button type="button" data-sec="'+s.id+'" '+(s.id===sec.id?'aria-current="true"':'')+'><span class="ico">'+s.icon+'</span>'+esc(s.title)+'</button>';}).join('');
+  var v=$('#view'),h='';
+  if(sec.custom==='tickets')h=ticketsHtml();
+  else if(sec.custom==='sales')h=salesHtml();
+  else h=sec.blocks.map(blockHtml).join('');
+  v.innerHTML=h;
+  if(sec.custom==='sales'&&state.sales&&state.sales.configured!==false)$('#salesBody').innerHTML=salesRows('');
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',function(e){
+  var t=e.target.closest('button');if(!t)return;
+  if(t.dataset.sec){state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else render();window.scrollTo(0,0);return;}
+  if(t.dataset.add){var L=findList(t.dataset.add),arr=getP(state.content,L.path);arr.push(L.strings?'':clone(L.blank));markDirty();render();return;}
+  if(t.dataset.del){var p=t.dataset.del.split('|');if(confirm('Delete this item?')){getP(state.content,p[0]).splice(+p[1],1);markDirty();render();}return;}
+  if(t.dataset.move){var m=t.dataset.move.split('|'),a=getP(state.content,m[0]),i=+m[1],j=i+ +m[2];if(a[j]!==undefined){var x=a[i];a[i]=a[j];a[j]=x;markDirty();render();}return;}
+  if(t.id==='addTicket'){
+    var name=prompt('Name of the new ticket (e.g. “Last Chance — Single”)');if(!name)return;
+    var price=parseInt(prompt('Price in naira (numbers only)'),10);if(!(price>=100)){toast('Enter a price of ₦100 or more.',true);return;}
+    var base=name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,28)||'ticket',id=base,n=1;
+    while(state.content.tickets.some(function(x){return x.id===id;}))id=base+'_'+(++n);
+    state.content.tickets.push({id:id,label:name.trim(),price:price,active:true});markDirty();render();return;
+  }
+  if(t.dataset.tkdel!==undefined){if(confirm('Delete this ticket type? Turning it off is usually safer.')){state.content.tickets.splice(+t.dataset.tkdel,1);markDirty();render();}return;}
+  if(t.dataset.upload){
+    var field=t.closest('.field'),input=field.querySelector('input[data-bind]'),bar=field.querySelector('.bar'),msg=field.querySelector('.msg');
+    var fi=document.createElement('input');fi.type='file';fi.accept=t.dataset.upload;
+    fi.onchange=function(){
+      var f=fi.files[0];if(!f)return;
+      if(f.size>50*1024*1024){msg.textContent='File is over 50 MB.';msg.className='msg err';return;}
+      msg.textContent='Uploading…';msg.className='msg';bar.hidden=false;bar.firstChild.style.width='0';t.disabled=true;
+      var folder=t.dataset.kind==='video'?'videos':(t.dataset.kind==='pdf'?'files':'images');
+      uploadFile(f,folder,function(p){bar.firstChild.style.width=Math.round(p*100)+'%';}).then(function(url){
+        setP(state.content,input.dataset.bind,url);markDirty();render();toast('Uploaded ✓ — remember to publish');
+      }).catch(function(err){msg.textContent=err.message;msg.className='msg err';bar.hidden=true;t.disabled=false;});
+    };
+    fi.click();return;
+  }
+  if(t.hasAttribute('data-clear')){var inp=t.closest('.field').querySelector('input[data-bind]');setP(state.content,inp.dataset.bind,'');markDirty();render();return;}
+  if(t.id==='salesRefresh'){loadSales();return;}
+  if(t.id==='salesCsv'){csvDownload();return;}
+});
+function findList(path){var hit=null;SECTIONS.forEach(function(s){(s.blocks||[]).forEach(function(b){if(b.list&&b.list.path===path)hit=b.list;});});return hit;}
+
+document.addEventListener('input',function(e){
+  var el=e.target;
+  if(el.id==='salesSearch'){$('#salesBody').innerHTML=salesRows(el.value);return;}
+  if(el.dataset.tk!==undefined){
+    var tk=state.content.tickets[+el.dataset.tk],f=el.dataset.tkf;
+    tk[f]=el.type==='checkbox'?el.checked:(f==='price'?parseInt(el.value,10)||0:el.value);markDirty();return;
+  }
+  if(!el.dataset.bind)return;
+  var type=el.dataset.type,v=el.value;
+  if(type===NUM)v=v===''?null:Number(v);
+  if(type===DT){v=v?v+':00+01:00':'';}
+  setP(state.content,el.dataset.bind,v);markDirty();
+});
+document.addEventListener('change',function(e){
+  var el=e.target;
+  if(el.dataset.type==='image'||el.dataset.type==='video'||el.dataset.type==='pdf')render(); /* refresh thumbnail after typing a link */
+});
+
+/* ---------- login / boot ---------- */
+function showLogin(){$('#app').hidden=true;$('#login').hidden=false;setTimeout(function(){$('#pw').focus();},50);}
+function boot(){
+  api('me').then(function(me){
+    return api('content').then(function(c){
+      state.content=c;state.saved=JSON.stringify(c);
+      $('#login').hidden=true;$('#app').hidden=false;render();markDirty();
+      if(!me.supabase)$('#view').insertAdjacentHTML('afterbegin','<div class="notice">Supabase is not connected yet. You can look around, but publishing and uploads will not work until you finish step 2 of the README.</div>');
+    });
+  }).catch(function(e){
+    if(e.status===503){document.body.innerHTML='<div class="login"><div class="login-card"><h1>Almost there</h1><p>'+esc(e.message)+'</p></div></div>';return;}
+    showLogin();
+  });
+}
+$('#loginForm').addEventListener('submit',function(e){
+  e.preventDefault();var b=$('#loginBtn');b.disabled=true;b.textContent='Checking…';$('#loginErr').textContent='';
+  api('login',{body:{password:$('#pw').value}}).then(function(){$('#pw').value='';boot();})
+   .catch(function(err){$('#loginErr').textContent=err.message;})
+   .then(function(){b.disabled=false;b.textContent='Log in';});
+});
+$('#saveBtn').addEventListener('click',save);
+$('#logoutBtn').addEventListener('click',function(){
+  if(state.dirty&&!confirm('You have unpublished changes. Log out anyway?'))return;
+  state.dirty=false;api('logout',{body:{}}).then(function(){location.reload();});
+});
+boot();
+</script>
+</body>
+</html>
