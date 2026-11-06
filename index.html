@@ -486,14 +486,14 @@ a{color:inherit}
         <h2 class="display h2" data-c="videos.title">Game Tribe Moments 🎮</h2>
         <p data-c="videos.subtitle">See what Game Tribe moments look like. Press play.</p>
       </div>
-      <div class="videos-grid">
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_7468.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_7469.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_7470.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_7471.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+      <div class="videos-grid" id="videosGrid">
+        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5307.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5308.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5308.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5307.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
       </div>
       <div class="center" style="margin-top:40px">
-        <a class="more-link y" href="https://www.tiktok.com/@gametribe_abraka" target="_blank" rel="noopener">More on our TikTok <span aria-hidden="true">→</span></a>
+        <a class="more-link y" data-link="instagram" href="https://www.instagram.com/gametribe_abraka/" target="_blank" rel="noopener">More on our Instagram <span aria-hidden="true">→</span></a>
       </div>
     </div>
   </section>
@@ -509,7 +509,7 @@ a{color:inherit}
       </div>
       <div class="logo-block">
         <h3 class="sub-h">Sponsor logos</h3>
-        <div class="logo-grid" aria-label="Sponsor logos">
+        <div class="logo-grid" id="sponsorGrid" aria-label="Sponsor logos">
           <div class="logo-card"><img src="logo2.png" alt="Sponsor logo" loading="lazy"></div>
           <div class="logo-card"><img src="logo3.png" alt="Sponsor logo" loading="lazy"></div>
           <div class="logo-card"><img src="logo4.png" alt="Sponsor logo" loading="lazy"></div>
@@ -519,16 +519,13 @@ a{color:inherit}
           <div class="logo-card"><img src="instant-verify.PNG" alt="Sponsor logo" loading="lazy"></div>
           <div class="logo-card"><img src="campus-hub.jpeg" alt="Sponsor logo" loading="lazy"></div>
           <div class="logo-card"><img src="instantbuy.png" alt="Sponsor logo" loading="lazy"></div>
-          <div class="logo-card"><img src="d-exchange.png" alt="Sponsor logo" loading="lazy"></div>
         </div>
       </div>
       <div class="logo-block">
         <h3 class="sub-h">Vendor logos</h3>
-        <div class="logo-grid" aria-label="Vendor logos">
+        <div class="logo-grid" id="vendorGrid" aria-label="Vendor logos">
           <div class="logo-card"><img src="trixmix.png" alt="Vendor logo" loading="lazy"></div>
-          <div class="logo-card"><img src="noma-kitchen.png" alt="Vendor logo" loading="lazy"></div>
           <div class="logo-card"><img src="testicakes.png" alt="Vendor logo" loading="lazy"></div>
-          <div class="logo-card"><img src="presh-cui.png" alt="Vendor logo" loading="lazy"></div>
           <div class="logo-card"><img src="logo4.png" alt="Vendor logo" loading="lazy"></div>
           <div class="logo-card"><img src="logo1.png" alt="Vendor logo" loading="lazy"></div>
           <div class="logo-card"><img src="logo2.png" alt="Vendor logo" loading="lazy"></div>
@@ -629,7 +626,7 @@ a{color:inherit}
           <span class="kicker r" data-c="gallery.kicker">Game Tribe Abraka</span>
           <h2 class="display h2" data-c="gallery.title">This Is What You’re Coming For</h2>
         </div>
-        <a class="more-link r" href="https://www.tiktok.com/@gametribe_abraka" target="_blank" rel="noopener">See more on TikTok <span aria-hidden="true">→</span></a>
+        <a class="more-link r" data-link="instagram" href="https://www.instagram.com/gametribe_abraka/" target="_blank" rel="noopener">See more on Instagram <span aria-hidden="true">→</span></a>
       </div>
       <div class="bento" id="galleryGrid">
         <div class="b big"><img src="gallery-1.jpg" alt="Game Tribe moment 1" loading="lazy" decoding="async"></div>
@@ -1135,7 +1132,7 @@ a{color:inherit}
 </script>
 
 <script>
-  var VIDEO_SRC = 'IMG_2170.MOV';
+  var VIDEO_SRC = 'bandicam 2025-06-04 17-13-40-037.mp4';
 
   function playInlineVideo(){
     var visual = document.getElementById('mediaVisual');
