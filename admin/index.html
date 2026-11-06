@@ -88,7 +88,9 @@ textarea{min-height:92px;resize:vertical}
 .item{border:1.5px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;background:#FDFBF6}
 .item-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .item-head b{flex:1;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
-.tile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.tile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.tile-grid .media{flex-direction:column}
+.tile-grid .thumb{flex:none;width:100%;height:96px}
 .tile-grid .item{margin:0}
 .switch{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:13px;cursor:pointer}
 .switch input{width:18px;height:18px;accent-color:var(--red)}
@@ -212,15 +214,12 @@ var SECTIONS=[
   {title:'Videos',help:'Upload phone videos (MP4 works best, up to 50 MB each).',grid:true,list:{path:'videos.items',itemLabel:'Video',blank:{src:''},fields:[
    {key:'src',label:'Video',type:VID}]}}]},
 
- {id:'sponsors',icon:'🤝',title:'Sponsors & vendors',blocks:[
+ {id:'sponsors',icon:'🤝',title:'Partners & sponsors',blocks:[
   {title:'Heading',fields:[
    {path:'sponsors.kicker',label:'Small text above',type:T},
    {path:'sponsors.title',label:'Heading',type:T},
    {path:'sponsors.subtitle',label:'Sentence below',type:TA,full:true}]},
-  {title:'Sponsor logos',grid:true,list:{path:'sponsors.sponsors',itemLabel:'Sponsor',blank:{image:'',name:'',link:''},fields:[
-   {key:'image',label:'Logo',type:IMG,contain:true},{key:'name',label:'Name',type:T},{key:'link',label:'Website (optional)',type:T}]}},
-  {title:'Vendor logos',grid:true,list:{path:'sponsors.vendors',itemLabel:'Vendor',blank:{image:'',name:'',link:''},fields:[
-   {key:'image',label:'Logo',type:IMG,contain:true},{key:'name',label:'Name',type:T},{key:'link',label:'Website (optional)',type:T}]}}]},
+  {title:'Categories',groups:true}]},
 
  {id:'vendorBand',icon:'🛍️',title:'Vendor invitation',blocks:[
   {title:'Red vendor section',fields:[
@@ -355,6 +354,7 @@ function fieldHtml(f,value,bind){
   var cls='field'+(f.full?' full':'');
   var b=' data-bind="'+esc(bind)+'" data-type="'+f.type+'"';
   if(f.type===TA)return '<div class="'+cls+'">'+lab+'<textarea id="'+id+'"'+b+'>'+esc(value)+'</textarea>'+help+'</div>';
+  if(f.type==='select')return '<div class="'+cls+'">'+lab+'<select id="'+id+'"'+b+'>'+f.options.map(function(o){return '<option value="'+esc(o[0])+'"'+(o[0]===value?' selected':'')+'>'+esc(o[1])+'</option>';}).join('')+'</select>'+help+'</div>';
   if(f.type===NUM)return '<div class="'+cls+'">'+lab+'<input id="'+id+'" type="number" step="'+(f.step||'1')+'" value="'+esc(value)+'"'+b+'>'+help+'</div>';
   if(f.type===DT){
     var v='';if(value){var ms=Date.parse(value);if(!isNaN(ms))v=new Date(ms+3600000).toISOString().slice(0,16);}
@@ -391,7 +391,28 @@ function listHtml(block){
   return out;
 }
 
+var GROUP_ITEM_LIST={itemLabel:'Logo',blank:{image:'',name:'',link:''},fields:[
+  {key:'image',label:'Logo',type:IMG,contain:true},{key:'name',label:'Name',type:T},{key:'link',label:'Website (optional)',type:T}]};
+function groupsHtml(){
+  var arr=state.content.sponsors.groups||[],h='<div class="notice">Each category becomes its own row of logos on the website, in this order. Categories with no logos are hidden automatically.</div>';
+  arr.forEach(function(g,i){
+    var base='sponsors.groups.'+i;
+    h+='<section class="card"><div class="item-head"><h3 style="margin:0;flex:1;font-family:var(--display);text-transform:uppercase;font-size:15px">'+esc(g.title||'Untitled')+' <span style="font-family:var(--body);text-transform:none;color:var(--muted);font-size:13px">· '+((g.items||[]).length)+' logos</span></h3>'+
+      '<button class="btn btn-ghost sm" type="button" data-gmove="'+i+'|-1" '+(i===0?'disabled':'')+' aria-label="Move category up">↑</button>'+
+      '<button class="btn btn-ghost sm" type="button" data-gmove="'+i+'|1" '+(i===arr.length-1?'disabled':'')+' aria-label="Move category down">↓</button>'+
+      '<button class="btn btn-ghost sm danger" type="button" data-gdel="'+i+'">Delete category</button></div>'+
+      '<div class="grid two">'+
+        fieldHtml({label:'Category name (shown above the logos)',type:T},g.title,base+'.title')+
+        fieldHtml({label:'Logo size',type:'select',options:[['normal','Normal'],['large','Large (good for featured brands)']]},g.size||'normal',base+'.size')+
+        fieldHtml({label:'Short text under the name (optional)',type:T,full:true},g.subtitle,base+'.subtitle')+
+      '</div><h3 style="margin:18px 0 10px">Logos</h3>'+
+      listHtml({grid:true,list:Object.assign({path:base+'.items'},GROUP_ITEM_LIST)})+'</section>';
+  });
+  return h+'<button class="btn btn-ink" type="button" id="addGroup">+ Add category</button>';
+}
+
 function blockHtml(b){
+  if(b.groups)return groupsHtml();
   var h='<section class="card"><h3>'+esc(b.title||'')+'</h3>'+(b.help?'<p class="help">'+esc(b.help)+'</p>':'');
   if(b.fields)h+='<div class="grid '+(b.cols===3?'three':'two')+'">'+b.fields.map(function(f){return fieldHtml(f,getP(state.content,f.path),f.path);}).join('')+'</div>';
   if(b.list)h+=listHtml(b);
@@ -450,6 +471,19 @@ function csvDownload(){
 }
 
 /* ---------- main render ---------- */
+function warnThumb(th){
+  var f=th&&th.closest('.field'),m=f&&f.querySelector('.msg');
+  if(m){m.textContent='⚠ This file cannot be opened from its link. If you uploaded it, the Supabase bucket "site-media" must be Public. Click “Check connection” at the top.';m.className='msg err';}
+}
+function refreshThumb(input){
+  /* update just the preview, never re-draw the page (that would swallow the user's next click) */
+  var f=input.closest('.field'),th=f&&f.querySelector('.thumb'),m=f&&f.querySelector('.msg');
+  if(m){m.textContent='';m.className='msg';}
+  if(!th)return;
+  var u=srcUrl(input.value);th.setAttribute('data-src',u);
+  th.style.backgroundImage=u?"url('"+u.replace(/'/g,'%27')+"')":'';
+  if(u){var im=new Image();im.onerror=function(){warnThumb(th);};im.src=u;}
+}
 function render(){
   var sec=SECTIONS.filter(function(s){return s.id===state.section;})[0]||SECTIONS[0];
   $('#pageTitle').textContent=sec.title;
@@ -459,7 +493,7 @@ function render(){
   else if(sec.custom==='sales')h=salesHtml();
   else h=sec.blocks.map(blockHtml).join('');
   v.innerHTML=h;
-  var warn=function(th){var m=th.closest('.field')&&th.closest('.field').querySelector('.msg');if(m){m.textContent='⚠ This file cannot be opened from its link. If you uploaded it, the Supabase bucket "site-media" must be Public. Click “Check connection” at the top.';m.className='msg err';}};
+  var warn=warnThumb;
   v.querySelectorAll('.thumb[data-src]').forEach(function(th){var im=new Image();im.onerror=function(){warn(th);};im.src=th.getAttribute('data-src');});
   v.querySelectorAll('.thumb video').forEach(function(vd){vd.addEventListener('error',function(){warn(vd.parentNode);});});
   if(sec.custom==='sales'&&state.sales&&state.sales.configured!==false)$('#salesBody').innerHTML=salesRows('');
@@ -472,6 +506,14 @@ document.addEventListener('click',function(e){
   if(t.dataset.add){var L=findList(t.dataset.add),arr=getP(state.content,L.path);arr.push(L.strings?'':clone(L.blank));markDirty();render();return;}
   if(t.dataset.del){var p=t.dataset.del.split('|');if(confirm('Delete this item?')){getP(state.content,p[0]).splice(+p[1],1);markDirty();render();}return;}
   if(t.dataset.move){var m=t.dataset.move.split('|'),a=getP(state.content,m[0]),i=+m[1],j=i+ +m[2];if(a[j]!==undefined){var x=a[i];a[i]=a[j];a[j]=x;markDirty();render();}return;}
+  if(t.id==='addGroup'){
+    var gname=prompt('Name of the new category (e.g. “Community Partners”)');if(!gname||!gname.trim())return;
+    var gl=state.content.sponsors.groups,gb=gname.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,28)||'group',gid=gb,gn=1;
+    while(gl.some(function(x){return x.id===gid;}))gid=gb+'_'+(++gn);
+    gl.push({id:gid,title:gname.trim(),subtitle:'',size:'normal',items:[]});markDirty();render();return;
+  }
+  if(t.dataset.gdel!==undefined){var gi=+t.dataset.gdel,gg=state.content.sponsors.groups[gi];if(confirm('Delete the category “'+gg.title+'” and its '+(gg.items||[]).length+' logos?')){state.content.sponsors.groups.splice(gi,1);markDirty();render();}return;}
+  if(t.dataset.gmove){var gm=t.dataset.gmove.split('|'),ga=state.content.sponsors.groups,g1=+gm[0],g2=g1+ +gm[1];if(ga[g2]!==undefined){var gx=ga[g1];ga[g1]=ga[g2];ga[g2]=gx;markDirty();render();}return;}
   if(t.id==='addTicket'){
     var name=prompt('Name of the new ticket (e.g. “Last Chance — Single”)');if(!name)return;
     var price=parseInt(prompt('Price in naira (numbers only)'),10);if(!(price>=100)){toast('Enter a price of ₦100 or more.',true);return;}
@@ -498,7 +540,7 @@ document.addEventListener('click',function(e){
   if(t.id==='salesRefresh'){loadSales();return;}
   if(t.id==='salesCsv'){csvDownload();return;}
 });
-function findList(path){var hit=null;SECTIONS.forEach(function(s){(s.blocks||[]).forEach(function(b){if(b.list&&b.list.path===path)hit=b.list;});});return hit;}
+function findList(path){if(/^sponsors\.groups\.\d+\.items$/.test(path))return Object.assign({path:path},GROUP_ITEM_LIST);var hit=null;SECTIONS.forEach(function(s){(s.blocks||[]).forEach(function(b){if(b.list&&b.list.path===path)hit=b.list;});});return hit;}
 
 document.addEventListener('input',function(e){
   var el=e.target;
@@ -515,7 +557,8 @@ document.addEventListener('input',function(e){
 });
 document.addEventListener('change',function(e){
   var el=e.target;
-  if(el.dataset.type==='image'||el.dataset.type==='video'||el.dataset.type==='pdf')render(); /* refresh thumbnail after typing a link */
+  if(el.dataset.bind&&/^sponsors\.groups\.\d+\.title$/.test(el.dataset.bind))render();
+  if(el.dataset.type==='image')refreshThumb(el);
 });
 
 /* ---------- login / boot ---------- */
