@@ -67,7 +67,7 @@ export const DEFAULT_CONTENT = {
       'A full-day playground for gamers, creators, students, music lovers and every friend who came to make a memory. Pull up, pick your game, meet your people and enjoy the tribe.',
     goldLine: 'Games • Banters • Hangout • Connect',
     poster: 'gallery-6.jpg',
-    video: 'bandicam 2025-06-04 17-13-40-037.mp4',
+    video: 'IMG_2170.MOV',
     caption: '▶ Watch the highlights'
   },
 
@@ -88,10 +88,10 @@ export const DEFAULT_CONTENT = {
     title: 'Game Tribe Moments 🎮',
     subtitle: 'See what Game Tribe moments look like. Press play.',
     items: [
-      { src: 'IMG_5307.MP4' },
-      { src: 'IMG_5308.MP4' },
-      { src: 'IMG_5308.MP4' },
-      { src: 'IMG_5307.MP4' }
+      { src: 'IMG_7468.MP4' },
+      { src: 'IMG_7469.MP4' },
+      { src: 'IMG_7470.MP4' },
+      { src: 'IMG_7471.MP4' }
     ]
   },
 
