@@ -2,9 +2,9 @@ import crypto from 'crypto';
 import {
   adminConfigured, isAdmin, passwordMatches, sessionCookie, clearCookie
 } from './_lib/auth.js';
-import { supabaseConfigured } from './_lib/supabase.js';
+import { supabaseConfigured, supabaseUrl, sb } from './_lib/supabase.js';
 import {
-  getContent, saveContent, listSales, createSignedUpload
+  getContent, saveContent, listSales, createSignedUpload, MEDIA_BUCKET
 } from './_lib/store.js';
 
 /* Very small in-memory brake on password guessing (per server instance). */
@@ -100,6 +100,38 @@ export default async function handler(req, res) {
 
     if (action === 'me') {
       return res.status(200).json({ ok: true, supabase: supabaseConfigured() });
+    }
+
+    if (action === 'diagnose') {
+      const checks = [];
+      const add = (name, ok, detail) => checks.push({ name, ok, detail });
+      const url = supabaseUrl();
+      add('SUPABASE_URL is set', Boolean(url), url ? url : 'Missing. Add it in Vercel and redeploy.');
+      if (url) {
+        const host = url.replace(/^https?:\/\//, '');
+        const wrong = /(^|\.)supabase\.com$/.test(host) || /^db\./.test(host) || /\.vercel\.app$/.test(host);
+        add('SUPABASE_URL points at your Supabase project', !wrong,
+          'Using ' + url + '. It should look like https://abcdefghijklmnop.supabase.co (Project Settings → API → Project URL), not the dashboard page, a db. address or your own website.');
+      }
+      add('SUPABASE_SERVICE_ROLE_KEY is set', Boolean((process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()), 'Needed to save content.');
+      add('SUPABASE_ANON_KEY is set', Boolean((process.env.SUPABASE_ANON_KEY || '').trim()), 'Needed for photo and video uploads.');
+      if (supabaseConfigured()) {
+        const tests = [
+          ['Table site_content is reachable', '/rest/v1/site_content?select=key&limit=1', 'Run supabase/setup.sql in the SQL Editor.'],
+          ['Table ticket_sales is reachable', '/rest/v1/ticket_sales?select=reference&limit=1', 'Run supabase/setup.sql in the SQL Editor.'],
+          ['Storage bucket "' + MEDIA_BUCKET + '" exists and is public', '/storage/v1/bucket/' + MEDIA_BUCKET, 'Run supabase/setup.sql, or create a public bucket with this name.']
+        ];
+        for (const [name, path, hint] of tests) {
+          try {
+            const data = await sb(path);
+            if (path.indexOf('/storage/v1/bucket/') === 0) {
+              if (data && data.public === true) add(name, true, 'OK');
+              else add(name, false, 'The bucket exists but is PRIVATE, so uploaded photos cannot show on the website. In Supabase open Storage, choose site-media, Edit bucket, and turn on Public bucket (or run: update storage.buckets set public = true where id = \'site-media\';).');
+            } else add(name, true, 'OK');
+          } catch (e) { add(name, false, e.message + ' — ' + hint); }
+        }
+      }
+      return res.status(200).json({ checks, allOk: checks.every((c) => c.ok) });
     }
 
     if (action === 'content' && req.method === 'GET') {
