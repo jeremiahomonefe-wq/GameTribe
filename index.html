@@ -195,6 +195,10 @@ a{color:inherit}
 .logo-card img{width:100%;height:64px;object-fit:contain}
 @media(min-width:768px){.logo-card img{height:76px}}
 .logo-block+.logo-block{margin-top:48px}
+.sub-p{text-align:center;color:rgba(28,20,16,.65);max-width:560px;margin:-8px auto 20px;font-size:15px}
+.logo-grid.large>.logo-card{flex-basis:calc((100% - var(--g)) / 2)}
+.logo-grid.large .logo-card img{height:88px}
+@media(min-width:768px){.logo-grid.large>.logo-card{flex-basis:calc((100% - 2*var(--g)) / 3)}.logo-grid.large .logo-card img{height:120px}}
 .sponsor-cta{margin-top:48px}
 
 /* vendor band */
@@ -487,10 +491,10 @@ a{color:inherit}
         <p data-c="videos.subtitle">See what Game Tribe moments look like. Press play.</p>
       </div>
       <div class="videos-grid" id="videosGrid">
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5307.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5308.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5308.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5307.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_7468.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_7469.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_7470.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_7471.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
       </div>
       <div class="center" style="margin-top:40px">
         <a class="more-link y" data-link="instagram" href="https://www.instagram.com/gametribe_abraka/" target="_blank" rel="noopener">More on our Instagram <span aria-hidden="true">→</span></a>
@@ -507,6 +511,7 @@ a{color:inherit}
         <h2 class="display h2" id="partnerHeading" data-c="sponsors.title">Partners, Sponsors &amp; Vendors</h2>
         <p data-c="sponsors.subtitle">We’re creating space for the brands and businesses that make Game Tribe Fest even more memorable.</p>
       </div>
+      <div id="logoGroups">
       <div class="logo-block">
         <h3 class="sub-h">Sponsor logos</h3>
         <div class="logo-grid" id="sponsorGrid" aria-label="Sponsor logos">
@@ -531,6 +536,7 @@ a{color:inherit}
           <div class="logo-card"><img src="logo2.png" alt="Vendor logo" loading="lazy"></div>
           <div class="logo-card"><img src="logo3.png" alt="Vendor logo" loading="lazy"></div>
         </div>
+      </div>
       </div>
       <div class="center sponsor-cta">
         <div class="btn-row center">
@@ -1132,7 +1138,7 @@ a{color:inherit}
 </script>
 
 <script>
-  var VIDEO_SRC = 'bandicam 2025-06-04 17-13-40-037.mp4';
+  var VIDEO_SRC = 'IMG_2170.MOV';
 
   function playInlineVideo(){
     var visual = document.getElementById('mediaVisual');
@@ -1496,14 +1502,12 @@ document.querySelectorAll('.video-card').forEach(function(card){
     }
     if(c.intro&&url(c.intro.video)&&typeof VIDEO_SRC!=='undefined')VIDEO_SRC=url(c.intro.video);
 
-    /* sponsors + vendors */
-    if(c.sponsors){
-      if(c.sponsors.sponsors)setHtml('sponsorGrid',c.sponsors.sponsors.map(function(i){return logoCard(i,'Sponsor logo');}).join(''));
-      if(c.sponsors.vendors)setHtml('vendorGrid',c.sponsors.vendors.map(function(i){return logoCard(i,'Vendor logo');}).join(''));
-      [['sponsorGrid',c.sponsors.sponsors],['vendorGrid',c.sponsors.vendors]].forEach(function(p){
-        var blk=document.getElementById(p[0]);blk=blk&&blk.closest('.logo-block');
-        if(blk&&p[1]&&!p[1].length)blk.style.display='none';
-      });
+    /* partner categories (sponsors, vendors, partners, featured brands, media partners...) */
+    if(c.sponsors&&Array.isArray(c.sponsors.groups)){
+      setHtml('logoGroups',c.sponsors.groups.filter(function(g){return g&&g.items&&g.items.length;}).map(function(g){
+        return '<div class="logo-block"><h3 class="sub-h">'+esc(g.title)+'</h3>'+(g.subtitle?'<p class="sub-p">'+esc(g.subtitle)+'</p>':'')+
+          '<div class="logo-grid'+(g.size==='large'?' large':'')+'" aria-label="'+esc(g.title)+'">'+g.items.map(function(i){return logoCard(i,g.title);}).join('')+'</div></div>';
+      }).join(''));
     }
 
     /* games */
