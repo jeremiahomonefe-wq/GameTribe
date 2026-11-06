@@ -52,6 +52,14 @@ function validateContent(content) {
       }
     }
   }
+  const groups = content.sponsors && content.sponsors.groups;
+  if (groups !== undefined) {
+    if (!Array.isArray(groups) || groups.length > 20) return 'Categories must be a list of at most 20.';
+    for (const g of groups) {
+      if (!g || typeof g.title !== 'string' || !g.title.trim()) return 'Every category needs a name.';
+      if (!Array.isArray(g.items) || g.items.length > 200) return 'Each category can hold at most 200 logos.';
+    }
+  }
   if (content.event && content.event.date && isNaN(new Date(content.event.date).getTime())) {
     return 'The event date is not a valid date.';
   }
@@ -147,7 +155,7 @@ export default async function handler(req, res) {
         const proto = String(req.headers['x-forwarded-proto'] || (local ? 'http' : 'https')).split(',')[0].trim();
         const page = await fetch(proto + '://' + host + '/', { headers: { 'Cache-Control': 'no-cache' } });
         const html = await page.text();
-        const isNew = html.indexOf('/api/content') > -1 && html.indexOf('id="sponsorGrid"') > -1;
+        const isNew = html.indexOf('/api/content') > -1 && html.indexOf('id="logoGroups"') > -1;
         add('Your live homepage is the new version', isNew,
           isNew ? 'OK (' + host + ')'
                 : 'The homepage at ' + host + ' does NOT load content from the dashboard, so it is still the old index.html (or a different site is being served). Replace index.html with the one from the zip, redeploy, then hard-refresh.');
