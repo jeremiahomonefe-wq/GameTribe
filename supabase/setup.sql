@@ -30,4 +30,4 @@ alter table public.ticket_sales enable row level security;
 -- 4. Public bucket for uploaded photos, videos, logos and PDFs.
 insert into storage.buckets (id, name, public)
 values ('site-media', 'site-media', true)
-on conflict (id) do nothing;
+on conflict (id) do update set public = true;
