@@ -131,6 +131,35 @@ export default async function handler(req, res) {
           } catch (e) { add(name, false, e.message + ' — ' + hint); }
         }
       }
+      /* Has anything been published, and when? */
+      if (supabaseConfigured()) {
+        try {
+          const rows = await sb('/rest/v1/site_content?key=eq.main&select=updated_at');
+          if (rows && rows[0]) add('Published content found in the database', true, 'Last published: ' + rows[0].updated_at);
+          else add('Published content found in the database', false, 'Nothing has been published yet. Make a change and click Publish changes.');
+        } catch (e) { /* already reported above */ }
+      }
+
+      /* Is the LIVE homepage the new version that reads from the dashboard? */
+      try {
+        const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+        const local = /^(localhost|127\.|\[::1\])/.test(host);
+        const proto = String(req.headers['x-forwarded-proto'] || (local ? 'http' : 'https')).split(',')[0].trim();
+        const page = await fetch(proto + '://' + host + '/', { headers: { 'Cache-Control': 'no-cache' } });
+        const html = await page.text();
+        const isNew = html.indexOf('/api/content') > -1 && html.indexOf('id="sponsorGrid"') > -1;
+        add('Your live homepage is the new version', isNew,
+          isNew ? 'OK (' + host + ')'
+                : 'The homepage at ' + host + ' does NOT load content from the dashboard, so it is still the old index.html (or a different site is being served). Replace index.html with the one from the zip, redeploy, then hard-refresh.');
+        if (isNew) {
+          const api = await fetch(proto + '://' + host + '/api/content');
+          const okJson = api.ok && /json/.test(api.headers.get('content-type') || '');
+          add('Your homepage can reach /api/content', okJson, okJson ? 'OK' : 'Got HTTP ' + api.status + ' from /api/content on ' + host + '.');
+        }
+      } catch (e) {
+        add('Your live homepage is the new version', false, 'Could not open the homepage to check it: ' + e.message);
+      }
+
       return res.status(200).json({ checks, allOk: checks.every((c) => c.ok) });
     }
 
