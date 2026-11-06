@@ -19,11 +19,27 @@ function merge(base, saved) {
   return saved === undefined || saved === null ? base : saved;
 }
 
+/* Older saved content had two lists (sponsors, vendors). Convert them to the
+   new category list without losing anything the admin already edited. */
+function migrate(saved) {
+  const sp = saved && saved.sponsors;
+  if (sp && !Array.isArray(sp.groups) && (Array.isArray(sp.sponsors) || Array.isArray(sp.vendors))) {
+    const groups = DEFAULT_CONTENT.sponsors.groups.map((g) => {
+      if (g.id === 'sponsors' && Array.isArray(sp.sponsors)) return { ...g, items: sp.sponsors };
+      if (g.id === 'vendors' && Array.isArray(sp.vendors)) return { ...g, items: sp.vendors };
+      return g;
+    });
+    const { sponsors: _s, vendors: _v, ...rest } = sp;
+    return { ...saved, sponsors: { ...rest, groups } };
+  }
+  return saved;
+}
+
 export async function getContent() {
   if (!supabaseConfigured()) return DEFAULT_CONTENT;
   try {
     const rows = await sb('/rest/v1/site_content?key=eq.main&select=value');
-    const saved = rows && rows[0] && rows[0].value;
+    const saved = migrate(rows && rows[0] && rows[0].value);
     return saved ? merge(DEFAULT_CONTENT, saved) : DEFAULT_CONTENT;
   } catch (error) {
     console.error('getContent failed, using defaults:', error.message);
