@@ -111,6 +111,8 @@ tr:hover td{background:#FFFBF0}
 .notice{background:#FFF1C9;border:1px solid #F0D27A;border-radius:14px;padding:12px 14px;font-size:14px;margin-bottom:16px;font-weight:600}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:999px;font-weight:800;font-size:14px;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 .toast.err{background:var(--red)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,52,42,.6)}50%{box-shadow:0 0 0 10px rgba(232,52,42,0)}}
+.btn-red.pulse{animation:pulse 1.1s ease infinite}
 </style>
 </head>
 <body>
@@ -137,6 +139,7 @@ tr:hover td{background:#FFFBF0}
     <header class="top">
       <h2 id="pageTitle"></h2>
       <span class="status" id="status" aria-live="polite"></span>
+      <button class="btn btn-ghost sm" id="checkBtn" type="button">Check connection</button>
       <a class="btn btn-line sm" href="/" target="_blank" rel="noopener">View website</a>
       <button class="btn btn-ghost sm" id="logoutBtn" type="button">Log out</button>
       <button class="btn btn-red" id="saveBtn" type="button" disabled>Publish changes</button>
@@ -305,7 +308,7 @@ function save(){
   }).catch(function(e){
     if(e.status===401){showLogin();return;}
     toast(e.message,true);
-  }).then(function(){b.textContent='Publish changes';b.disabled=!state.dirty;});
+  }).then(function(){b.classList.remove('pulse');b.textContent='Publish changes';b.disabled=!state.dirty;});
 }
 
 /* ---------- uploads ---------- */
@@ -359,7 +362,7 @@ function fieldHtml(f,value,bind){
   }
   if(f.type===IMG||f.type===VID||f.type==='pdf'){
     var isImg=f.type===IMG,s=srcUrl(value);
-    var th=isImg&&s?'<div class="thumb'+(f.contain?' contain':'')+'" style="background-image:url(\''+esc(s).replace(/'/g,'%27')+'\')"></div>'
+    var th=isImg&&s?'<div class="thumb'+(f.contain?' contain':'')+'" data-src="'+esc(s)+'" style="background-image:url(\''+esc(s).replace(/'/g,'%27')+'\')"></div>'
       :(f.type===VID&&s?'<div class="thumb"><video src="'+esc(s)+'" muted preload="metadata"></video></div>':'<div class="thumb">'+(f.type==='pdf'?'PDF':(value?'':'None'))+'</div>');
     var accept=isImg?'image/jpeg,image/png,image/webp,image/gif':(f.type===VID?'video/mp4,video/webm,video/quicktime':'application/pdf');
     return '<div class="'+cls+'">'+lab+'<div class="media">'+th+'<div class="media-body"><input id="'+id+'" type="text" placeholder="Upload a file or paste a link" value="'+esc(value)+'"'+b+'>'+
@@ -456,6 +459,9 @@ function render(){
   else if(sec.custom==='sales')h=salesHtml();
   else h=sec.blocks.map(blockHtml).join('');
   v.innerHTML=h;
+  var warn=function(th){var m=th.closest('.field')&&th.closest('.field').querySelector('.msg');if(m){m.textContent='⚠ This file cannot be opened from its link. If you uploaded it, the Supabase bucket "site-media" must be Public. Click “Check connection” at the top.';m.className='msg err';}};
+  v.querySelectorAll('.thumb[data-src]').forEach(function(th){var im=new Image();im.onerror=function(){warn(th);};im.src=th.getAttribute('data-src');});
+  v.querySelectorAll('.thumb video').forEach(function(vd){vd.addEventListener('error',function(){warn(vd.parentNode);});});
   if(sec.custom==='sales'&&state.sales&&state.sales.configured!==false)$('#salesBody').innerHTML=salesRows('');
 }
 
@@ -483,7 +489,7 @@ document.addEventListener('click',function(e){
       msg.textContent='Uploading…';msg.className='msg';bar.hidden=false;bar.firstChild.style.width='0';t.disabled=true;
       var folder=t.dataset.kind==='video'?'videos':(t.dataset.kind==='pdf'?'files':'images');
       uploadFile(f,folder,function(p){bar.firstChild.style.width=Math.round(p*100)+'%';}).then(function(url){
-        setP(state.content,input.dataset.bind,url);markDirty();render();toast('Uploaded ✓ — remember to publish');
+        setP(state.content,input.dataset.bind,url);markDirty();render();toast('Uploaded ✓ — now click “Publish changes” to show it on the website');$('#saveBtn').classList.add('pulse');
       }).catch(function(err){msg.textContent=err.message;msg.className='msg err';bar.hidden=true;t.disabled=false;});
     };
     fi.click();return;
@@ -531,6 +537,17 @@ $('#loginForm').addEventListener('submit',function(e){
   api('login',{body:{password:$('#pw').value}}).then(function(){$('#pw').value='';boot();})
    .catch(function(err){$('#loginErr').textContent=err.message;})
    .then(function(){b.disabled=false;b.textContent='Log in';});
+});
+$('#checkBtn').addEventListener('click',function(){
+  var b=this;b.disabled=true;b.textContent='Checking…';
+  api('diagnose').then(function(d){
+    var old=$('#diag');if(old)old.remove();
+    var html='<div class="notice" id="diag"><b>'+(d.allOk?'Everything is connected ✓':'Something needs fixing')+'</b><ul style="margin:8px 0 0;padding-left:20px">'+
+      d.checks.map(function(c){return '<li style="margin-bottom:6px">'+(c.ok?'✅':'❌')+' <b>'+esc(c.name)+'</b>'+(c.ok&&c.detail==='OK'?'':'<br><span style="font-weight:600;font-size:13px;word-break:break-word">'+esc(c.detail)+'</span>')+'</li>';}).join('')+'</ul>'+
+      '<button class="btn btn-ghost sm" type="button" onclick="this.parentNode.remove()">Close</button></div>';
+    $('#view').insertAdjacentHTML('afterbegin',html);window.scrollTo(0,0);
+  }).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);})
+   .then(function(){b.disabled=false;b.textContent='Check connection';});
 });
 $('#saveBtn').addEventListener('click',save);
 $('#logoutBtn').addEventListener('click',function(){
