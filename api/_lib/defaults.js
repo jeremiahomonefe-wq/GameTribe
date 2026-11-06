@@ -100,8 +100,11 @@ export const DEFAULT_CONTENT = {
     title: 'Partners, Sponsors & Vendors',
     subtitle:
       'We’re creating space for the brands and businesses that make Game Tribe Fest even more memorable.',
-    sponsors: [
-      { image: 'logo2.png', name: 'Sponsor' },
+    groups: [
+      {
+        id: 'sponsors', title: 'Sponsors', subtitle: '', size: 'normal',
+        items: [
+          { image: 'logo2.png', name: 'Sponsor' },
       { image: 'logo3.png', name: 'Sponsor' },
       { image: 'logo4.png', name: 'Sponsor' },
       { image: 'ueban-chopa.png', name: 'Sponsor' },
@@ -110,14 +113,22 @@ export const DEFAULT_CONTENT = {
       { image: 'instant-verify.PNG', name: 'Sponsor' },
       { image: 'campus-hub.jpeg', name: 'Sponsor' },
       { image: 'instantbuy.png', name: 'Sponsor' }
-    ],
-    vendors: [
-      { image: 'trixmix.png', name: 'Vendor' },
+        ]
+      },
+      {
+        id: 'vendors', title: 'Vendors', subtitle: '', size: 'normal',
+        items: [
+          { image: 'trixmix.png', name: 'Vendor' },
       { image: 'testicakes.png', name: 'Vendor' },
       { image: 'logo4.png', name: 'Vendor' },
       { image: 'logo1.png', name: 'Vendor' },
       { image: 'logo2.png', name: 'Vendor' },
       { image: 'logo3.png', name: 'Vendor' }
+        ]
+      },
+      { id: 'partners', title: 'Partners', subtitle: '', size: 'normal', items: [] },
+      { id: 'featured', title: 'Featured Brands', subtitle: '', size: 'large', items: [] },
+      { id: 'media', title: 'Media Partners', subtitle: '', size: 'normal', items: [] }
     ]
   },
 
