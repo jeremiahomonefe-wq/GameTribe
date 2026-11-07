@@ -67,7 +67,7 @@ export const DEFAULT_CONTENT = {
       'A full-day playground for gamers, creators, students, music lovers and every friend who came to make a memory. Pull up, pick your game, meet your people and enjoy the tribe.',
     goldLine: 'Games • Banters • Hangout • Connect',
     poster: 'gallery-6.jpg',
-    video: 'IMG_2170.MOV',
+    video: 'bandicam 2025-06-04 17-13-40-037.mp4',
     caption: '▶ Watch the highlights'
   },
 
@@ -88,10 +88,10 @@ export const DEFAULT_CONTENT = {
     title: 'Game Tribe Moments 🎮',
     subtitle: 'See what Game Tribe moments look like. Press play.',
     items: [
-      { src: 'IMG_7468.MP4' },
-      { src: 'IMG_7469.MP4' },
-      { src: 'IMG_7470.MP4' },
-      { src: 'IMG_7471.MP4' }
+      { src: 'IMG_5307.MP4' },
+      { src: 'IMG_5308.MP4' },
+      { src: 'IMG_5308.MP4' },
+      { src: 'IMG_5307.MP4' }
     ]
   },
 
@@ -187,6 +187,143 @@ export const DEFAULT_CONTENT = {
     { id: 'wave_single', label: 'First Wave — Single', price: 7000, active: true },
     { id: 'wave_group', label: 'First Wave — Group of 4', price: 26000, active: true }
   ],
+
+  /* ---------- Other pages (About, Memories, FAQs, Contact, Partner) ---------- */
+  pages: {
+    about: {
+      pill: 'About Us',
+      title: 'Who We Are',
+      intro:
+        'Game Tribe is a full-day playground for gamers, creators, students, music lovers and every friend who came to make a memory.',
+      story: [
+        'Game Tribe Fest brings the Game Tribe community together in Abraka for a day of games, banter and hangout. 2026 is our very first edition, and we are building it with the community, the vendors and the brands that make a day like this possible.',
+        'Pull up, pick your game, meet your people and enjoy the tribe.'
+      ],
+      pillarsTitle: 'What we’re about',
+      pillars: [
+        { emoji: '🎲', title: 'Games', text: 'Giant archery, giant Jenga, the jumbo hopscotch mat, tug of war and more. Friendly competition for every crew.' },
+        { emoji: '💬', title: 'Banters', text: 'Great gist, loud laughter and friendly rivalry. The best part of any game is who you play it with.' },
+        { emoji: '🛋️', title: 'Hangout', text: 'Relax, shop with our vendors and soak up the day with your friends.' },
+        { emoji: '🤝', title: 'Connect', text: 'Meet new people, find your tribe and make connections that last beyond the day.' }
+      ],
+      ctaTitle: 'Come play with us',
+      ctaText: 'Grab your ticket, bring your crew and be part of the very first Game Tribe Fest.'
+    },
+
+    memories: {
+      pill: 'Memories',
+      title: 'Memories from the Tribe',
+      intro: 'Photos and videos from Game Tribe events, all in one place.',
+      emptyTitle: 'Our first memories are coming soon',
+      emptyText:
+        'Game Tribe Fest 2026 is our very first edition. Photos and videos from the day will be shared right here after the event.',
+      /* One gallery per year. Add a year from the dashboard, then upload its
+         photos and videos (current event or past events):
+         { id, year, title, description, photos: [{image, caption}], videos: [{src, caption}] } */
+      years: []
+    },
+
+    faq: {
+      pill: 'FAQs',
+      title: 'Frequently Asked Questions',
+      intro: 'Got questions? We have your answers.',
+      categories: [
+        {
+          id: 'tickets',
+          title: 'Tickets',
+          items: [
+            { q: 'How do I buy a ticket?', a: 'Tap “Buy Your Tickets”, choose a ticket type, enter your name, email and phone number, and pay securely with Paystack.' },
+            { q: 'Which ticket types are available?', a: 'The available ticket types and their prices are shown when you tap “Buy Your Tickets”.' },
+            { q: 'Will I get a confirmation?', a: 'Yes. Right after your payment is verified, we email your ticket with your ticket number. If you can’t see it, check your spam folder.' },
+            { q: 'What do I show at the entrance?', a: 'Show your confirmation email with your ticket number at the entrance.' },
+            { q: 'I paid but my email has not arrived. What should I do?', a: 'Give it a few minutes and check your spam folder. If it still hasn’t arrived, email us with your name and payment reference and we will sort it out.' }
+          ]
+        },
+        {
+          id: 'event',
+          title: 'The Event',
+          items: [
+            { q: 'When and where is Game Tribe Fest?', a: 'Game Tribe Fest 2026 holds on 27 November 2026 at Ojeta Primary School, Campus 2 Road, Abraka, Delta State.' },
+            { q: 'What happens on the day?', a: 'A full day of games, banter and hangout: giant archery, giant Jenga, the jumbo hopscotch mat, tug of war and more, with vendors and great company.' },
+            { q: 'Is this the first Game Tribe Fest?', a: 'Yes, 2026 is our very first edition. Come be part of the story from the start.' },
+            { q: 'How do I find the venue?', a: 'There is a map on the homepage under “Find The Venue”, with a button that opens the location in Google Maps.' }
+          ]
+        },
+        {
+          id: 'partners',
+          title: 'Vendors & Sponsors',
+          items: [
+            { q: 'How do I become a vendor?', a: 'Vendor spaces are limited. Tap “Get Vendor Space” to see the full vendor package, then message us on WhatsApp to secure your spot.' },
+            { q: 'What does the vendor package include?', a: 'A vendor stand with table and 2 chairs, 2 event tickets, a confirmed vendorship flyer posted on social media with your brand tagged, and the chance to showcase and sell your products and services.' },
+            { q: 'How can my brand sponsor the fest?', a: 'Open our proposal from the “Partner with us” page, then email or message us and we will shape a package that fits your brand.' }
+          ]
+        }
+      ],
+      stillTitle: 'Still have a question?',
+      stillText: 'Send us a message and we’ll get back to you.'
+    },
+
+    contact: {
+      pill: 'Contact',
+      title: 'Get in Touch',
+      intro:
+        'Please check our FAQ page first, most answers are already there. Otherwise, send us a message and we’ll respond as soon as we can.',
+      formTitle: 'Send us a message',
+      successText: 'Thanks! Your message has been sent. We’ll reply as soon as we can.',
+      cards: [
+        { kind: 'email', title: 'General', text: 'Questions about Game Tribe Fest.' },
+        { kind: 'email', title: 'Tickets & support', text: 'Payment or ticket problem? Include your name and payment reference.' },
+        { kind: 'whatsapp', title: 'Join the tribe', text: 'Chat with the community and get updates first.' },
+        { kind: 'venue', title: 'Find us', text: '' }
+      ]
+    },
+
+    partner: {
+      pill: '📣 Partner with Game Tribe',
+      titleTop: 'Partner',
+      titleMid: 'with',
+      titleBig: 'the Tribe',
+      intro:
+        'Put your brand in front of the Game Tribe community. Show up as a vendor or a sponsor at our very first Game Tribe Fest.',
+      highlight: 'Vendor spaces are limited.',
+      packagesTitle: 'Ways to partner',
+      packages: [
+        {
+          name: 'Full Vendorship Package',
+          badge: 'Vendors',
+          price: '₦40,000',
+          features: [
+            'Vendor stand with table and 2 chairs',
+            '2 event tickets',
+            'Confirmed vendorship flyer posted on social media with your brand tagged',
+            'Showcase and sell your products and services',
+            'Great exposure to a vibrant gaming community'
+          ],
+          button: 'Get Vendor Space',
+          action: 'vendor'
+        },
+        {
+          name: 'Sponsor the Fest',
+          badge: 'Sponsors',
+          price: 'Let’s talk',
+          features: [
+            'See the full details in our proposal',
+            'Talk to us to shape a package that fits your brand'
+          ],
+          button: 'View Our Proposal',
+          action: 'proposal'
+        }
+      ],
+      stepsTitle: 'How it works',
+      steps: [
+        { title: 'Choose how to partner', text: 'Vendor space or sponsorship, whichever suits your brand.' },
+        { title: 'Talk to us', text: 'Message us on WhatsApp or email and we’ll answer your questions.' },
+        { title: 'Secure your spot', text: 'Confirm early. Vendor spaces are limited.' }
+      ],
+      logosTitle: 'Brands already on board',
+      note: 'Limited vendor spaces available. Secure your spot early!'
+    }
+  },
 
   /* Optional replacements. Leave empty to keep the built-in files. */
   files: { vendorFlyer: '', proposalPdf: '' }

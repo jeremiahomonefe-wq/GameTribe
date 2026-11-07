@@ -19,9 +19,32 @@ function merge(base, saved) {
   return saved === undefined || saved === null ? base : saved;
 }
 
+/* The first version of the Memories page used "events"; it now uses one gallery per "year". */
+function migrateMemories(saved) {
+  const mem = saved && saved.pages && saved.pages.memories;
+  if (mem && Array.isArray(mem.events) && !Array.isArray(mem.years)) {
+    const years = mem.events.map((e, i) => {
+      const found = String((e && e.date) || '') + ' ' + String((e && e.title) || '');
+      const m = found.match(/(?:19|20)\d\d/);
+      return {
+        id: (e && e.id) || 'y' + i,
+        year: m ? m[0] : '',
+        title: (e && e.title) || '',
+        description: (e && e.description) || '',
+        photos: (e && e.photos) || [],
+        videos: (e && e.videos) || []
+      };
+    });
+    const { events: _e, ...rest } = mem;
+    return { ...saved, pages: { ...saved.pages, memories: { ...rest, years } } };
+  }
+  return saved;
+}
+
 /* Older saved content had two lists (sponsors, vendors). Convert them to the
    new category list without losing anything the admin already edited. */
 function migrate(saved) {
+  saved = migrateMemories(saved);
   const sp = saved && saved.sponsors;
   if (sp && !Array.isArray(sp.groups) && (Array.isArray(sp.sponsors) || Array.isArray(sp.vendors))) {
     const groups = DEFAULT_CONTENT.sponsors.groups.map((g) => {
