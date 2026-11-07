@@ -35,7 +35,7 @@ function validateContent(content) {
   if (!content || typeof content !== 'object' || Array.isArray(content)) {
     return 'Content must be an object.';
   }
-  if (JSON.stringify(content).length > 400000) return 'Content is too large.';
+  if (JSON.stringify(content).length > 1500000) return 'Content is too large.';
 
   if (content.tickets !== undefined) {
     if (!Array.isArray(content.tickets) || content.tickets.length > 30) {
@@ -58,6 +58,26 @@ function validateContent(content) {
     for (const g of groups) {
       if (!g || typeof g.title !== 'string' || !g.title.trim()) return 'Every category needs a name.';
       if (!Array.isArray(g.items) || g.items.length > 200) return 'Each category can hold at most 200 logos.';
+    }
+  }
+  const pg = content.pages;
+  if (pg !== undefined) {
+    if (!pg || typeof pg !== 'object' || Array.isArray(pg)) return 'Pages content is invalid.';
+    const arr = (v, max, label) => (v === undefined || (Array.isArray(v) && v.length <= max)) ? '' : label + ' must be a list of at most ' + max + ' items.';
+    const checks = [
+      arr(pg.faq && pg.faq.categories, 30, 'FAQ categories'),
+      arr(pg.memories && pg.memories.years, 60, 'Memories years'),
+      arr(pg.partner && pg.partner.packages, 8, 'Partner packages'),
+      arr(pg.about && pg.about.pillars, 12, 'About pillars'),
+      arr(pg.contact && pg.contact.cards, 12, 'Contact cards')
+    ];
+    for (const c of checks) if (c) return c;
+    for (const cat of (pg.faq && pg.faq.categories) || []) {
+      if (!Array.isArray(cat.items) || cat.items.length > 100) return 'Each FAQ category can hold at most 100 questions.';
+    }
+    for (const y of (pg.memories && pg.memories.years) || []) {
+      if (!Array.isArray(y.photos) || y.photos.length > 1500) return 'Each year can hold at most 1500 photos.';
+      if (!Array.isArray(y.videos) || y.videos.length > 300) return 'Each year can hold at most 300 videos.';
     }
   }
   if (content.event && content.event.date && isNaN(new Date(content.event.date).getTime())) {
