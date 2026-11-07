@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memories · Game Tribe Fest</title>
+<meta name="description" content="Photos and videos from Game Tribe events, all in one place.">
+<meta name="theme-color" content="#E8342A">
+<meta property="og:title" content="Memories · Game Tribe Fest">
+<meta property="og:description" content="Photos and videos from Game Tribe events, all in one place.">
+<meta property="og:type" content="website">
+<link rel="icon" href="/assets/logo.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body data-page="memories">
+<nav class="nav" aria-label="Main">
+  <div class="wrap nav-in">
+    <a class="brand" href="/" aria-label="Game Tribe home"><img src="/assets/logo.png" alt="Game Tribe"></a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/#games">Games</a>
+      <a href="/memories" aria-current="page">Memories</a>
+      <a href="/partner">Partners</a>
+      <a href="/faq">FAQs</a>
+      <a href="/contact">Contact</a>
+    </div>
+    <div class="nav-cta">
+      <a class="btn btn-outline sm" href="/?vendor=1">Get Vendor Space</a>
+      <a class="btn btn-red sm" href="/?tickets=1">Buy Your Tickets</a>
+    </div>
+    <button class="burger" id="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu"><span></span></button>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="/">Home</a>
+    <a href="/about">About</a>
+    <a href="/#games">Games</a>
+    <a href="/memories" aria-current="page">Memories</a>
+    <a href="/partner">Partners</a>
+    <a href="/faq">FAQs</a>
+    <a href="/contact">Contact</a>
+    <div class="btn-row">
+      <a class="btn btn-outline" href="/?vendor=1">Get Vendor Space</a>
+      <a class="btn btn-red" href="/?tickets=1">Buy Your Tickets</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <section class="phero" style="padding-bottom:48px">
+    <div class="blob b-gold2 b-tr"></div><div class="blob b-red b-bl" style="opacity:.3"></div>
+    <div class="wrap narrow">
+      <span class="pill pill-white" data-c="pages.memories.pill">Memories</span>
+      <h1 class="display" data-c="pages.memories.title">Memories from the Tribe</h1>
+      <p data-c="pages.memories.intro">Photos and videos from Game Tribe events, all in one place.</p>
+    </div>
+  </section>
+
+  <div class="chipbar" id="memChipsBar" hidden>
+    <div class="wrap">
+      <div class="chips" id="memChips" aria-label="Jump to a year"></div>
+      <div class="chips filt" id="memFilter" hidden role="group" aria-label="Show">
+        <button class="chip on" type="button" data-f="all">All</button>
+        <button class="chip" type="button" data-f="photos">Photos</button>
+        <button class="chip" type="button" data-f="videos">Videos</button>
+      </div>
+    </div>
+  </div>
+  <div id="memYears"></div>
+
+  <section class="soon white sec" id="soon" hidden style="padding-bottom:80px">
+    <div class="wrap narrow">
+      <div class="polas" aria-hidden="true">
+        <div class="pola"><div class="in">📸</div><b>Soon</b></div>
+        <div class="pola"><div class="in">🎮</div><b>Soon</b></div>
+        <div class="pola"><div class="in">🎉</div><b>Soon</b></div>
+      </div>
+      <h2 class="display" data-c="pages.memories.emptyTitle">Our first memories are coming soon</h2>
+      <p data-c="pages.memories.emptyText">Game Tribe Fest 2026 is our very first edition. Photos and videos from the day will be shared right here after the event.</p>
+      <div class="cd" id="memCd">
+        <div class="cd-box"><div class="cd-num" id="mDays">--</div><div class="cd-label">Days</div></div>
+        <div class="cd-box"><div class="cd-num" id="mHours">--</div><div class="cd-label">Hrs</div></div>
+        <div class="cd-box"><div class="cd-num" id="mMins">--</div><div class="cd-label">Min</div></div>
+        <div class="cd-box"><div class="cd-num" id="mSecs">--</div><div class="cd-label">Sec</div></div>
+      </div>
+      <p id="memPast" hidden style="font-weight:800;color:var(--red);margin-top:22px">The day has come and gone. Our photos and videos are on the way!</p>
+      <div class="btn-row center">
+        <a class="btn btn-red" href="/?tickets=1">Buy Your Tickets</a>
+        <a class="btn btn-outline" data-link="instagram" href="https://www.instagram.com/gametribe_abraka/" target="_blank" rel="noopener">Follow on Instagram</a>
+      </div>
+    </div>
+  </section>
+</main>
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <button class="x" type="button" aria-label="Close">✕</button>
+  <button class="p" type="button" aria-label="Previous photo">‹</button>
+  <figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
+  <button class="n" type="button" aria-label="Next photo">›</button>
+</div>
+
+
+<footer class="foot" id="footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <img class="flogo" src="/assets/logo.png" alt="Game Tribe">
+        <p class="about" data-c="footer.about">Play, connect and repeat in Abraka.</p>
+        <div class="socials">
+          <a class="social" data-link="instagram" href="https://www.instagram.com/gametribe_abraka/" target="_blank" rel="noopener" aria-label="Instagram"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
+          <a class="social" data-link="tiktok" href="https://www.tiktok.com/@gametribe_abraka" target="_blank" rel="noopener" aria-label="TikTok"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3c.5 2.4 2 4 4.7 4.2V10c-1.7 0-3.2-.5-4.7-1.6v6.7c0 3.3-2.7 6-6 6s-6-2.7-6-6 2.7-6 6-6c.3 0 .7 0 1 .1v2.9a3 3 0 1 0 2 2.8V3h3z"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <h4>Explore</h4>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/about">About</a></li>
+          <li><a href="/#games">Games</a></li>
+          <li><a href="/memories">Memories</a></li>
+          <li><a href="/partner">Partners</a></li>
+          <li><a href="/faq">FAQs</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Join</h4>
+        <ul>
+          <li><a href="/?tickets=1">Buy your tickets</a></li>
+          <li><a href="/?attending=1">I am attending</a></li>
+          <li><a href="/?vendor=1">Get vendor space</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="mailto:gametribe001@gmail.com" style="text-transform:none" data-link="email" data-c="links.email">gametribe001@gmail.com</a></li>
+          <li><a data-link="whatsapp" href="https://chat.whatsapp.com/GbSblslBHcdJGbShVafLt3?mode=gi_t" target="_blank" rel="noopener">Join our WhatsApp</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bar">
+      <p data-c="footer.copyright">All rights reserved 2026, Game Tribe Fest.</p>
+      <p data-c="footer.tagline">Games • Banters • Hangout • Connect</p>
+    </div>
+  </div>
+</footer>
+<script src="/assets/page.js"></script>
+</body>
+</html>
