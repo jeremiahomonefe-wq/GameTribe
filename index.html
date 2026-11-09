@@ -344,6 +344,17 @@ a{color:inherit}
   .shot img,.b img{transition:none}
 }
 
+/* homepage: "Play Game Tribe Live" section */
+.play-card{position:relative;overflow:hidden;max-width:420px;margin:0 auto;width:100%;background:var(--ink);color:var(--cream);border-radius:26px;padding:30px 26px 0;text-align:center;outline:4px solid rgba(251,182,20,.3);box-shadow:0 26px 60px rgba(0,0,0,.35);transform:rotate(2deg)}
+.play-card::before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;top:-90px;right:-80px;background:rgba(232,52,42,.5);filter:blur(60px)}
+.play-card>*{position:relative}
+.play-card .pl{font-size:12px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.play-card .pn{font-family:var(--display);font-size:clamp(42px,7vw,64px);line-height:1;color:var(--gold);letter-spacing:.04em;margin-bottom:12px}
+.play-card p{color:rgba(255,246,229,.8);margin-bottom:18px}
+.play-card .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:26px}
+.play-card .chips span{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px 14px;font-weight:800;font-size:13px}
+.play-card .bar{display:flex;justify-content:space-between;margin:0 -26px;padding:14px 24px;background:var(--red);font-weight:800;font-size:13px}
+
 </style>
 </head>
 <body>
@@ -356,6 +367,7 @@ a{color:inherit}
       <a href="/" aria-current="page">Home</a>
       <a href="/about">About</a>
       <a href="/#games">Games</a>
+      <a href="/play" class="nav-play">Play</a>
       <a href="/memories">Memories</a>
       <a href="/partner">Partners</a>
       <a href="/faq">FAQs</a>
@@ -371,6 +383,7 @@ a{color:inherit}
     <a href="/" aria-current="page">Home</a>
     <a href="/about">About</a>
     <a href="/#games">Games</a>
+    <a href="/play" class="nav-play">Play</a>
     <a href="/memories">Memories</a>
     <a href="/partner">Partners</a>
     <a href="/faq">FAQs</a>
@@ -596,6 +609,27 @@ a{color:inherit}
     </div>
   </section>
 
+  <!-- PLAY ONLINE -->
+  <section class="sec redsec" id="play">
+    <div class="blob b-gold2 b-tr"></div><div class="blob b-black b-bl"></div>
+    <div class="wrap">
+      <div class="split">
+        <div class="vendor-copy">
+          <span class="pill pill-soft" data-c="pages.play.teaserPill">🎮 New · Play online</span>
+          <h2 class="display" data-c="pages.play.teaserTitle">Can’t wait for the day? Play Game Tribe Live</h2>
+          <p data-c="pages.play.teaserText">Join a live quiz from your phone with a PIN. Answer fast, climb the leaderboard and see who the tribe’s top player is.</p>
+          <div class="btn-row"><a class="btn btn-yellow" href="/play" data-c="pages.play.teaserButton">Play now</a><a class="btn btn-light" href="/play#how">How it works</a></div>
+        </div>
+        <div class="play-card" aria-hidden="true">
+          <div class="pl">Sample game PIN</div><div class="pn">482 913</div>
+          <p>Enter the PIN on your phone to join.</p>
+          <div class="chips"><span>Ovie</span><span>Tega</span><span>Efe</span><span>Mide</span></div>
+          <div class="bar"><span>Lobby is open</span><span>4 players</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- VENUE -->
   <section class="sec dark" id="venue">
     <div class="blob b-red b-tl"></div><div class="blob b-gold b-br"></div>
@@ -692,6 +726,7 @@ a{color:inherit}
           <li><a href="/">Home</a></li>
           <li><a href="/about">About</a></li>
           <li><a href="/#games">Games</a></li>
+          <li><a href="/play">Play</a></li>
           <li><a href="/memories">Memories</a></li>
           <li><a href="/partner">Partners</a></li>
           <li><a href="/faq">FAQs</a></li>
