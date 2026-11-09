@@ -26,6 +26,7 @@ export const DEFAULT_CONTENT = {
       'https://wa.me/2348103769079?text=Hi%2C%20I%27m%20interested%20in%20a%20vendor%20space%20at%20Game%20Tribe%20Fest',
     instagram: 'https://www.instagram.com/gametribe_abraka/',
     tiktok: 'https://www.tiktok.com/@gametribe_abraka',
+    game: 'https://play.gametribeng.com',
     email: 'gametribe001@gmail.com'
   },
 
@@ -250,6 +251,16 @@ export const DEFAULT_CONTENT = {
           ]
         },
         {
+          id: 'play',
+          title: 'Game Tribe Live',
+          items: [
+            { q: 'What is Game Tribe Live?', a: 'A live quiz you play on your phone. A host opens a game and shows a 6-digit PIN, and everyone who joins answers the same questions at the same time.' },
+            { q: 'How do I join a game?', a: 'Open the Play page, enter the PIN from the big screen or host, pick a nickname and you are in. You do not need an account.' },
+            { q: 'Why do you ask for my phone number?', a: 'So the organisers can reach you if you win. It is never shown to other players.' },
+            { q: 'Can I host my own game?', a: 'Yes. Open the Play page, choose Host a game and share the PIN with your players.' }
+          ]
+        },
+        {
           id: 'partners',
           title: 'Vendors & Sponsors',
           items: [
@@ -276,6 +287,38 @@ export const DEFAULT_CONTENT = {
         { kind: 'whatsapp', title: 'Join the tribe', text: 'Chat with the community and get updates first.' },
         { kind: 'venue', title: 'Find us', text: '' }
       ]
+    },
+
+    play: {
+      pill: '🎮 Game Tribe Live',
+      title: 'Play Game Tribe Live',
+      intro: 'A live quiz you play on your phone. Join with a PIN, answer fast and climb the leaderboard.',
+      joinTitle: 'Got a PIN?',
+      joinText: 'Enter the 6-digit PIN shown on the big screen or shared by the host.',
+      joinButton: 'Join the game',
+      noPin: 'No PIN yet? Join our WhatsApp group to hear when the next live game starts.',
+      stepsTitle: 'How it works',
+      steps: [
+        { title: 'Get the PIN', text: 'The host opens a game and shares a 6-digit PIN on the big screen, in a link or as a QR code.' },
+        { title: 'Join on your phone', text: 'Enter the PIN, pick a nickname and add your phone number. No account needed.' },
+        { title: 'Answer fast', text: 'Each question appears on every phone at once. Quicker right answers score more points.' }
+      ],
+      modesTitle: 'Pick your game',
+      modes: [
+        { emoji: '🧠', title: 'Game Tribe Quiz', text: '40 ready questions on the Bible, Nigeria, general knowledge, cartoons and games.' },
+        { emoji: '🖼️', title: 'Guess the Picture', text: '30 pictures, four answers each. Spot the logo, the food, the flag or the cartoon.' }
+      ],
+      goodTitle: 'Good to know',
+      goodText: 'We ask for a phone number so the organisers can reach you if you win. It is never shown to other players.',
+      hostTitle: 'Want to host a game?',
+      hostText: 'Run a live quiz for your crew, class or festival crowd. Open a room, show the PIN on a big screen and start playing.',
+      hostButton: 'Host a game',
+      ctaTitle: 'Love the game? Come play in person',
+      ctaText: 'Game Tribe Fest brings the games to Abraka for a full day of banter and hangout.',
+      teaserPill: '🎮 New · Play online',
+      teaserTitle: 'Can’t wait for the day? Play Game Tribe Live',
+      teaserText: 'Join a live quiz from your phone with a PIN. Answer fast, climb the leaderboard and see who the tribe’s top player is.',
+      teaserButton: 'Play now'
     },
 
     partner: {
