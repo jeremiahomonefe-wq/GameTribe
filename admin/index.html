@@ -335,6 +335,33 @@ var SECTIONS=[
    {key:'kind',label:'Shows',type:'select',options:[['email','Contact email'],['whatsapp','WhatsApp group link'],['instagram','Instagram link'],['tiktok','TikTok link'],['venue','Venue address + map link']]},
    {key:'text',label:'Text (optional)',type:T,full:true}]}}]},
 
+ {id:'p_play',icon:'🎮',title:'Play page',blocks:[
+  {title:'Game address',help:'Where the game is hosted. The “Join the game” box and the “Host a game” button on the Play page send people here.',fields:[
+   {path:'links.game',label:'Game address (for example https://play.gametribeng.com)',type:T,full:true}]},
+  {title:'Heading',fields:[
+   {path:'pages.play.pill',label:'Small tag',type:T},{path:'pages.play.title',label:'Page title',type:T},
+   {path:'pages.play.intro',label:'Intro sentence',type:TA,full:true}]},
+  {title:'Join box',fields:[
+   {path:'pages.play.joinTitle',label:'Heading',type:T},{path:'pages.play.joinButton',label:'Button text',type:T},
+   {path:'pages.play.joinText',label:'Text above the PIN box',type:TA,full:true},
+   {path:'pages.play.noPin',label:'Text for people without a PIN (links to your WhatsApp group)',type:TA,full:true}]},
+  {title:'Game modes',fields:[{path:'pages.play.modesTitle',label:'Heading',type:T,full:true}]},
+  {title:'Game cards',list:{path:'pages.play.modes',itemLabel:'Game',max:6,blank:{emoji:'🎮',title:'',text:''},fields:[
+   {key:'title',label:'Name',type:T},{key:'emoji',label:'Emoji',type:T},{key:'text',label:'Description',type:TA,full:true}]}},
+  {title:'How it works',fields:[{path:'pages.play.stepsTitle',label:'Heading',type:T,full:true}]},
+  {title:'Steps',list:{path:'pages.play.steps',itemLabel:'Step',max:6,blank:{title:'',text:''},fields:[
+   {key:'title',label:'Title',type:T},{key:'text',label:'Text',type:T,full:true}]}},
+  {title:'Good to know',fields:[
+   {path:'pages.play.goodTitle',label:'Heading',type:T},{path:'pages.play.goodText',label:'Text',type:TA,full:true}]},
+  {title:'“Host a game” box',fields:[
+   {path:'pages.play.hostTitle',label:'Heading',type:T},{path:'pages.play.hostButton',label:'Button text',type:T},
+   {path:'pages.play.hostText',label:'Text',type:TA,full:true}]},
+  {title:'Bottom call to action',fields:[
+   {path:'pages.play.ctaTitle',label:'Heading',type:T},{path:'pages.play.ctaText',label:'Sentence',type:TA,full:true}]},
+  {title:'Homepage section',help:'The red “Play Game Tribe Live” section on the homepage.',fields:[
+   {path:'pages.play.teaserPill',label:'Small tag',type:T},{path:'pages.play.teaserButton',label:'Button text',type:T},
+   {path:'pages.play.teaserTitle',label:'Heading',type:T,full:true},{path:'pages.play.teaserText',label:'Text',type:TA,full:true}]}]},
+
  {id:'p_partner',icon:'📣',title:'Partner page',blocks:[
   {title:'Heading',fields:[
    {path:'pages.partner.pill',label:'Yellow tag',type:T},
