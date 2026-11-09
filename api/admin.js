@@ -69,7 +69,9 @@ function validateContent(content) {
       arr(pg.memories && pg.memories.years, 60, 'Memories years'),
       arr(pg.partner && pg.partner.packages, 8, 'Partner packages'),
       arr(pg.about && pg.about.pillars, 12, 'About pillars'),
-      arr(pg.contact && pg.contact.cards, 12, 'Contact cards')
+      arr(pg.contact && pg.contact.cards, 12, 'Contact cards'),
+      arr(pg.play && pg.play.steps, 8, 'Play steps'),
+      arr(pg.play && pg.play.modes, 8, 'Play game modes')
     ];
     for (const c of checks) if (c) return c;
     for (const cat of (pg.faq && pg.faq.categories) || []) {
