@@ -328,6 +328,17 @@ a{color:inherit}
   .shot img,.b img{transition:none}
 }
 
+/* homepage: "Play Game Tribe Live" section */
+.play-card{position:relative;overflow:hidden;max-width:420px;margin:0 auto;width:100%;background:var(--ink);color:var(--cream);border-radius:26px;padding:30px 26px 0;text-align:center;outline:4px solid rgba(251,182,20,.3);box-shadow:0 26px 60px rgba(0,0,0,.35);transform:rotate(2deg)}
+.play-card::before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;top:-90px;right:-80px;background:rgba(232,52,42,.5);filter:blur(60px)}
+.play-card>*{position:relative}
+.play-card .pl{font-size:12px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.play-card .pn{font-family:var(--display);font-size:clamp(42px,7vw,64px);line-height:1;color:var(--gold);letter-spacing:.04em;margin-bottom:12px}
+.play-card p{color:rgba(255,246,229,.8);margin-bottom:18px}
+.play-card .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:26px}
+.play-card .chips span{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px 14px;font-weight:800;font-size:13px}
+.play-card .bar{display:flex;justify-content:space-between;margin:0 -26px;padding:14px 24px;background:var(--red);font-weight:800;font-size:13px}
+
 /* ===================== sub-pages ===================== */
 .nav-links a[aria-current="page"]{color:var(--red)}
 .pill-white{background:#fff;border:1px solid var(--line);color:var(--ink);font-weight:800}
@@ -483,3 +494,29 @@ details.faq .ans{padding:0 22px 20px;color:rgba(28,20,16,.75);font-size:15.5px;l
 .note-band{margin-top:34px;text-align:center;font-weight:800;color:var(--red)}
 .faq-sec{scroll-margin-top:140px}
 [hidden]{display:none!important}
+
+/* ===================== play page ===================== */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.nav-links a.nav-play{background:var(--gold);color:var(--ink);border-radius:999px;padding:6px 16px;margin:0 4px;font-weight:800}
+.nav-links a.nav-play:hover{transform:scale(1.06)}
+.nav-links a.nav-play[aria-current="page"]{background:var(--red);color:#fff}
+.play-grid{display:grid;gap:34px}
+@media(min-width:900px){.play-grid{grid-template-columns:1fr 1.05fr;gap:48px;align-items:start}}
+.join-box{position:relative;overflow:hidden;background:var(--ink);color:#fff;border-radius:26px;padding:34px 30px;outline:4px solid rgba(251,182,20,.25);box-shadow:0 26px 60px rgba(232,52,42,.28)}
+.join-box::before{content:"";position:absolute;width:300px;height:300px;border-radius:50%;top:-110px;right:-90px;background:rgba(232,52,42,.5);filter:blur(64px)}
+.join-box>*{position:relative}
+.join-box h2{font-size:clamp(26px,4vw,40px);color:var(--gold);margin-bottom:10px}
+.join-box .jt{color:rgba(255,255,255,.82);margin-bottom:22px}
+#pinInput{width:100%;text-align:center;font-family:var(--display);font-size:clamp(34px,6vw,52px);letter-spacing:.2em;padding:14px 10px;border:0;border-radius:18px;background:var(--cream);color:var(--ink)}
+#pinInput::placeholder{color:rgba(28,20,16,.25)}
+#pinInput:focus{outline:none;box-shadow:0 0 0 4px rgba(251,182,20,.6)}
+.join-box .btn{width:100%;margin-top:14px;padding:15px 24px;font-size:16px}
+.pin-msg{min-height:22px;margin:10px 0 0;color:#FFB4AE;font-weight:800;font-size:14px}
+.nopin{margin-top:14px;color:rgba(255,255,255,.75);font-size:14px}
+.nopin a{color:var(--gold);font-weight:800}
+.modes{display:grid;gap:14px}
+.mode{display:flex;gap:16px;align-items:flex-start;background:var(--cream);border:1px solid var(--line);border-radius:22px;padding:22px}
+.mode .e{flex:0 0 auto;display:grid;place-items:center;width:56px;height:56px;border-radius:16px;background:#fff;font-size:30px;box-shadow:0 4px 12px rgba(28,20,16,.1)}
+.mode h3{font-family:var(--display);text-transform:uppercase;font-size:20px;margin-bottom:6px}
+.mode p{color:rgba(28,20,16,.72);font-size:15px}
+.goodnote{max-width:720px;margin:34px auto 0;background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 22px;text-align:center}
