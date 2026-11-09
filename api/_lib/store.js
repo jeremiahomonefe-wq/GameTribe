@@ -92,25 +92,38 @@ export async function getTicketMap() {
 /* Record a paid ticket. Safe to call more than once for the same reference
    (webhook + browser verification both call it). Never throws. */
 export async function recordSale(row) {
-  if (!supabaseConfigured()) return;
-  try {
-    const clean = {};
-    for (const [k, v] of Object.entries(row)) {
-      if (v !== undefined && v !== null && v !== '') clean[k] = v;
-    }
-    await sb('/rest/v1/ticket_sales?on_conflict=reference', {
-      method: 'POST',
-      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: clean
-    });
-  } catch (error) {
-    console.error('recordSale failed:', error.message);
+  if (!supabaseConfigured()) {
+    throw new Error('Supabase is not configured. Sale was not recorded.');
   }
-}
 
-export async function listSales() {
-  const rows = await sb('/rest/v1/ticket_sales?select=*&order=created_at.desc&limit=5000');
-  return rows || [];
+  const clean = {};
+
+  for (const [key, value] of Object.entries(row)) {
+    if (value !== undefined && value !== null && value !== '') {
+      clean[key] = value;
+    }
+  }
+
+  if (!clean.reference) {
+    throw new Error('Cannot record a sale without a payment reference.');
+  }
+
+  const result = await sb(
+    '/rest/v1/ticket_sales?on_conflict=reference',
+    {
+      method: 'POST',
+      headers: {
+        Prefer: 'resolution=merge-duplicates,return=representation'
+      },
+      body: clean
+    }
+  );
+
+  if (!result || !result.length) {
+    throw new Error('Supabase did not confirm the ticket sale.');
+  }
+
+  return result[0];
 }
 
 /* Create a one-time upload URL so the browser can send the file straight to
