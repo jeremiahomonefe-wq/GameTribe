@@ -18,18 +18,19 @@ function sign(payload) {
   return body + '.' + mac;
 }
 
+/* Returns the session payload if the token is genuine and not expired, else null. */
 function verify(token) {
-  if (!token || token.indexOf('.') < 0) return false;
+  if (!token || token.indexOf('.') < 0) return null;
   const [body, mac] = token.split('.');
   const expected = crypto.createHmac('sha256', secret()).update(body).digest('base64url');
   const a = Buffer.from(mac);
   const b = Buffer.from(expected);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
   try {
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString());
-    return payload.exp > Date.now();
+    return payload.exp > Date.now() ? payload : null;
   } catch (e) {
-    return false;
+    return null;
   }
 }
 
@@ -46,8 +47,18 @@ export function adminConfigured() {
   return Boolean(process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD.length >= 8);
 }
 
+/* The signed-in session { role, uid?, name?, email? } or null.
+   Sessions created before roles existed have no role: only the main admin
+   password could create those, so they are the owner. */
+export function getSession(req) {
+  if (!adminConfigured()) return null;
+  const payload = verify(readCookie(req, COOKIE));
+  if (!payload) return null;
+  return { ...payload, role: payload.role || 'owner' };
+}
+
 export function isAdmin(req) {
-  return adminConfigured() && verify(readCookie(req, COOKIE));
+  return getSession(req) !== null;
 }
 
 export function passwordMatches(input) {
@@ -56,8 +67,9 @@ export function passwordMatches(input) {
   return crypto.timingSafeEqual(a, b);
 }
 
-export function sessionCookie() {
-  const token = sign({ exp: Date.now() + MAX_AGE * 1000 });
+/* extra = { role, uid, name, email } for team members. Omit it for the main admin. */
+export function sessionCookie(extra) {
+  const token = sign({ role: 'owner', ...(extra || {}), exp: Date.now() + MAX_AGE * 1000 });
   return COOKIE + '=' + token + '; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=' + MAX_AGE;
 }
 

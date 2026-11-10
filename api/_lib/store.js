@@ -78,32 +78,52 @@ export async function saveContent(content) {
   });
 }
 
-/* { ticket_id: { label, amount } } — includes inactive tickets so a payment
-   that was already started can still be verified. */
+/* How many people one ticket admits. Saved content from before this update
+   has no "admits" value, so fall back to the name: a "Group" ticket = 4. */
+export function ticketAdmits(t) {
+  const n = Number(t && t.admits);
+  if (Number.isInteger(n) && n >= 1) return n;
+  return /group/i.test(String((t && t.id) || '') + ' ' + String((t && t.label) || '')) ? 4 : 1;
+}
+
+/* { ticket_id: { label, amount, admits } } — includes inactive tickets so a
+   payment that was already started can still be verified. */
 export async function getTicketMap() {
   const content = await getContent();
   const map = {};
   for (const t of content.tickets || []) {
-    if (t && t.id) map[t.id] = { label: t.label, amount: Number(t.price) };
+    if (t && t.id) map[t.id] = { label: t.label, amount: Number(t.price), admits: ticketAdmits(t) };
   }
   return map;
 }
+
+const NEW_SALE_COLUMNS = ['quantity', 'unit_price', 'admits_per_unit', 'admits_total'];
 
 /* Record a paid ticket. Safe to call more than once for the same reference
    (webhook + browser verification both call it). Never throws. */
 export async function recordSale(row) {
   if (!supabaseConfigured()) return;
+  const clean = {};
+  for (const [k, v] of Object.entries(row)) {
+    if (v !== undefined && v !== null && v !== '') clean[k] = v;
+  }
+  const send = (body) => sb('/rest/v1/ticket_sales?on_conflict=reference', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body
+  });
   try {
-    const clean = {};
-    for (const [k, v] of Object.entries(row)) {
-      if (v !== undefined && v !== null && v !== '') clean[k] = v;
-    }
-    await sb('/rest/v1/ticket_sales?on_conflict=reference', {
-      method: 'POST',
-      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: clean
-    });
+    await send(clean);
   } catch (error) {
+    /* If the SQL update has not been run yet, the new columns do not exist.
+       Still save the sale in the old format rather than losing it. */
+    if (error.status === 400 && NEW_SALE_COLUMNS.some((c) => c in clean)) {
+      console.error('recordSale: new columns missing, saving in old format. Run supabase/upgrade.sql.', error.message);
+      const legacy = { ...clean };
+      NEW_SALE_COLUMNS.forEach((c) => delete legacy[c]);
+      try { await send(legacy); } catch (e2) { console.error('recordSale failed:', e2.message); }
+      return;
+    }
     console.error('recordSale failed:', error.message);
   }
 }

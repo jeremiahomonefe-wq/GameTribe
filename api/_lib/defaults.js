@@ -182,12 +182,16 @@ export const DEFAULT_CONTENT = {
   /* Ticket types. `price` is in naira. The server checks every payment
      against these prices, so what you set here is what must be paid. */
   tickets: [
-    { id: 'sponsored_single', label: 'Sponsored Tickets — Single', price: 3000, active: true },
-    { id: 'early_single', label: 'Early Bird — Single', price: 5000, active: false },
-    { id: 'early_group', label: 'Early Bird — Group of 4', price: 18000, active: false },
-    { id: 'wave_single', label: 'First Wave — Single', price: 7000, active: true },
-    { id: 'wave_group', label: 'First Wave — Group of 4', price: 26000, active: true }
+    { id: 'sponsored_single', label: 'Sponsored Tickets — Single', price: 3000, admits: 1, active: true },
+    { id: 'early_single', label: 'Early Bird — Single', price: 5000, admits: 1, active: false },
+    { id: 'early_group', label: 'Early Bird — Group of 4', price: 18000, admits: 4, active: false },
+    { id: 'wave_single', label: 'First Wave — Single', price: 7000, admits: 1, active: true },
+    { id: 'wave_group', label: 'First Wave — Group of 4', price: 26000, admits: 4, active: true }
   ],
+
+  /* Checkout options. maxQuantity = most tickets one buyer can add to a
+     single payment (they can still pay again for more). */
+  ticketing: { maxQuantity: 50 },
 
   /* ---------- Other pages (About, Memories, FAQs, Contact, Partner) ---------- */
   pages: {
