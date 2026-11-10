@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta name="referrer" content="no-referrer">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
@@ -34,7 +35,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .btn-ghost{color:var(--muted);padding:8px 12px}.btn-ghost:hover{color:var(--ink);background:rgba(0,0,0,.05)}
 .btn.sm{padding:6px 12px;font-size:12px}
 .btn.danger{color:var(--red)}.btn.danger:hover{background:rgba(232,52,42,.1)}
-input[type=text],input[type=password],input[type=number],input[type=datetime-local],input[type=search],textarea,select{width:100%;padding:10px 12px;border:1.5px solid #D6CCB8;border-radius:12px;background:#fff;font-weight:600}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=datetime-local],input[type=search],textarea,select{width:100%;padding:10px 12px;border:1.5px solid #D6CCB8;border-radius:12px;background:#fff;font-weight:600}
 input:focus,textarea:focus,select:focus{border-color:var(--ink);outline:none;box-shadow:0 0 0 3px rgba(251,182,20,.45)}
 textarea{min-height:92px;resize:vertical}
 
@@ -125,6 +126,22 @@ tr:hover td{background:#FFFBF0}
 .bulk button{margin-top:10px;background:var(--gold);color:var(--ink);border:0;border-radius:999px;padding:6px 14px;font-weight:800;cursor:pointer}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,52,42,.6)}50%{box-shadow:0 0 0 10px rgba(232,52,42,0)}}
 .btn-red.pulse{animation:pulse 1.1s ease infinite}
+.badge.used{background:#FDE0DD;color:var(--red)}.badge.part{background:#FFF1C9;color:#8A5A00}.badge.none{background:#DDF3E5;color:var(--ok)}
+.small{font-size:11px;color:var(--muted);font-weight:600;margin-top:3px}
+tr.row-used td{background:#FBF4F3}
+.who{font-size:13px;font-weight:800;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+.modal-back{position:fixed;inset:0;background:rgba(28,20,16,.55);display:grid;place-items:center;padding:16px;z-index:70}
+.modal{width:100%;max-width:460px;max-height:92vh;overflow:auto;background:#fff;border-radius:22px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.modal h3{font-family:var(--display);text-transform:uppercase;font-size:20px;margin:0 0 10px}
+.banner{border-radius:14px;padding:12px 14px;font-weight:800;margin-bottom:12px;line-height:1.4}
+.banner.ok{background:#DDF3E5;color:var(--ok)}.banner.warn{background:#FFF1C9;color:#8A5A00}.banner.bad{background:#FDE0DD;color:var(--red)}
+.kv{display:grid;grid-template-columns:100px 1fr;gap:6px 10px;font-size:14px;margin:0 0 14px}
+.kv dt{color:var(--muted);font-weight:700}.kv dd{margin:0;font-weight:700;word-break:break-word}
+.modal .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.modal .row input[type=number]{width:96px}
+.hist{margin:10px 0 0;padding:0;list-style:none;font-size:13px}
+.hist li{padding:6px 0;border-top:1px solid var(--line)}
+.linkbox{display:flex;gap:8px;margin-top:8px}
 </style>
 </head>
 <body>
@@ -133,11 +150,31 @@ tr:hover td{background:#FFFBF0}
 <div class="login" id="login" hidden>
   <form class="login-card" id="loginForm">
     <h1>Game Tribe<br>Admin</h1>
-    <p>Enter your admin password to edit the website.</p>
+    <p>Team members: use your email and password. Main admin: leave the email empty.</p>
+    <label for="em" style="font-weight:800;font-size:13px">Email <span style="font-weight:600;color:var(--muted)">(team members only)</span></label>
+    <input type="email" id="em" autocomplete="username" placeholder="Empty if you are the main admin" style="margin-bottom:12px">
     <label for="pw" style="font-weight:800;font-size:13px">Password</label>
     <input type="password" id="pw" autocomplete="current-password" required autofocus>
     <p class="err" id="loginErr" role="alert"></p>
     <button class="btn btn-red" style="width:100%;margin-top:12px" id="loginBtn">Log in</button>
+  </form>
+</div>
+
+<!-- INVITE (opened from the emailed link) -->
+<div class="login" id="invite" hidden>
+  <form class="login-card" id="inviteForm">
+    <h1>Welcome to<br>Game Tribe Admin</h1>
+    <p id="inviteIntro">Checking your invite…</p>
+    <div id="inviteFields" hidden>
+      <label for="ipw" style="font-weight:800;font-size:13px">Choose a password (8+ characters)</label>
+      <input type="password" id="ipw" autocomplete="new-password" minlength="8" required style="margin-bottom:12px">
+      <label for="ipw2" style="font-weight:800;font-size:13px">Repeat the password</label>
+      <input type="password" id="ipw2" autocomplete="new-password" minlength="8" required>
+      <p class="err" id="inviteErr" role="alert"></p>
+      <button class="btn btn-red" style="width:100%;margin-top:12px" id="inviteBtn">Save password &amp; continue</button>
+    </div>
+    <p class="err" id="inviteFail" role="alert"></p>
+    <p style="margin:14px 0 0"><a href="/admin">Go to the login page</a></p>
   </form>
 </div>
 
@@ -150,6 +187,7 @@ tr:hover td{background:#FFFBF0}
   <div class="main">
     <header class="top">
       <h2 id="pageTitle"></h2>
+      <span class="who" id="who" hidden></span>
       <span class="status" id="status" aria-live="polite"></span>
       <button class="btn btn-ghost sm" id="checkBtn" type="button">Check connection</button>
       <a class="btn btn-line sm" href="/" target="_blank" rel="noopener">View website</a>
@@ -160,6 +198,7 @@ tr:hover td{background:#FFFBF0}
   </div>
 </div>
 <div id="toastHost" aria-live="polite"></div>
+<div id="modalHost"></div>
 
 <script>
 /* ============================================================
@@ -265,6 +304,7 @@ var SECTIONS=[
 
  {id:'tickets',icon:'🎟️',title:'Tickets & prices',custom:'tickets'},
  {id:'sales',icon:'💰',title:'Sales & attendees',custom:'sales'},
+ {id:'team',icon:'👥',title:'Team & access',custom:'team'},
 
  {id:'links',icon:'🔗',title:'Links, contact & footer',blocks:[
   {title:'Contact and links',fields:[
@@ -379,7 +419,7 @@ var SECTIONS=[
 ];
 
 /* ============================================================ */
-var state={content:null,saved:'',dirty:false,section:'event',sales:null};
+var state={content:null,saved:'',dirty:false,section:'event',sales:null,team:null,teamResult:null,salesFilter:'all',role:'owner',me:null};
 var $=function(s,r){return (r||document).querySelector(s);};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function getP(o,p){return p.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
@@ -388,7 +428,7 @@ function clone(x){return JSON.parse(JSON.stringify(x));}
 function api(action,opt){
   opt=opt||{};
   return fetch('/api/admin?action='+action,{method:opt.body?'POST':'GET',credentials:'same-origin',headers:opt.body?{'Content-Type':'application/json'}:{},body:opt.body?JSON.stringify(opt.body):undefined})
-   .then(function(r){return r.json().catch(function(){return {};}).then(function(d){if(!r.ok){var e=new Error(d.message||('Error '+r.status));e.status=r.status;throw e;}return d;});});
+   .then(function(r){return r.json().catch(function(){return {};}).then(function(d){if(!r.ok){var e=new Error(d.message||('Error '+r.status));e.status=r.status;e.data=d;throw e;}return d;});});
 }
 function toast(msg,err){var t=document.createElement('div');t.className='toast'+(err?' err':'');t.textContent=msg;$('#toastHost').appendChild(t);setTimeout(function(){t.remove();},err?5000:2400);}
 function srcUrl(v){v=String(v||'');return /^(https?:|data:|\/)/.test(v)?v:(v?'/'+v:'');}
@@ -402,7 +442,18 @@ function markDirty(){
   $('#saveBtn').disabled=!state.dirty;
 }
 window.addEventListener('beforeunload',function(e){if(state.dirty){e.preventDefault();e.returnValue='';}});
-document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();if(state.dirty)save();}});
+document.addEventListener('keydown',function(e){
+  if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();if(state.dirty)save();return;}
+  if(e.key==='Escape'&&$('#modalHost').firstChild){closeModal();return;}
+  /* Gate shortcut: Enter in the search box opens the ticket if exactly one person matches */
+  if(e.key==='Enter'&&e.target&&e.target.id==='salesSearch'&&canCheckin()&&state.sales){
+    e.preventDefault();
+    var f=state.salesFilter||'all',hit=(state.sales.sales||[]).filter(function(r){return saleMatches(r,e.target.value)&&(f==='all'||saleStatus(r)===f);});
+    if(hit.length===1)gateModal(hit[0].reference);else if(hit.length>1)toast(hit.length+' people match. Type more of the reference or phone number.',true);else toast('Nobody matches that.',true);
+    return;
+  }
+  if(e.key==='Enter'&&e.target&&(e.target.id==='gateCount')&&$('#gateAdmit')){e.preventDefault();$('#gateAdmit').click();}
+});
 
 function save(){
   var b=$('#saveBtn');b.disabled=true;b.textContent='Publishing…';
@@ -544,6 +595,7 @@ function blockHtml(b){
 }
 
 /* ---------- tickets view ---------- */
+function tkAdmits(t){var n=parseInt(t.admits,10);return n>=1?n:(/group/i.test((t.id||'')+' '+(t.label||''))?4:1);}
 function ticketsHtml(){
   var arr=state.content.tickets||[];
   var h='<div class="notice">⚠ The price you set here is what Paystack will charge. The server checks every payment against these prices, so a changed price takes effect as soon as you publish.</div>';
@@ -553,45 +605,211 @@ function ticketsHtml(){
       '<label class="switch"><input type="checkbox" data-tk="'+i+'" data-tkf="active" '+(t.active?'checked':'')+'> On sale</label>'+
       '<button class="btn btn-ghost sm danger" type="button" data-tkdel="'+i+'">Delete</button></div>'+
       '<div class="grid two"><div class="field"><label>Name shown to buyers</label><input type="text" data-tk="'+i+'" data-tkf="label" value="'+esc(t.label)+'"></div>'+
-      '<div class="field"><label>Price (₦, whole number)</label><input type="number" min="100" step="1" data-tk="'+i+'" data-tkf="price" value="'+esc(t.price)+'"></div></div></div>';
+      '<div class="field"><label>Price (₦, whole number)</label><input type="number" min="100" step="1" data-tk="'+i+'" data-tkf="price" value="'+esc(t.price)+'"></div>'+
+      '<div class="field"><label>People admitted per ticket</label><input type="number" min="1" max="20" step="1" data-tk="'+i+'" data-tkf="admits" value="'+esc(tkAdmits(t))+'"><p class="help">1 for a single ticket, 4 for a Group of 4. Buying 2 group tickets admits 8 people.</p></div></div></div>';
   });
   h+='<button class="btn btn-line" type="button" id="addTicket">+ Add ticket type</button></section>';
+  var mq=getP(state.content,'ticketing.maxQuantity');
+  h+='<section class="card"><h3>Buying several tickets at once</h3><p class="help">Buyers can pick a quantity at checkout and pay for it in one go. This is the most tickets one buyer can add to a single payment (they can always pay again for more).</p>'+
+    '<div class="field"><label>Max tickets per order</label><input type="number" min="1" max="200" step="1" data-bind="ticketing.maxQuantity" data-type="'+NUM+'" value="'+esc(mq==null?50:mq)+'"></div></section>';
   return h;
 }
 
-/* ---------- sales view ---------- */
+/* ---------- roles ---------- */
+var ROLE_SECTIONS={sales:['sales'],tickets:['sales']};
+function visibleSections(){
+  if(state.role==='owner')return SECTIONS;
+  var ids=ROLE_SECTIONS[state.role]||['sales'];
+  return SECTIONS.filter(function(x){return ids.indexOf(x.id)>-1;});
+}
+function roleLabel(r){return r==='tickets'?'Ticket in charge':(r==='sales'?'Sales':(r==='owner'?'Main admin':String(r||'')));}
+function canCheckin(){return state.role==='owner'||state.role==='tickets';}
+
+/* ---------- modal ---------- */
+function openModal(html){$('#modalHost').innerHTML='<div class="modal-back"><div class="modal" role="dialog" aria-modal="true">'+html+'</div></div>';}
+function closeModal(){$('#modalHost').innerHTML='';}
+
+/* ---------- sales view (with gate check-in) ---------- */
 function naira(n){return '₦'+Number(n||0).toLocaleString('en-NG');}
+function saleTotal(r){return Number(r.admits_total)||1;}
+function saleAdmitted(r){return Number(r.admitted_count)||0;}
+function saleStatus(r){var a=saleAdmitted(r),t=saleTotal(r);return a>=t?'full':(a>0?'part':'none');}
+function stripGT(s){return String(s==null?'':s).toLowerCase().replace(/^(gt-)+/,'');}
+function timeShort(iso){var d=new Date(iso);return isNaN(d)?'':d.toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}
+/* matches names, phones, emails, references and ticket numbers (with or without the GT- prefix, old GT-GT- numbers included) */
+function saleMatches(r,q){
+  q=String(q||'').trim().toLowerCase();if(!q)return true;
+  var hay=[r.name,r.email,r.phone,r.ticket_number,r.reference,r.ticket_label].join(' ').toLowerCase();
+  if(hay.indexOf(q)>-1)return true;
+  var sq=stripGT(q);
+  if(sq.length>=5&&(stripGT(r.reference).indexOf(sq)>-1||stripGT(r.ticket_number).indexOf(sq)>-1))return true;
+  var dq=q.replace(/\D/g,'').replace(/^0+/,'');
+  if(dq.length>=7&&String(r.phone||'').replace(/\D/g,'').indexOf(dq)>-1)return true;
+  return false;
+}
+function admitBadge(r){
+  var a=saleAdmitted(r),t=saleTotal(r),st=saleStatus(r);
+  if(st==='full')return '<span class="badge used">Used · '+a+'/'+t+'</span>';
+  if(st==='part')return '<span class="badge part">Partly · '+a+'/'+t+'</span>';
+  return '<span class="badge none">Not yet · 0/'+t+'</span>';
+}
+function salesTopHtml(){
+  var rows=state.sales.sales||[],total=0,qty=0,people=0,inside=0,notSent=0,by={};
+  rows.forEach(function(r){total+=Number(r.amount||0);qty+=Number(r.quantity||1);people+=saleTotal(r);inside+=saleAdmitted(r);if(!r.email_sent)notSent++;var k=r.ticket_label||r.ticket_type||'Other';by[k]=(by[k]||0)+Number(r.quantity||1);});
+  var h='<div class="kpis"><div class="kpi"><b>'+qty+'</b><span>Tickets sold</span></div><div class="kpi"><b>'+people+'</b><span>People covered</span></div>'+
+    '<div class="kpi"><b style="color:var(--ok)">'+inside+' / '+people+'</b><span>Checked in at the gate</span></div><div class="kpi"><b>'+rows.length+'</b><span>Orders</span></div>'+
+    '<div class="kpi"><b>'+naira(total)+'</b><span>Total paid</span></div>'+
+    '<div class="kpi"><b style="'+(notSent?'':'color:var(--ok)')+'">'+notSent+'</b><span>Emails not sent</span></div></div>';
+  var bk=Object.keys(by);
+  if(bk.length)h+='<section class="card"><h3>By ticket type</h3><div class="grid two">'+bk.map(function(k){return '<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0"><span>'+esc(k)+'</span><b>'+by[k]+'</b></div>';}).join('')+'</div></section>';
+  return h;
+}
 function salesHtml(){
   var d=state.sales;
   if(!d)return '<div class="empty">Loading sales…</div>';
   if(d.configured===false)return '<div class="notice">Supabase is not connected yet, so sales cannot be listed. Follow step 2 in the README, then reload.</div>';
-  var rows=d.sales||[],total=rows.reduce(function(s,r){return s+Number(r.amount||0);},0),notSent=rows.filter(function(r){return !r.email_sent;}).length;
-  var by={};rows.forEach(function(r){var k=r.ticket_label||r.ticket_type||'Other';by[k]=(by[k]||0)+1;});
-  var h='<div class="kpis"><div class="kpi"><b>'+rows.length+'</b><span>Tickets sold</span></div><div class="kpi"><b>'+naira(total)+'</b><span>Total paid</span></div>'+
-    '<div class="kpi"><b style="'+(notSent?'':'color:var(--ok)')+'">'+notSent+'</b><span>Emails not sent</span></div></div>';
-  var bk=Object.keys(by);
-  if(bk.length)h+='<section class="card"><h3>By ticket type</h3><div class="grid two">'+bk.map(function(k){return '<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0"><span>'+esc(k)+'</span><b>'+by[k]+'</b></div>';}).join('')+'</div></section>';
-  h+='<div class="toolbar"><input type="search" id="salesSearch" placeholder="Search name, email, phone, ticket no."><button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button><button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button></div>';
-  h+='<div class="table-wrap"><table><thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Phone</th><th>Ticket</th><th>Paid</th><th>Ticket no.</th><th>Email</th></tr></thead><tbody id="salesBody"></tbody></table></div>';
+  var h='';
+  if(state.role!=='owner')h+='<div class="notice">'+(canCheckin()?'You can see everyone who bought a ticket and check people in at the gate. You cannot change tickets or prices.':'You can see everyone who bought a ticket. This view is read-only.')+'</div>';
+  h+='<div id="salesTop">'+salesTopHtml()+'</div>';
+  h+='<div class="toolbar"><input type="search" id="salesSearch" placeholder="Search name, phone, reference or ticket no."'+(canCheckin()?' autocomplete="off"':'')+'>'+
+    '<select id="salesFilter" style="max-width:210px" aria-label="Filter by check-in"><option value="all">Everyone</option><option value="none">Not yet checked in</option><option value="part">Partly checked in</option><option value="full">Fully used</option></select>'+
+    '<button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button>'+(state.role==='owner'?'<button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button>':'')+'</div>';
+  if(canCheckin())h+='<p class="help" style="margin:-4px 0 12px;font-size:13px;color:var(--muted)">At the gate: type or paste the buyer’s reference or ticket number, press Enter, then admit them. A ticket that is already used cannot be admitted again.</p>';
+  h+='<div class="table-wrap"><table><thead><tr><th>Gate</th><th>Date</th><th>Name</th><th>Phone</th><th>Ticket</th><th>Qty</th><th>People</th><th>Ticket no.</th><th>Paid</th><th>Email</th><th>Contact</th></tr></thead><tbody id="salesBody"></tbody></table></div>';
   return h;
 }
 function salesRows(q){
-  var rows=(state.sales.sales||[]).filter(function(r){q=(q||'').toLowerCase();return !q||[r.name,r.email,r.phone,r.ticket_number,r.ticket_label].join(' ').toLowerCase().indexOf(q)>-1;});
-  if(!rows.length)return '<tr><td colspan="8"><div class="empty">No tickets yet.</div></td></tr>';
+  var f=state.salesFilter||'all',can=canCheckin();
+  var rows=(state.sales.sales||[]).filter(function(r){return saleMatches(r,q)&&(f==='all'||saleStatus(r)===f);});
+  if(!rows.length)return '<tr><td colspan="11"><div class="empty">'+((q||f!=='all')?'Nobody matches that.':'No tickets yet.')+'</div></td></tr>';
   return rows.map(function(r){
-    var dt=new Date(r.paid_at||r.created_at);
-    return '<tr><td>'+esc(isNaN(dt)?'':dt.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.email)+'</td><td>'+esc(r.phone)+'</td><td>'+esc(r.ticket_label||r.ticket_type)+'</td><td>'+naira(r.amount)+'</td><td><code>'+esc(r.ticket_number)+'</code></td><td>'+(r.email_sent?'<span class="badge ok">Sent</span>':'<span class="badge warn">Not sent</span>')+'</td></tr>';
+    var dt=new Date(r.paid_at||r.created_at),st=saleStatus(r);
+    var gate='<div style="white-space:nowrap">'+admitBadge(r)+(can?' <button type="button" class="btn sm '+(st==='full'?'btn-line':'btn-red')+'" data-act="gate" data-ref="'+esc(r.reference)+'">'+(st==='full'?'View':'Check in')+'</button>':'')+'</div>'+
+      (r.checked_in_at?'<div class="small">'+esc(timeShort(r.checked_in_at))+(r.checked_in_by?' · '+esc(r.checked_in_by):'')+'</div>':'');
+    return '<tr'+(st==='full'?' class="row-used"':'')+'><td>'+gate+'</td><td>'+esc(isNaN(dt)?'':dt.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.phone)+'</td><td>'+esc(r.ticket_label||r.ticket_type)+'</td><td>'+esc(r.quantity||1)+'</td><td>'+saleTotal(r)+'</td><td><code>'+esc(r.ticket_number)+'</code></td><td>'+naira(r.amount)+'</td><td>'+(r.email_sent?'<span class="badge ok">Sent</span>':'<span class="badge warn">Not sent</span>')+'</td><td>'+esc(r.email)+'</td></tr>';
   }).join('');
+}
+function refreshSalesView(){
+  if(!state.sales||state.sales.configured===false||!$('#salesBody'))return;
+  var s=$('#salesSearch'),f=$('#salesFilter'),top=$('#salesTop');
+  if(top)top.innerHTML=salesTopHtml();
+  if(f)f.value=state.salesFilter||'all';
+  $('#salesBody').innerHTML=salesRows(s?s.value:'');
 }
 function loadSales(){
   state.sales=null;render();
-  api('sales').then(function(d){state.sales=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
+  api('sales').then(function(d){state.sales=d;followRole(d);render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
+}
+/* If the main admin changed this person's role while they were signed in, follow it. */
+function followRole(d){
+  if(d&&d.role&&d.role!==state.role){state.role=d.role;applyRole();}
 }
 function csvDownload(){
   var q=function(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-  var head=['Date','Name','Email','Phone','Ticket','Amount (NGN)','Ticket number','Reference','Email sent'];
-  var lines=[head.join(',')].concat((state.sales.sales||[]).map(function(r){return [r.paid_at||r.created_at,r.name,r.email,r.phone,r.ticket_label||r.ticket_type,r.amount,r.ticket_number,r.reference,r.email_sent?'yes':'no'].map(q).join(',');}));
+  var head=['Date','Name','Email','Phone','Ticket','Quantity','People covered','People checked in','Amount (NGN)','Ticket number','Reference','Email sent'];
+  var lines=[head.join(',')].concat((state.sales.sales||[]).map(function(r){return [r.paid_at||r.created_at,r.name,r.email,r.phone,r.ticket_label||r.ticket_type,r.quantity||1,saleTotal(r),saleAdmitted(r),r.amount,r.ticket_number,r.reference,r.email_sent?'yes':'no'].map(q).join(',');}));
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv'}));a.download='game-tribe-tickets.csv';a.click();
+}
+
+/* ---------- gate check-in ---------- */
+function findSale(ref){return (state.sales&&state.sales.sales||[]).filter(function(r){return r.reference===ref;})[0];}
+function updateSale(sale){var a=state.sales.sales;for(var i=0;i<a.length;i++){if(a[i].reference===sale.reference){a[i]=sale;return;}}}
+function gateModal(ref,problem){
+  var r=findSale(ref);if(!r)return;
+  var a=saleAdmitted(r),t=saleTotal(r),left=t-a,st=saleStatus(r),can=canCheckin(),er=esc(r.reference);
+  var last=r.checked_in_at?' (last '+esc(timeShort(r.checked_in_at))+(r.checked_in_by?' by '+esc(r.checked_in_by):'')+')':'';
+  var banner=problem?'<div class="banner bad">'+esc(problem)+'</div>':
+    st==='full'?'<div class="banner bad">ALREADY USED — all '+t+' admitted'+last+'. Do not give out another tag.</div>':
+    st==='part'?'<div class="banner warn">'+a+' of '+t+' already admitted'+last+'. '+left+' still to come in.</div>':
+    '<div class="banner ok">Valid — nobody from this ticket has been admitted yet.</div>';
+  var h='<h3>'+esc(r.name||'Ticket')+'</h3>'+banner+
+    '<dl class="kv"><dt>Ticket</dt><dd>'+esc(r.ticket_label||r.ticket_type)+(Number(r.quantity)>1?' × '+esc(r.quantity):'')+'</dd>'+
+    '<dt>People</dt><dd>'+t+' ('+a+' admitted)</dd><dt>Phone</dt><dd>'+esc(r.phone)+'</dd>'+
+    '<dt>Ticket no.</dt><dd>'+esc(r.ticket_number)+'</dd><dt>Reference</dt><dd>'+er+'</dd></dl>';
+  if(can&&left>0){
+    if(t>1)h+='<div class="row"><label for="gateCount" style="font-weight:800;font-size:13px">People coming in now</label><input type="number" id="gateCount" min="1" max="'+left+'" value="'+left+'"></div>';
+    h+='<div class="row"><button class="btn btn-red" type="button" id="gateAdmit" data-act="admit" data-ref="'+er+'">Admit'+(t>1?'':' this person')+'</button><button class="btn btn-line" type="button" data-act="mclose">Close</button></div>';
+  }else h+='<div class="row"><button class="btn btn-line" type="button" data-act="mclose">Close</button></div>';
+  if(state.role==='owner'&&a>0)h+='<div class="row" style="border-top:1px solid var(--line);padding-top:12px"><span style="font-size:13px;font-weight:700">Admitted by mistake?</span><input type="number" id="undoCount" min="1" max="'+a+'" value="1" aria-label="How many to remove"><button class="btn btn-ghost sm danger" type="button" data-act="undo" data-ref="'+er+'">Remove from admitted</button></div>';
+  h+='<div class="row"><button class="btn btn-ghost sm" type="button" data-act="history" data-ref="'+er+'">Show history</button></div><ul class="hist" id="gateHistory"></ul>';
+  openModal(h);
+  var c=$('#gateCount');if(c){c.focus();c.select();}else{var b=$('#gateAdmit');if(b)b.focus();}
+}
+function doAdmit(ref){
+  var c=$('#gateCount'),n=c?parseInt(c.value,10):1,btn=$('#gateAdmit');
+  if(!(n>=1)){toast('Enter how many people are coming in.',true);return;}
+  btn.disabled=true;btn.textContent='Saving…';
+  api('checkin',{body:{reference:ref,count:n}}).then(function(res){
+    updateSale(res.sale);closeModal();refreshSalesView();
+    toast('✓ Admitted '+n+' — '+(res.sale.name||'')+' ('+saleAdmitted(res.sale)+' of '+saleTotal(res.sale)+')');
+    var s=$('#salesSearch');if(s){s.focus();s.select();}
+  }).catch(function(e){
+    if(e.status===401)return showLogin();
+    if(e.data&&e.data.sale){updateSale(e.data.sale);refreshSalesView();gateModal(ref,e.message);return;}
+    btn.disabled=false;btn.textContent='Admit';toast(e.message,true);
+  });
+}
+function doUndo(ref){
+  var r=findSale(ref),n=parseInt(($('#undoCount')||{}).value,10);
+  if(!r||!(n>=1))return;
+  if(!confirm('Remove '+n+' from the admitted count for '+(r.name||'this ticket')+'?'))return;
+  api('checkin-undo',{body:{reference:ref,count:n}}).then(function(res){
+    updateSale(res.sale);refreshSalesView();gateModal(ref);toast('Removed '+n+' from the admitted count');
+  }).catch(function(e){
+    if(e.status===401)return showLogin();
+    if(e.data&&e.data.sale){updateSale(e.data.sale);refreshSalesView();gateModal(ref,e.message);return;}
+    toast(e.message,true);
+  });
+}
+function loadHistory(ref){
+  var ul=$('#gateHistory');if(!ul)return;ul.innerHTML='<li>Loading…</li>';
+  api('checkin-log&reference='+encodeURIComponent(ref)).then(function(d){
+    var l=d.log||[];
+    ul.innerHTML=l.length?l.map(function(x){return '<li>'+(x.action==='admit'?'Admitted ':'Removed ')+esc(x.delta)+' · '+esc(timeShort(x.created_at))+' · '+esc(x.by_name||'')+'</li>';}).join(''):'<li>Nobody has been checked in yet.</li>';
+  }).catch(function(e){ul.innerHTML='<li>'+esc(e.message)+'</li>';});
+}
+
+/* ---------- team (main admin only) ---------- */
+function teamHtml(){
+  var h='<div class="notice">You are the only main admin. Team members can only do what their role allows, and you can remove them at any time. Removing someone, or changing their role, takes effect immediately.</div>';
+  h+='<section class="card"><h3>Invite a team member</h3><p class="help">They receive an email with a link to choose their own password.</p>'+
+    '<div class="grid two"><div class="field"><label for="tmName">Name</label><input type="text" id="tmName" maxlength="80" placeholder="e.g. Ada Obi"></div>'+
+    '<div class="field"><label for="tmEmail">Email</label><input type="email" id="tmEmail" placeholder="name@example.com"></div>'+
+    '<div class="field full"><label for="tmRole">Role</label><select id="tmRole"><option value="tickets">Ticket in charge — sees every buyer and checks people in at the gate</option><option value="sales">Sales — sees every buyer, view only</option></select>'+
+    '<p class="help">Neither role can edit tickets, prices or the website, upload files, or invite anyone.</p></div></div>'+
+    '<p style="margin:14px 0 0"><button class="btn btn-red" type="button" id="tmInvite" data-act="invite">Send invite</button></p>';
+  var r=state.teamResult;
+  if(r)h+='<div class="notice" style="margin:14px 0 0">'+(r.emailSent?'✅ Invite emailed.':'⚠ The email could not be sent ('+esc(r.emailError||'unknown error')+'). Copy the link below and send it to them yourself.')+
+    '<div class="linkbox"><input type="text" id="tmLink" readonly value="'+esc(r.link)+'"><button class="btn btn-line sm" type="button" data-act="copylink">Copy</button></div>'+
+    '<div class="small">This link works once and expires in 72 hours. It cannot be shown again, but you can send a fresh one any time.</div></div>';
+  h+='</section><section class="card"><h3>Your team</h3>';
+  var d=state.team;
+  if(!d)h+='<div class="empty">Loading…</div>';
+  else if(!d.members.length)h+='<div class="empty">Nobody yet. Invite your first team member above.</div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last login</th><th></th></tr></thead><tbody>'+d.members.map(function(m){
+    var act=m.status==='active';
+    return '<tr><td>'+esc(m.name||'—')+'</td><td>'+esc(m.email)+'</td>'+
+      '<td><select data-teamrole="'+esc(m.id)+'" aria-label="Role for '+esc(m.email)+'" style="min-width:150px"><option value="tickets"'+(m.role==='tickets'?' selected':'')+'>Ticket in charge</option><option value="sales"'+(m.role==='sales'?' selected':'')+'>Sales</option></select></td>'+
+      '<td>'+(act?'<span class="badge ok">Active</span>':'<span class="badge warn">Invite pending</span>'+(m.invite_expires_at?'<div class="small">expires '+esc(timeShort(m.invite_expires_at))+'</div>':''))+'</td>'+
+      '<td>'+esc(m.last_login_at?timeShort(m.last_login_at):'—')+'</td>'+
+      '<td style="white-space:nowrap"><button class="btn btn-line sm" type="button" data-act="resend" data-id="'+esc(m.id)+'">'+(act?'Send reset link':'Resend invite')+'</button> <button class="btn btn-ghost sm danger" type="button" data-act="remove" data-id="'+esc(m.id)+'" data-name="'+esc(m.name||m.email)+'">Remove</button></td></tr>';
+  }).join('')+'</tbody></table></div>';
+  return h+'</section>';
+}
+function loadTeam(keepResult){
+  if(!keepResult)state.teamResult=null;
+  state.team=null;render();
+  api('team-list').then(function(d){state.team=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
+}
+function reloadTeamList(){return api('team-list').then(function(d){state.team=d;render();});}
+function teamFail(b,label){return function(e){if(e.status===401)return showLogin();toast(e.message,true);if(b){b.disabled=false;b.textContent=label;}};}
+function doInvite(){
+  var email=$('#tmEmail').value.trim(),b=$('#tmInvite');
+  if(!email){toast('Enter an email address.',true);return;}
+  b.disabled=true;b.textContent='Sending…';
+  api('team-invite',{body:{name:$('#tmName').value.trim(),email:email,role:$('#tmRole').value}}).then(function(res){
+    state.teamResult=res;toast(res.emailSent?'Invite sent ✓':'Invite created — copy the link',!res.emailSent);return reloadTeamList();
+  }).catch(teamFail(b,'Send invite'));
 }
 
 /* ---------- main render ---------- */
@@ -609,24 +827,53 @@ function refreshThumb(input){
   if(u){var im=new Image();im.onerror=function(){warnThumb(th);};im.src=u;}
 }
 function render(){
-  var sec=SECTIONS.filter(function(s){return s.id===state.section;})[0]||SECTIONS[0];
+  var vis=visibleSections(),sec=vis.filter(function(s){return s.id===state.section;})[0]||vis[0];
   $('#pageTitle').textContent=sec.title;
-  $('#nav').innerHTML=SECTIONS.map(function(s){if(s.sep)return '<div class="sep"></div><div class="sep-label">'+esc(s.sep)+'</div>';return (s.id==='tickets'?'<div class="sep"></div>':'')+'<button type="button" data-sec="'+s.id+'" '+(s.id===sec.id?'aria-current="true"':'')+'><span class="ico">'+s.icon+'</span>'+esc(s.title)+'</button>';}).join('');
+  $('#nav').innerHTML=vis.map(function(s){if(s.sep)return '<div class="sep"></div><div class="sep-label">'+esc(s.sep)+'</div>';return (s.id==='tickets'?'<div class="sep"></div>':'')+'<button type="button" data-sec="'+s.id+'" '+(s.id===sec.id?'aria-current="true"':'')+'><span class="ico">'+s.icon+'</span>'+esc(s.title)+'</button>';}).join('');
   var v=$('#view'),h='';
   if(sec.custom==='tickets')h=ticketsHtml();
   else if(sec.custom==='sales')h=salesHtml();
+  else if(sec.custom==='team')h=teamHtml();
   else h=sec.blocks.map(blockHtml).join('');
   v.innerHTML=h;
   var warn=warnThumb;
   v.querySelectorAll('.thumb[data-src]').forEach(function(th){var im=new Image();im.onerror=function(){warn(th);};im.src=th.getAttribute('data-src');});
   v.querySelectorAll('.thumb video').forEach(function(vd){vd.addEventListener('error',function(){warn(vd.parentNode);});});
-  if(sec.custom==='sales'&&state.sales&&state.sales.configured!==false)$('#salesBody').innerHTML=salesRows('');
+  if(sec.custom==='sales')refreshSalesView();
 }
 
 /* ---------- events ---------- */
+function handleAct(t){
+  var a=t.dataset.act,ref=t.dataset.ref;
+  if(a==='gate'){gateModal(ref);return;}
+  if(a==='mclose'){closeModal();return;}
+  if(a==='admit'){doAdmit(ref);return;}
+  if(a==='undo'){doUndo(ref);return;}
+  if(a==='history'){loadHistory(ref);return;}
+  if(a==='invite'){doInvite();return;}
+  if(a==='copylink'){
+    var i=$('#tmLink');if(!i)return;i.select();
+    var done=function(){toast('Link copied');};
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(i.value).then(done,function(){document.execCommand('copy');done();});
+    else{document.execCommand('copy');done();}
+    return;
+  }
+  if(a==='resend'){
+    t.disabled=true;
+    api('team-resend',{body:{id:t.dataset.id}}).then(function(res){state.teamResult=res;toast(res.emailSent?'Email sent ✓':'Link created — copy it',!res.emailSent);return reloadTeamList();}).catch(teamFail(t,'Resend'));
+    return;
+  }
+  if(a==='remove'){
+    if(!confirm('Remove '+t.dataset.name+'? They will lose access immediately.'))return;
+    api('team-remove',{body:{id:t.dataset.id}}).then(function(){toast('Removed');return reloadTeamList();}).catch(teamFail());
+    return;
+  }
+}
 document.addEventListener('click',function(e){
+  if(e.target.classList&&e.target.classList.contains('modal-back')){closeModal();return;}
   var t=e.target.closest('button');if(!t)return;
-  if(t.dataset.sec){state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else render();window.scrollTo(0,0);return;}
+  if(t.dataset.act){handleAct(t);return;}
+  if(t.dataset.sec){state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='team')loadTeam();else render();window.scrollTo(0,0);return;}
   if(t.dataset.add){
     var L=listSpec(t.dataset.add),arr=getP(state.content,t.dataset.add),item=L.strings?'':clone(L.blank);
     if(item&&typeof item==='object'&&'id' in item)item.id=newId();
@@ -651,7 +898,8 @@ document.addEventListener('click',function(e){
     var price=parseInt(prompt('Price in naira (numbers only)'),10);if(!(price>=100)){toast('Enter a price of ₦100 or more.',true);return;}
     var base=name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,28)||'ticket',id=base,n=1;
     while(state.content.tickets.some(function(x){return x.id===id;}))id=base+'_'+(++n);
-    state.content.tickets.push({id:id,label:name.trim(),price:price,active:true});markDirty();render();return;
+    var admits=parseInt(prompt('How many people does ONE of these tickets admit? (1 for a single, 4 for a Group of 4)','1'),10);if(!(admits>=1&&admits<=20)){toast('Enter a number from 1 to 20.',true);return;}
+    state.content.tickets.push({id:id,label:name.trim(),price:price,admits:admits,active:true});markDirty();render();return;
   }
   if(t.dataset.tkdel!==undefined){if(confirm('Delete this ticket type? Turning it off is usually safer.')){state.content.tickets.splice(+t.dataset.tkdel,1);markDirty();render();}return;}
   if(t.dataset.upload){
@@ -678,7 +926,7 @@ document.addEventListener('input',function(e){
   if(el.id==='salesSearch'){$('#salesBody').innerHTML=salesRows(el.value);return;}
   if(el.dataset.tk!==undefined){
     var tk=state.content.tickets[+el.dataset.tk],f=el.dataset.tkf;
-    tk[f]=el.type==='checkbox'?el.checked:(f==='price'?parseInt(el.value,10)||0:el.value);markDirty();return;
+    tk[f]=el.type==='checkbox'?el.checked:(f==='price'?parseInt(el.value,10)||0:(f==='admits'?Math.min(20,Math.max(1,parseInt(el.value,10)||1)):el.value));markDirty();return;
   }
   if(!el.dataset.bind)return;
   var type=el.dataset.type,v=el.value;
@@ -688,6 +936,12 @@ document.addEventListener('input',function(e){
 });
 document.addEventListener('change',function(e){
   var el=e.target;
+  if(el.id==='salesFilter'){state.salesFilter=el.value;refreshSalesView();return;}
+  if(el.dataset.teamrole){
+    el.disabled=true;
+    api('team-role',{body:{id:el.dataset.teamrole,role:el.value}}).then(function(){toast('Role updated ✓');return reloadTeamList();}).catch(function(err){if(err.status===401)return showLogin();toast(err.message,true);reloadTeamList();});
+    return;
+  }
   if(el.dataset.bind){ /* keep a card's heading in step with its title/name/year, without redrawing the page */
     var mt=/^(.*)\.(\d+)\.([^.]+)$/.exec(el.dataset.bind),sp=mt&&REG[regKey(mt[1])];
     if(sp&&sp.titleKey===mt[3]){var cd=el.closest('section.card'),hd=cd&&cd.querySelector('.item-head h3');if(hd)hd.textContent=el.value||'Untitled';}
@@ -745,12 +999,23 @@ window.addEventListener('dragover',function(e){e.preventDefault();});  /* a miss
 window.addEventListener('drop',function(e){e.preventDefault();});
 
 /* ---------- login / boot ---------- */
-function showLogin(){$('#app').hidden=true;$('#login').hidden=false;setTimeout(function(){$('#pw').focus();},50);}
+function showLogin(){closeModal();$('#app').hidden=true;$('#invite').hidden=true;$('#login').hidden=false;setTimeout(function(){$('#em').focus();},50);}
+function applyRole(){
+  var owner=state.role==='owner',w=$('#who');
+  $('#saveBtn').hidden=!owner;$('#checkBtn').hidden=!owner;
+  if(!owner&&state.me){w.textContent=(state.me.name||state.me.email||'')+' · '+roleLabel(state.role);w.hidden=false;}else w.hidden=true;
+}
 function boot(){
   api('me').then(function(me){
+    state.me=me;state.role=me.role||'owner';state.sales=null;state.team=null;applyRole();
+    if(state.role!=='owner'){
+      /* Team members never load the website content: the server would refuse it anyway. */
+      state.content=null;state.section='sales';
+      $('#login').hidden=true;$('#invite').hidden=true;$('#app').hidden=false;loadSales();return;
+    }
     return api('content').then(function(c){
       state.content=c;state.saved=JSON.stringify(c);
-      $('#login').hidden=true;$('#app').hidden=false;render();markDirty();
+      $('#login').hidden=true;$('#invite').hidden=true;$('#app').hidden=false;render();markDirty();
       if(!me.supabase)$('#view').insertAdjacentHTML('afterbegin','<div class="notice">Supabase is not connected yet. You can look around, but publishing and uploads will not work until you finish step 2 of the README.</div>');
     });
   }).catch(function(e){
@@ -760,10 +1025,33 @@ function boot(){
 }
 $('#loginForm').addEventListener('submit',function(e){
   e.preventDefault();var b=$('#loginBtn');b.disabled=true;b.textContent='Checking…';$('#loginErr').textContent='';
-  api('login',{body:{password:$('#pw').value}}).then(function(){$('#pw').value='';boot();})
+  api('login',{body:{email:$('#em').value.trim(),password:$('#pw').value}}).then(function(){$('#pw').value='';boot();})
    .catch(function(err){$('#loginErr').textContent=err.message;})
    .then(function(){b.disabled=false;b.textContent='Log in';});
 });
+
+/* ---------- invite link (/admin?invite=...) ---------- */
+var INVITE_TOKEN=(function(){try{return new URLSearchParams(location.search).get('invite')||'';}catch(e){return '';}})();
+function showInvite(){
+  $('#login').hidden=true;$('#app').hidden=true;$('#invite').hidden=false;
+  api('invite-info&token='+encodeURIComponent(INVITE_TOKEN)).then(function(d){
+    $('#inviteIntro').textContent=d.reset?('Hi '+(d.name||d.email)+', choose a new password for '+d.email+'.'):('Hi '+(d.name||d.email)+'! You have been invited as '+d.roleLabel+'. Choose a password to get started.');
+    $('#inviteFields').hidden=false;
+  }).catch(function(e){$('#inviteIntro').textContent='';$('#inviteFail').textContent=e.message;});
+}
+$('#inviteForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  var p1=$('#ipw').value,p2=$('#ipw2').value,b=$('#inviteBtn'),err=$('#inviteErr');err.textContent='';
+  if(p1.length<8){err.textContent='Use at least 8 characters.';return;}
+  if(p1!==p2){err.textContent='The two passwords do not match.';return;}
+  b.disabled=true;b.textContent='Saving…';
+  api('invite-accept',{body:{token:INVITE_TOKEN,password:p1}}).then(function(){
+    $('#ipw').value='';$('#ipw2').value='';INVITE_TOKEN='';
+    try{history.replaceState(null,'','/admin');}catch(x){}
+    boot();
+  }).catch(function(ex){err.textContent=ex.message;}).then(function(){b.disabled=false;b.textContent='Save password & continue';});
+});
+
 $('#checkBtn').addEventListener('click',function(){
   var b=this;b.disabled=true;b.textContent='Checking…';
   api('diagnose').then(function(d){
@@ -781,7 +1069,15 @@ $('#logoutBtn').addEventListener('click',function(){
   state.dirty=false;api('logout',{body:{}}).then(function(){location.reload();});
 });
 registerLists();
-boot();
+if(INVITE_TOKEN)showInvite();else boot();
+
+/* Keep the gate list fresh when several people check in at once. */
+var _salesBusy=false;
+setInterval(function(){
+  if(document.hidden||$('#app').hidden||state.section!=='sales'||$('#modalHost').firstChild||_salesBusy)return;
+  _salesBusy=true;
+  api('sales').then(function(d){if(state.section==='sales'&&!$('#modalHost').firstChild){var was=state.role;state.sales=d;followRole(d);if(was!==state.role)render();else refreshSalesView();}}).catch(function(e){if(e.status===401)showLogin();}).then(function(){_salesBusy=false;});
+},20000);
 </script>
 </body>
 </html>
