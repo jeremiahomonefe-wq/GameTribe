@@ -314,6 +314,12 @@ a{color:inherit}
 #ticketPurchaseForm input,#ticketPurchaseForm select{font:inherit;font-weight:600;border:1.5px solid rgba(28,20,16,.25);border-radius:12px;background:#fff;color:var(--ink)}
 #ticketPurchaseForm label{color:var(--ink)}
 #ticketPayButton:disabled{opacity:.65;cursor:not-allowed}
+.qty-quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.qty-quick button{border:1.5px solid rgba(28,20,16,.25);border-radius:999px;background:#fff;color:var(--ink);font:800 14px var(--body);padding:8px 16px;min-width:46px;cursor:pointer}
+.qty-quick button.on{background:var(--red);border-color:var(--red);color:#fff}
+.qty-hint{margin:6px 0 0;font-size:12px;font-weight:600;opacity:.75}
+.ticket-summary{margin-top:10px;padding:12px 14px;border-radius:12px;background:rgba(28,20,16,.07);font-size:14px;font-weight:700;line-height:1.5}
+.ticket-summary b{font-family:var(--display);font-size:22px;color:var(--red)}
 .ticket-result-overlay{display:none;position:fixed;inset:0;z-index:150;padding:16px;background:rgba(28,20,16,.86);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center}
 .ticket-result-overlay.active{display:flex}
 .ticket-result-modal{width:min(100%,500px);background:var(--cream);color:var(--ink);border-radius:24px;text-align:center;padding:32px 24px 24px;box-shadow:0 30px 80px rgba(0,0,0,.5);animation:ticketModalIn .22s ease-out}
@@ -818,7 +824,12 @@ a{color:inherit}
       <label style="display:block;margin:10px 0;font-size:12px;font-weight:700;">Email address<input id="ticketEmail" type="email" autocomplete="email" required style="width:100%;margin-top:6px;padding:12px;"></label>
       <label style="display:block;margin:10px 0;font-size:12px;font-weight:700;">Phone number<input id="ticketPhone" type="tel" autocomplete="tel" required style="width:100%;margin-top:6px;padding:12px;"></label>
       <label style="display:block;margin:10px 0;font-size:12px;font-weight:700;">Ticket type<select id="ticketType" style="width:100%;margin-top:6px;padding:12px;"><option value="sponsored_single">Sponsored Tickets — Single · ₦3,000</option><option value="wave_single">First Wave — Single · ₦7,000</option><option value="wave_group">First Wave — Group of 4 · ₦26,000</option></select></label>
-      <button id="ticketPayButton" type="submit" class="btn btn-red" style="width:100%;margin-top:14px;padding:14px;">Proceed to Payment</button>
+      <div style="margin:10px 0;"><div style="font-size:12px;font-weight:700;">How many tickets?</div>
+<div class="qty-quick" id="ticketQtyQuick"></div>
+<input id="ticketQty" type="number" min="1" max="50" step="1" value="1" inputmode="numeric" aria-label="Number of tickets" style="width:100%;margin-top:8px;padding:12px;">
+<p class="qty-hint" id="ticketQtyHint">Need more than 10? Type the number above.</p>
+<div class="ticket-summary" id="ticketSummary" aria-live="polite"></div></div>
+<button id="ticketPayButton" type="submit" class="btn btn-red" style="width:100%;margin-top:14px;padding:14px;">Proceed to Payment</button>
       <div id="ticketStatus" role="status" style="margin-top:14px;font-size:13px;"></div>
     </form>
   </div>
@@ -831,7 +842,7 @@ a{color:inherit}
   <div class="ticket-result-modal" role="dialog" aria-modal="true" aria-labelledby="ticketSuccessTitle">
     <div class="ticket-result-icon" aria-hidden="true">✓</div>
     <h2 id="ticketSuccessTitle">YOU'RE IN!</h2>
-    <p>Your payment has been confirmed and your Game Tribe Fest ticket has been created.</p>
+    <p id="successTicketText">Your payment has been confirmed and your Game Tribe Fest ticket has been created.</p>
 
     <div class="ticket-number-box">
       <small>Your Ticket Number</small>
@@ -1307,7 +1318,59 @@ document.querySelectorAll('.video-card').forEach(function(card){
 </script>
 
 <script>
-  var TICKET_SETTINGS={paystackPublicKey:'pk_live_9fc882239cf6a6cd6832b2e100781f3ae93117b6',sponsored_single:{price:3000},wave_single:{price:7000},wave_group:{price:26000}};
+  var TICKET_SETTINGS={paystackPublicKey:'pk_live_9fc882239cf6a6cd6832b2e100781f3ae93117b6',sponsored_single:{price:3000,admits:1},wave_single:{price:7000,admits:1},wave_group:{price:26000,admits:4}};
+  var TICKET_MAX_QTY=50;
+
+  /* ----- quantity picker ----- */
+  function ticketMoney(n){return '\u20A6'+Number(n).toLocaleString('en-NG');}
+  function getTicketQty(){
+    var raw=document.getElementById('ticketQty').value.trim();
+    if(!/^\d+$/.test(raw)) return 0;
+    var n=parseInt(raw,10);
+    return (n>=1&&n<=TICKET_MAX_QTY)?n:0;
+  }
+  function setTicketQty(n){
+    document.getElementById('ticketQty').value=n;
+    updateTicketSummary();
+  }
+  function buildTicketQtyButtons(){
+    var box=document.getElementById('ticketQtyQuick'),input=document.getElementById('ticketQty');
+    if(!box||!input) return;
+    input.max=TICKET_MAX_QTY;
+    box.innerHTML=[1,2,3,4,5,10].filter(function(n){return n<=TICKET_MAX_QTY;}).map(function(n){
+      return '<button type="button" data-q="'+n+'">'+n+'</button>';
+    }).join('');
+    var hint=document.getElementById('ticketQtyHint');
+    if(hint) hint.textContent=TICKET_MAX_QTY>10?'Need more than 10? Type the number above (up to '+TICKET_MAX_QTY+' per payment).':'Up to '+TICKET_MAX_QTY+' tickets per payment.';
+  }
+  function updateTicketSummary(){
+    var box=document.getElementById('ticketSummary'),sel=document.getElementById('ticketType');
+    if(!box||!sel) return;
+    var ticket=TICKET_SETTINGS[sel.value],qty=getTicketQty(),cur=document.getElementById('ticketQty').value.trim();
+    Array.prototype.forEach.call(document.querySelectorAll('#ticketQtyQuick button'),function(b){
+      b.className=(String(qty)===b.getAttribute('data-q'))?'on':'';
+    });
+    if(!ticket){box.textContent='';return;}
+    if(!qty){
+      box.innerHTML='<span style="color:#8d251d">Enter a number of tickets from 1 to '+TICKET_MAX_QTY+'.</span>';
+      return;
+    }
+    var people=qty*(ticket.admits||1),
+        label=sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text.split(' \u00B7 ')[0]:'';
+    box.innerHTML='Total: <b>'+ticketMoney(ticket.price*qty)+'</b><br><span style="font-weight:600">'+
+      qty+' \u00D7 '+label.replace(/</g,'&lt;')+(people>1?' \u2014 admits '+people+' people':'')+'</span>';
+  }
+  (function(){
+    var qi=document.getElementById('ticketQty'),qb=document.getElementById('ticketQtyQuick'),ts=document.getElementById('ticketType');
+    if(qi) qi.addEventListener('input',updateTicketSummary);
+    if(ts) ts.addEventListener('change',updateTicketSummary);
+    if(qb) qb.addEventListener('click',function(e){
+      var b=e.target.closest?e.target.closest('button'):null;
+      if(b&&b.getAttribute('data-q')) setTicketQty(parseInt(b.getAttribute('data-q'),10));
+    });
+    buildTicketQtyButtons();
+    updateTicketSummary();
+  })();
 
   function openTicketModal(){
     var modal=document.getElementById('ticketPurchaseOverlay');
@@ -1342,6 +1405,12 @@ document.querySelectorAll('.video-card').forEach(function(card){
     var modal=document.getElementById('ticketSuccessOverlay');
     document.getElementById('successTicketNumber').textContent=order.ticketNumber||'-';
     document.getElementById('successTicketEmail').textContent=email||'your email address';
+    var txt=document.getElementById('successTicketText');
+    if(txt){
+      txt.textContent=(order.quantity>1)
+        ? 'Your payment has been confirmed and your '+order.quantity+' tickets have been created'+(order.admitsTotal>1?' (admits '+order.admitsTotal+' people).':'.')
+        : 'Your payment has been confirmed and your Game Tribe Fest ticket has been created.';
+    }
     modal.classList.add('active');
     modal.setAttribute('aria-hidden','false');
     document.body.style.overflow='hidden';
@@ -1391,6 +1460,12 @@ document.querySelectorAll('.video-card').forEach(function(card){
       return;
     }
 
+    var qty=getTicketQty();
+    if(!qty){
+      showTicketStatus('Please enter how many tickets you want (1 to '+TICKET_MAX_QTY+').',true);
+      return;
+    }
+
     if(typeof PaystackPop==='undefined'){
       showTicketStatus('Paystack could not load. Check your internet connection and try again.',true);
       return;
@@ -1405,7 +1480,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
     new PaystackPop().newTransaction({
       key:TICKET_SETTINGS.paystackPublicKey,
       email:email,
-      amount:ticket.price*100,
+      amount:ticket.price*qty*100,
       currency:'NGN',
       firstName:name.split(' ')[0],
       lastName:name.split(' ').slice(1).join(' '),
@@ -1413,6 +1488,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
       reference:reference,
       metadata:{
         ticket_type:type,
+        quantity:qty,
         customer_name:name
       },
 
@@ -1423,11 +1499,13 @@ document.querySelectorAll('.video-card').forEach(function(card){
           name:name,
           email:email,
           phone:phone,
-          ticketType:type
+          ticketType:type,
+          quantity:qty
         }).then(function(order){
           button.disabled=false;
           button.textContent='Proceed to Payment';
-          showTicketStatus('Payment confirmed. Your ticket has been created.',false);
+          showTicketStatus('Payment confirmed. Your tickets have been created.',false);
+          setTicketQty(1);
 
           closeTicketModal();
           showTicketSuccess(order,email);
@@ -1602,7 +1680,13 @@ document.querySelectorAll('.video-card').forEach(function(card){
       var key=TICKET_SETTINGS.paystackPublicKey;
       Object.keys(TICKET_SETTINGS).forEach(function(k){if(k!=='paystackPublicKey')delete TICKET_SETTINGS[k];});
       var active=c.tickets.filter(function(t){return t.active&&t.price>0;});
-      active.forEach(function(t){TICKET_SETTINGS[t.id]={price:t.price};});
+      active.forEach(function(t){
+        var a=parseInt(t.admits,10);
+        if(!(a>=1)) a=/group/i.test(String(t.id)+' '+String(t.label))?4:1;
+        TICKET_SETTINGS[t.id]={price:t.price,admits:a};
+      });
+      var mq=parseInt(c.ticketing&&c.ticketing.maxQuantity,10);
+      if(mq>=1&&mq<=200) TICKET_MAX_QTY=mq;
       TICKET_SETTINGS.paystackPublicKey=key;
       var sel=document.getElementById('ticketType');
       if(sel){
@@ -1610,6 +1694,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
           ? active.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.label)+' \u00B7 '+money(t.price)+'</option>';}).join('')
           : '<option value="">Tickets are not on sale right now</option>';
       }
+      if(typeof buildTicketQtyButtons==='function'){buildTicketQtyButtons();updateTicketSummary();}
     }
     var form=document.getElementById('ticketPurchaseForm');
     if(form&&!form._gtGuard){
