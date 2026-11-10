@@ -1,7 +1,9 @@
 import crypto from 'crypto';
 import {
-  adminConfigured, isAdmin, passwordMatches, sessionCookie, clearCookie
+  adminConfigured, getSession, passwordMatches, sessionCookie, clearCookie
 } from './_lib/auth.js';
+import * as team from './_lib/team.js';
+import * as gate from './_lib/checkin.js';
 import { supabaseConfigured, supabaseUrl, sb } from './_lib/supabase.js';
 import {
   getContent, saveContent, listSales, createSignedUpload, MEDIA_BUCKET
@@ -14,6 +16,34 @@ function tooManyAttempts(ip) {
   const entry = (attempts.get(ip) || []).filter((t) => now - t < 15 * 60 * 1000);
   attempts.set(ip, entry);
   return entry.length >= 8;
+}
+
+/*
+ * Who may do what. The main admin (owner) can do everything. Team members are
+ * limited to the actions listed here; anything else gets a 403 even if someone
+ * tries to call the API directly.
+ */
+const PERMS = {
+  owner: null, /* null = everything */
+  tickets: new Set(['me', 'sales', 'checkin', 'checkin-log']),
+  sales: new Set(['me', 'sales', 'checkin-log'])
+};
+function allowed(role, action) {
+  const p = PERMS[role];
+  return p === null || Boolean(p && p.has(action));
+}
+
+function siteOrigin(req) {
+  if (process.env.SITE_URL) return String(process.env.SITE_URL).replace(/\/+$/, '');
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
+  return proto + '://' + host;
+}
+
+function fmtTime(iso) {
+  try {
+    return new Date(iso).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return ''; }
 }
 
 const ALLOWED_UPLOADS = {
@@ -50,6 +80,15 @@ function validateContent(content) {
       if (!Number.isInteger(t.price) || t.price < 100 || t.price > 10000000) {
         return 'Ticket price for "' + t.label + '" must be a whole number of naira (100 or more).';
       }
+      if (t.admits !== undefined && (!Number.isInteger(t.admits) || t.admits < 1 || t.admits > 20)) {
+        return 'People admitted per ticket for "' + t.label + '" must be a whole number from 1 to 20.';
+      }
+    }
+  }
+  if (content.ticketing !== undefined) {
+    const q = content.ticketing && content.ticketing.maxQuantity;
+    if (q !== undefined && q !== null && (!Number.isInteger(q) || q < 1 || q > 200)) {
+      return 'Max tickets per order must be a whole number from 1 to 200.';
     }
   }
   const groups = content.sponsors && content.sponsors.groups;
@@ -110,14 +149,35 @@ export default async function handler(req, res) {
       if (tooManyAttempts(ip)) {
         return res.status(429).json({ message: 'Too many attempts. Try again in 15 minutes.' });
       }
-      const { password } = await readBody(req);
-      if (!passwordMatches(password)) {
+      const body = await readBody(req);
+      const email = team.normEmail(body.email);
+      if (!email) {
+        /* Main admin: password only. */
+        if (!passwordMatches(body.password)) {
+          attempts.get(ip).push(Date.now());
+          await new Promise((r) => setTimeout(r, 700));
+          return res.status(401).json({ message: 'Wrong password.' });
+        }
+        res.setHeader('Set-Cookie', sessionCookie());
+        return res.status(200).json({ ok: true, role: 'owner' });
+      }
+      /* Team member: email + password. */
+      if (!supabaseConfigured()) {
+        return res.status(503).json({ message: 'Supabase is not connected yet, so team logins are unavailable.' });
+      }
+      const member = await team.findByEmail(email);
+      const active = Boolean(member && member.status === 'active');
+      const good = await team.checkPassword(body.password, active ? member.password_hash : null);
+      if (!active || !good) {
         attempts.get(ip).push(Date.now());
         await new Promise((r) => setTimeout(r, 700));
-        return res.status(401).json({ message: 'Wrong password.' });
+        return res.status(401).json({ message: 'Wrong email or password.' });
       }
-      res.setHeader('Set-Cookie', sessionCookie());
-      return res.status(200).json({ ok: true });
+      try { await team.touchLogin(member.id); } catch (e) { /* not important */ }
+      res.setHeader('Set-Cookie', sessionCookie({
+        role: member.role, uid: member.id, name: member.name || member.email, email: member.email
+      }));
+      return res.status(200).json({ ok: true, role: member.role });
     }
 
     if (action === 'logout') {
@@ -125,11 +185,63 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    /* ---- invite links (no login yet: the secret token is the proof) ---- */
+    if (action === 'invite-info' && req.method === 'GET') {
+      if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected yet.' });
+      const member = await team.findByInvite(req.query && req.query.token);
+      if (!member) {
+        return res.status(404).json({ message: 'This invite link is invalid or has expired. Ask the main admin to send a new one.' });
+      }
+      return res.status(200).json({
+        email: member.email, name: member.name || '', role: member.role,
+        roleLabel: team.ROLES[member.role].label, reset: member.status === 'active'
+      });
+    }
+
+    if (action === 'invite-accept' && req.method === 'POST') {
+      const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+      if (tooManyAttempts(ip)) return res.status(429).json({ message: 'Too many attempts. Try again in 15 minutes.' });
+      if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected yet.' });
+      const { token, password } = await readBody(req);
+      if (typeof password !== 'string' || password.length < 8 || password.length > 200) {
+        return res.status(400).json({ message: 'Choose a password with at least 8 characters.' });
+      }
+      const member = await team.findByInvite(token);
+      if (!member) {
+        attempts.get(ip).push(Date.now());
+        return res.status(404).json({ message: 'This invite link is invalid or has expired. Ask the main admin to send a new one.' });
+      }
+      await team.activate(member.id, await team.hashPassword(password));
+      res.setHeader('Set-Cookie', sessionCookie({
+        role: member.role, uid: member.id, name: member.name || member.email, email: member.email
+      }));
+      return res.status(200).json({ ok: true, role: member.role });
+    }
+
     /* ---- everything below needs a valid session ---- */
-    if (!isAdmin(req)) return res.status(401).json({ message: 'Please log in.' });
+    const session = getSession(req);
+    if (!session) return res.status(401).json({ message: 'Please log in.' });
+
+    let role = session.role;
+    let who = { name: 'Main admin', email: '' };
+    if (role !== 'owner') {
+      /* Team member: confirm they still exist, and use their CURRENT role,
+         so removing someone or changing their role takes effect immediately. */
+      if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected.' });
+      const member = await team.getById(session.uid);
+      if (!member || member.status !== 'active') {
+        res.setHeader('Set-Cookie', clearCookie());
+        return res.status(401).json({ message: 'Your access has been removed. Please contact the main admin.' });
+      }
+      role = member.role;
+      who = { name: member.name || member.email, email: member.email };
+    }
+    if (!allowed(role, action)) {
+      return res.status(403).json({ message: 'Your role does not have permission to do that.' });
+    }
 
     if (action === 'me') {
-      return res.status(200).json({ ok: true, supabase: supabaseConfigured() });
+      return res.status(200).json({ ok: true, role, name: who.name, email: who.email, supabase: supabaseConfigured() });
     }
 
     if (action === 'diagnose') {
@@ -149,6 +261,9 @@ export default async function handler(req, res) {
         const tests = [
           ['Table site_content is reachable', '/rest/v1/site_content?select=key&limit=1', 'Run supabase/setup.sql in the SQL Editor.'],
           ['Table ticket_sales is reachable', '/rest/v1/ticket_sales?select=reference&limit=1', 'Run supabase/setup.sql in the SQL Editor.'],
+          ['Table ticket_sales has the quantity and check-in columns', '/rest/v1/ticket_sales?select=quantity,admits_total,admitted_count,checked_in_at&limit=1', 'Run supabase/upgrade.sql in the SQL Editor (new sales are still saved without it, but quantities are not).'],
+          ['Table checkin_log is reachable', '/rest/v1/checkin_log?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
+          ['Table team_members is reachable', '/rest/v1/team_members?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Storage bucket "' + MEDIA_BUCKET + '" exists and is public', '/storage/v1/bucket/' + MEDIA_BUCKET, 'Run supabase/setup.sql, or create a public bucket with this name.']
         ];
         for (const [name, path, hint] of tests) {
@@ -225,9 +340,114 @@ export default async function handler(req, res) {
     }
 
     if (action === 'sales' && req.method === 'GET') {
-      if (!supabaseConfigured()) return res.status(200).json({ sales: [], configured: false });
+      if (!supabaseConfigured()) return res.status(200).json({ sales: [], configured: false, role });
       const sales = await listSales();
-      return res.status(200).json({ sales, configured: true });
+      /* role is included so an open dashboard notices a role change without a reload */
+      return res.status(200).json({ sales, configured: true, role });
+    }
+
+    /* ---- gate check-in ---- */
+    if (action === 'checkin' || action === 'checkin-undo') {
+      if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed.' });
+      const { reference, count } = await readBody(req);
+      const n = Number(count);
+      if (typeof reference !== 'string' || !reference || reference.length > 100 || !Number.isInteger(n) || n < 1 || n > 1000) {
+        return res.status(400).json({ message: 'Choose how many people to ' + (action === 'checkin' ? 'admit' : 'remove') + '.' });
+      }
+      const result = action === 'checkin'
+        ? await gate.admit(reference, n, who.name, role)
+        : await gate.undo(reference, n, who.name, role);
+      if (result.ok) return res.status(200).json({ ok: true, sale: result.sale });
+
+      const sale = result.sale;
+      if (result.error === 'not_found') return res.status(404).json({ message: 'That ticket was not found.' });
+      if (result.error === 'too_many') {
+        const total = Number(sale.admits_total) || 1;
+        const done = Number(sale.admitted_count) || 0;
+        const last = sale.checked_in_at ? ' Last let in ' + fmtTime(sale.checked_in_at) + (sale.checked_in_by ? ' by ' + sale.checked_in_by : '') + '.' : '';
+        return res.status(409).json({
+          message: done >= total
+            ? 'ALREADY USED. All ' + total + ' ' + (total === 1 ? 'person has' : 'people have') + ' already been let in.' + last
+            : 'Only ' + (total - done) + ' of ' + total + ' can still be let in (' + done + ' already in).' + last,
+          sale
+        });
+      }
+      if (result.error === 'nothing_to_undo') {
+        return res.status(409).json({ message: 'Only ' + (Number(sale.admitted_count) || 0) + ' have been let in, so that many cannot be removed.', sale });
+      }
+      return res.status(409).json({
+        message: 'Another gate device updated this ticket at the same moment. Check the new count and try again.',
+        sale
+      });
+    }
+
+    if (action === 'checkin-log' && req.method === 'GET') {
+      const reference = String((req.query && req.query.reference) || '');
+      if (!reference || reference.length > 100) return res.status(400).json({ message: 'Reference required.' });
+      return res.status(200).json({ log: await gate.getLog(reference) });
+    }
+
+    /* ---- team (main admin only) ---- */
+    if (action.indexOf('team-') === 0) {
+      if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected yet.' });
+
+      if (action === 'team-list' && req.method === 'GET') {
+        return res.status(200).json({ members: await team.listMembers(), roles: team.ROLES });
+      }
+
+      if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed.' });
+      const body = await readBody(req);
+
+      const deliver = async (member, invite, reset) => {
+        const link = siteOrigin(req) + '/admin?invite=' + invite.token;
+        let emailSent = false;
+        let emailError = '';
+        try {
+          await team.sendInviteEmail({ to: member.email, name: member.name, role: member.role, link, reset });
+          emailSent = true;
+        } catch (e) {
+          emailError = e.message;
+          console.error('INVITE EMAIL ERROR:', e.message);
+        }
+        return { link, emailSent, emailError };
+      };
+
+      if (action === 'team-invite') {
+        const email = team.normEmail(body.email);
+        const name = String(body.name || '').trim().slice(0, 80);
+        if (!team.validEmail(email)) return res.status(400).json({ message: 'Enter a valid email address.' });
+        if (!team.ROLES[body.role]) return res.status(400).json({ message: 'Choose a role.' });
+        const invite = team.newInvite();
+        let member = await team.findByEmail(email);
+        if (member && member.status === 'active') {
+          return res.status(409).json({ message: email + ' is already on the team.' });
+        }
+        if (member) {
+          member = await team.setInvite(member.id, invite, { role: body.role, name: name || member.name });
+        } else {
+          member = await team.createMember({ email, name, role: body.role, invite });
+        }
+        return res.status(200).json({ ok: true, ...(await deliver(member, invite, false)) });
+      }
+
+      if (!team.isMemberId(body.id)) return res.status(400).json({ message: 'Unknown team member.' });
+      const member = await team.getById(body.id);
+      if (!member) return res.status(404).json({ message: 'That team member no longer exists.' });
+
+      if (action === 'team-resend') {
+        const invite = team.newInvite();
+        const updated = await team.setInvite(member.id, invite);
+        return res.status(200).json({ ok: true, ...(await deliver(updated || member, invite, member.status === 'active')) });
+      }
+      if (action === 'team-role') {
+        if (!team.ROLES[body.role]) return res.status(400).json({ message: 'Choose a role.' });
+        await team.setRole(member.id, body.role);
+        return res.status(200).json({ ok: true });
+      }
+      if (action === 'team-remove') {
+        await team.removeMember(member.id);
+        return res.status(200).json({ ok: true });
+      }
     }
 
     return res.status(404).json({ message: 'Unknown action.' });
