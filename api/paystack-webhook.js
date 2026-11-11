@@ -214,7 +214,7 @@ export default async function handler(req, res) {
       paid_at: transaction.paid_at,
       source: 'webhook',
       email_sent: false
-    });
+    }, { strict: true }); /* if the database is down this throws -> 500 -> Paystack retries later */
     const ticketNumber =
       await sendTicketEmail({
         email,
