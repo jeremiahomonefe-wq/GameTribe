@@ -4,9 +4,13 @@ import {
 } from './_lib/auth.js';
 import * as team from './_lib/team.js';
 import * as gate from './_lib/checkin.js';
+import * as paystack from './_lib/paystack.js';
+import {
+  checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, HARD_MAX_QUANTITY
+} from './_lib/tickets.js';
 import { supabaseConfigured, supabaseUrl, sb } from './_lib/supabase.js';
 import {
-  getContent, saveContent, listSales, createSignedUpload, MEDIA_BUCKET
+  getContent, saveContent, listSales, getTicketMap, recordSale, createSignedUpload, MEDIA_BUCKET
 } from './_lib/store.js';
 
 /* Very small in-memory brake on password guessing (per server instance). */
@@ -38,6 +42,32 @@ function siteOrigin(req) {
   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
   const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
   return proto + '://' + host;
+}
+
+const naira = (n) => '₦' + Number(n || 0).toLocaleString('en-NG');
+
+/* The buyer's name as Paystack knows it. */
+function buyerName(tx) {
+  const c = tx.customer || {};
+  return (
+    tx.metadata.customer_name ||
+    [c.first_name, c.last_name].filter(Boolean).join(' ').trim() ||
+    (c.email ? String(c.email).split('@')[0] : '') ||
+    'Game Tribe Guest'
+  );
+}
+
+/* Plain-English reason a paid transaction was not accepted automatically. */
+function explainRejection(tx, tickets, purchase) {
+  const type = tx.metadata.ticket_type;
+  if (!type) return 'This payment has no ticket type attached, so it did not come through the website ticket form (for example a Paystack payment link, a transfer, or another product).';
+  const ticket = tickets[type];
+  if (!ticket) return 'Ticket type "' + type + '" does not exist on the site any more (it may have been renamed or deleted).';
+  if (purchase.reason === 'Invalid quantity.') return 'The quantity attached to this payment is not valid.';
+  if (purchase.reason === 'Invalid currency.') return 'Paid in ' + tx.currency + ', not Naira.';
+  const q = Number(tx.metadata.quantity) || 1;
+  return 'Paid ' + naira(tx.amount / 100) + ', but ' + q + ' × ' + ticket.label + ' should be ' + naira(ticket.amount * q) +
+    '. The ticket price may have changed after they started paying, or extra fees were added.';
 }
 
 function fmtTime(iso) {
@@ -344,6 +374,119 @@ export default async function handler(req, res) {
       const sales = await listSales();
       /* role is included so an open dashboard notices a role change without a reload */
       return res.status(200).json({ sales, configured: true, role });
+    }
+
+    /* ---- compare Paystack with the saved sales (main admin only) ---- */
+    if (action === 'reconcile' && req.method === 'GET') {
+      if (!process.env.PAYSTACK_SECRET_KEY) return res.status(503).json({ message: 'PAYSTACK_SECRET_KEY is not set on the server.' });
+      if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected yet.' });
+      const days = Math.min(60, Math.max(1, parseInt(req.query && req.query.days, 10) || 7));
+      let found;
+      try {
+        found = await paystack.listSuccessful({
+          from: new Date(Date.now() - days * 86400 * 1000).toISOString(),
+          to: new Date(Date.now() + 3600 * 1000).toISOString()
+        });
+      } catch (e) {
+        return res.status(502).json({ message: 'Could not read from Paystack. ' + e.message });
+      }
+      const saved = new Set((await listSales()).map((r) => r.reference));
+      const tickets = await getTicketMap();
+      const missing = [];
+      for (const tx of found.transactions) {
+        if (saved.has(tx.reference)) continue;
+        const c = tx.customer || {};
+        const item = {
+          reference: tx.reference,
+          paidAt: tx.paid_at || tx.created_at || '',
+          amount: Number(tx.amount) / 100,
+          currency: tx.currency,
+          channel: tx.channel || '',
+          name: buyerName(tx),
+          email: c.email || '',
+          phone: c.phone || '',
+          ticketType: tx.metadata.ticket_type || '',
+          quantity: Number(tx.metadata.quantity) || 1
+        };
+        const purchase = checkPurchase(tx, tickets);
+        if (purchase.ok && item.email) {
+          missing.push({ ...item, state: 'ready', ticketLabel: purchase.ticket.label, quantity: purchase.quantity, admitsTotal: purchase.admitsTotal });
+        } else {
+          missing.push({
+            ...item,
+            state: 'review',
+            reason: purchase.ok ? 'Paystack has no email address for this buyer, so no ticket email can be sent.' : explainRejection(tx, tickets, purchase)
+          });
+        }
+      }
+      return res.status(200).json({
+        days,
+        checked: found.transactions.length,
+        saved: found.transactions.length - missing.length,
+        truncated: found.truncated,
+        missing,
+        tickets: Object.keys(tickets).map((id) => ({ id, label: tickets[id].label, price: tickets[id].amount, admits: tickets[id].admits }))
+      });
+    }
+
+    if (action === 'reconcile-import') {
+      if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed.' });
+      if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected yet.' });
+      const body = await readBody(req);
+      const reference = body.reference;
+      if (typeof reference !== 'string' || !/^[\w.\-=]{3,100}$/.test(reference)) {
+        return res.status(400).json({ message: 'Invalid payment reference.' });
+      }
+      /* Never trust the browser: ask Paystack again, and only act on a successful payment. */
+      let tx;
+      try { tx = await paystack.verifyTransaction(reference); } catch (e) {
+        return res.status(502).json({ message: 'Could not confirm this payment with Paystack. ' + e.message });
+      }
+      if (!tx || tx.status !== 'success') return res.status(400).json({ message: 'Paystack does not show this payment as successful.' });
+      if (tx.currency !== 'NGN') return res.status(400).json({ message: 'This payment was not made in Naira.' });
+      if (await gate.getSale(tx.reference)) return res.status(409).json({ message: 'This payment is already saved.', already: true });
+
+      const tickets = await getTicketMap();
+      let purchase;
+      if (body.ticketType) {
+        /* Manual choice by the main admin (for payments that did not match automatically). */
+        const ticket = tickets[body.ticketType];
+        const qty = body.quantity === undefined ? 1 : Number(body.quantity);
+        if (!ticket) return res.status(400).json({ message: 'Choose a ticket type.' });
+        if (!Number.isInteger(qty) || qty < 1 || qty > HARD_MAX_QUANTITY) return res.status(400).json({ message: 'Choose a quantity from 1 to ' + HARD_MAX_QUANTITY + '.' });
+        const per = ticket.admits || 1;
+        purchase = { ok: true, ticketType: body.ticketType, ticket, quantity: qty, totalNaira: Number(tx.amount) / 100, admitsPerUnit: per, admitsTotal: per * qty };
+      } else {
+        purchase = checkPurchase(tx, tickets);
+        if (!purchase.ok) return res.status(400).json({ message: purchase.message + ' Choose the ticket type to import it by hand.' });
+      }
+      const c = tx.customer || {};
+      const name = buyerName(tx);
+      await recordSale({
+        reference: tx.reference,
+        ticket_number: ticketNumberFor(tx.reference),
+        name,
+        email: c.email,
+        phone: c.phone,
+        ...saleFields(purchase),
+        paid_at: tx.paid_at,
+        source: 'recovered',
+        email_sent: false
+      }, { strict: true });
+
+      let emailSent = false;
+      let emailError = '';
+      if (body.sendEmail !== false && c.email) {
+        try {
+          await sendTicketEmail({ email: c.email, name, ticket: purchase.ticket, reference: tx.reference, quantity: purchase.quantity, admitsTotal: purchase.admitsTotal });
+          await recordSale({ reference: tx.reference, email_sent: true });
+          emailSent = true;
+        } catch (e) {
+          emailError = e.message;
+          console.error('RECOVERY EMAIL ERROR:', e.message);
+        }
+      }
+      return res.status(200).json({ ok: true, emailSent, emailError, name, ticket: purchase.ticket.label, quantity: purchase.quantity });
     }
 
     /* ---- gate check-in ---- */
