@@ -100,8 +100,10 @@ export async function getTicketMap() {
 const NEW_SALE_COLUMNS = ['quantity', 'unit_price', 'admits_per_unit', 'admits_total'];
 
 /* Record a paid ticket. Safe to call more than once for the same reference
-   (webhook + browser verification both call it). Never throws. */
-export async function recordSale(row) {
+   (webhook + browser verification both call it).
+   Normally it never throws. With { strict: true } it throws if the sale could
+   not be saved, so the caller can tell Paystack to retry later. */
+export async function recordSale(row, opts = {}) {
   if (!supabaseConfigured()) return;
   const clean = {};
   for (const [k, v] of Object.entries(row)) {
@@ -112,6 +114,10 @@ export async function recordSale(row) {
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
     body
   });
+  const giveUp = (error) => {
+    console.error('recordSale failed:', error.message);
+    if (opts.strict) throw error;
+  };
   try {
     await send(clean);
   } catch (error) {
@@ -121,10 +127,14 @@ export async function recordSale(row) {
       console.error('recordSale: new columns missing, saving in old format. Run supabase/upgrade.sql.', error.message);
       const legacy = { ...clean };
       NEW_SALE_COLUMNS.forEach((c) => delete legacy[c]);
-      try { await send(legacy); } catch (e2) { console.error('recordSale failed:', e2.message); }
+      try { await send(legacy); } catch (e2) { giveUp(e2); }
       return;
     }
-    console.error('recordSale failed:', error.message);
+    /* A hiccup on Supabase's side (5xx or network): try once more. */
+    if (!error.status || error.status >= 500) {
+      try { await send(clean); return; } catch (e3) { giveUp(e3); return; }
+    }
+    giveUp(error);
   }
 }
 
