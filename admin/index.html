@@ -143,6 +143,8 @@ tr.row-used td{background:#FBF4F3}
 .hist li{padding:6px 0;border-top:1px solid var(--line)}
 .linkbox{display:flex;gap:8px;margin-top:8px}
 .modal.wide{max-width:780px}
+.keybox{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:18px;letter-spacing:2px;background:#fff;border:1.5px dashed var(--ink);border-radius:12px;padding:12px;word-break:break-word;margin:10px 0;font-weight:700}
+.sec-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line);font-weight:700}
 .rc-card{border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:10px}
 .rc-card.ready{border-color:#9AD2AE}.rc-card.review{border-color:#E8B2AC}.rc-card.done{border-color:#9AD2AE;background:#F2FAF5}
 .rc-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:800}
@@ -161,6 +163,8 @@ tr.row-used td{background:#FBF4F3}
     <input type="email" id="em" autocomplete="username" placeholder="Empty if you are the main admin" style="margin-bottom:12px">
     <label for="pw" style="font-weight:800;font-size:13px">Password</label>
     <input type="password" id="pw" autocomplete="current-password" required autofocus>
+    <div id="otpWrap" hidden><label for="otp" style="font-weight:800;font-size:13px;display:block;margin-top:12px">Authenticator code</label>
+    <input type="text" id="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="6-digit code from your app"></div>
     <p class="err" id="loginErr" role="alert"></p>
     <button class="btn btn-red" style="width:100%;margin-top:12px" id="loginBtn">Log in</button>
   </form>
@@ -311,6 +315,7 @@ var SECTIONS=[
  {id:'tickets',icon:'🎟️',title:'Tickets & prices',custom:'tickets'},
  {id:'sales',icon:'💰',title:'Sales & attendees',custom:'sales'},
  {id:'team',icon:'👥',title:'Team & access',custom:'team'},
+ {id:'security',icon:'🔒',title:'Security',custom:'security'},
 
  {id:'links',icon:'🔗',title:'Links, contact & footer',blocks:[
   {title:'Contact and links',fields:[
@@ -492,7 +497,7 @@ function resizeImage(file,maxW){
 }
 function uploadFile(file,folder,onProgress){
   return resizeImage(file,file.type==='image/png'?1400:1800).then(function(f){
-    return api('sign-upload',{body:{filename:f.name,contentType:f.type,folder:folder}}).then(function(sig){
+    return api('sign-upload',{body:{filename:f.name,contentType:f.type,folder:folder,size:f.size}}).then(function(sig){
       return new Promise(function(resolve,reject){
         var fd=new FormData();fd.append('cacheControl','3600');fd.append('',f);
         var x=new XMLHttpRequest();x.open('PUT',sig.uploadUrl);
@@ -710,8 +715,14 @@ function loadSales(){
 function followRole(d){
   if(d&&d.role&&d.role!==state.role){state.role=d.role;applyRole();}
 }
+/* A buyer controls their own name, so a cell like =HYPERLINK(...) must never be able to run when you open the CSV in Excel. */
+function csvCell(v){
+  v=String(v==null?'':v);
+  if(/^[=@\t\r]/.test(v)||(/^[+\-]/.test(v)&&!/^[+\-][\d\s().\-]*$/.test(v)))v="'"+v;
+  return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+}
 function csvDownload(){
-  var q=function(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  var q=csvCell;
   var head=['Date','Name','Email','Phone','Ticket','Quantity','People covered','People checked in','Amount (NGN)','Ticket number','Reference','Email sent'];
   var lines=[head.join(',')].concat((state.sales.sales||[]).map(function(r){return [r.paid_at||r.created_at,r.name,r.email,r.phone,r.ticket_label||r.ticket_type,r.quantity||1,saleTotal(r),saleAdmitted(r),r.amount,r.ticket_number,r.reference,r.email_sent?'yes':'no'].map(q).join(',');}));
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv'}));a.download='game-tribe-tickets.csv';a.click();
@@ -837,6 +848,66 @@ function rcImportAll(btn){
   chain.then(function(){toast('All valid payments imported ✓');},rcRender);
 }
 
+/* ---------- security (main admin only) ---------- */
+var AUDIT_LABELS={login_ok:'Signed in',login_failed:'Failed sign-in',login_blocked:'Blocked: too many tries',content_published:'Published website changes',
+  team_invited:'Invited a team member',team_invite_resent:'Re-sent an invite',team_reset_link:'Sent a password reset link',team_role_changed:'Changed a role',team_removed:'Removed a team member',
+  invite_accepted:'Accepted an invite',invite_failed:'Bad invite link used',password_reset:'Team member set a new password',payment_imported:'Imported a payment from Paystack',
+  checkin_undone:'Undid a check-in',sessions_revoked:'Signed everyone out','2step_enabled':'Turned ON 2-step login','2step_disabled':'Turned OFF 2-step login','2step_disable_failed':'Failed to turn off 2-step login'};
+function auditBad(a){return /failed|blocked/.test(a);}
+function securityHtml(){
+  var d=state.secInfo;if(!d)return '<div class="empty">Loading…</div>';
+  var st=d.status,h='';
+  if(!st.tablesReady)h+='<div class="notice">The security tables are not in your database yet. Run <code>supabase/upgrade.sql</code> in the Supabase SQL Editor, then reload this page.</div>';
+  var row=function(label,on,onTxt,offTxt){return '<div class="sec-row"><span>'+label+'</span>'+(on?'<span class="badge ok">'+onTxt+'</span>':'<span class="badge warn">'+offTxt+'</span>')+'</div>';};
+  h+='<section class="card"><h3>Protection status</h3>'+
+    row('2-step login (authenticator app)',st.totpEnabled,'On','Off — strongly recommended')+
+    row('Human check on the contact form',st.captcha,'On','Off (optional)')+
+    row('Emails to you about repeated failed sign-ins',st.alerts,'On','Off — set ALERT_EMAIL in Vercel')+'</section>';
+  h+='<section class="card"><h3>2-step login</h3>';
+  if(st.twoFactorOverride)h+='<div class="notice">The emergency switch <code>ADMIN_2FA_OFF</code> is set in Vercel, so the code is not being asked for. Remove it once you are back in.</div>';
+  if(st.totpEnabled){
+    h+='<p class="help">On. Signing in needs your password and the 6-digit code from your authenticator app. To turn it off you need both as well.</p>'+
+      '<div class="grid two"><div class="field"><label for="tfPw">Password</label><input type="password" id="tfPw" autocomplete="current-password"></div>'+
+      '<div class="field"><label for="tfCode">Current code</label><input type="text" id="tfCode" inputmode="numeric" maxlength="8" autocomplete="one-time-code"></div></div>'+
+      '<p style="margin:12px 0 0"><button class="btn btn-ghost danger" type="button" data-act="totp-disable">Turn off 2-step login</button></p>';
+  }else if(state.secSetup){
+    var u=state.secSetup;
+    h+='<p class="help">1. Open your authenticator app (Google Authenticator, Microsoft Authenticator, Authy, 1Password…) and choose <b>Enter a setup key</b>. Name: Game Tribe Admin. Type: time-based.</p>'+
+      '<div class="keybox" id="tfKey">'+esc(u.secret)+'</div>'+
+      '<p class="help"><a href="'+esc(u.uri)+'">On this phone? Tap here to add it to your app automatically.</a></p>'+
+      '<p class="help">2. Type the 6-digit code the app now shows, to confirm it works.</p>'+
+      '<div class="field"><label for="tfCode">6-digit code</label><input type="text" id="tfCode" inputmode="numeric" maxlength="8" autocomplete="one-time-code"></div>'+
+      '<p style="margin:12px 0 0"><button class="btn btn-red" type="button" data-act="totp-enable">Turn on 2-step login</button> <button class="btn btn-line" type="button" data-act="totp-cancel">Cancel</button></p>'+
+      '<p class="help">Turning it on signs out every other device. If you ever lose your phone, add <code>ADMIN_2FA_OFF=true</code> in Vercel (environment variables), redeploy, sign in with just your password, then turn 2-step login off and on again.</p>';
+  }else{
+    h+='<p class="help">Adds a 6-digit code from your phone to every sign-in, so a stolen or guessed password alone is not enough to get in.</p>'+
+      '<p style="margin:12px 0 0"><button class="btn btn-red" type="button" data-act="totp-setup"'+(st.tablesReady?'':' disabled')+'>Set up 2-step login</button></p>';
+  }
+  h+='</section><section class="card"><h3>Sign out everywhere</h3><p class="help">Ends every other session on every device, team members included. You stay signed in here. Use it if you ever lose a phone or suspect someone has access. (Changing <code>ADMIN_PASSWORD</code> in Vercel does the same, and also signs you out.)</p>'+
+    '<p style="margin:12px 0 0"><button class="btn btn-ghost danger" type="button" data-act="sessions-revoke">Sign everyone else out</button></p></section>';
+  h+='<section class="card"><h3>Recent activity</h3><p class="help">The last 100 sign-ins and important changes. Repeated “Failed sign-in” lines mean someone is guessing passwords.</p>'+
+    '<p style="margin:0 0 10px"><button class="btn btn-line sm" type="button" data-act="audit-refresh">Refresh</button></p>';
+  if(d.audit.missingTable)h+='<div class="empty">The activity log table does not exist yet. Run <code>supabase/upgrade.sql</code>.</div>';
+  else if(!d.audit.log.length)h+='<div class="empty">Nothing recorded yet.</div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Who</th><th>What</th><th>Details</th><th>Address</th></tr></thead><tbody>'+d.audit.log.map(function(a){
+    return '<tr><td style="white-space:nowrap">'+esc(timeShort(a.created_at))+'</td><td>'+esc(a.actor||'—')+'</td><td>'+(auditBad(a.action)?'<span class="badge warn">':'<span class="badge ok">')+esc(AUDIT_LABELS[a.action]||a.action)+'</span></td><td>'+esc(a.detail||'')+'</td><td><code>'+esc(a.ip||'')+'</code></td></tr>';
+  }).join('')+'</tbody></table></div>';
+  return h+'</section>';
+}
+function loadSecurity(keepSetup){
+  if(!keepSetup)state.secSetup=null;
+  state.secInfo=null;render();
+  Promise.all([api('security-status'),api('audit-list')]).then(function(r){state.secInfo={status:r[0],audit:r[1]};render();})
+    .catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
+}
+function secCall(btn,label,action,body,done){
+  btn.disabled=true;
+  api(action,{body:body||{}}).then(done).catch(function(e){
+    if(e.status===401&&!/password or code/.test(e.message))return showLogin();
+    toast(e.message,true);btn.disabled=false;
+  });
+}
+
 /* ---------- team (main admin only) ---------- */
 function teamHtml(){
   var h='<div class="notice">You are the only main admin. Team members can only do what their role allows, and you can remove them at any time. Removing someone, or changing their role, takes effect immediately.</div>';
@@ -902,6 +973,7 @@ function render(){
   if(sec.custom==='tickets')h=ticketsHtml();
   else if(sec.custom==='sales')h=salesHtml();
   else if(sec.custom==='team')h=teamHtml();
+  else if(sec.custom==='security')h=securityHtml();
   else h=sec.blocks.map(blockHtml).join('');
   v.innerHTML=h;
   var warn=warnThumb;
@@ -918,6 +990,15 @@ function handleAct(t){
   if(a==='admit'){doAdmit(ref);return;}
   if(a==='undo'){doUndo(ref);return;}
   if(a==='history'){loadHistory(ref);return;}
+  if(a==='totp-setup'){secCall(t,'',a,{},function(r){state.secSetup=r;render();});return;}
+  if(a==='totp-cancel'){state.secSetup=null;render();return;}
+  if(a==='totp-enable'){secCall(t,'',a,{code:($('#tfCode')||{}).value||''},function(){toast('2-step login is now ON ✓');state.secSetup=null;loadSecurity();});return;}
+  if(a==='totp-disable'){secCall(t,'',a,{password:($('#tfPw')||{}).value||'',code:($('#tfCode')||{}).value||''},function(){toast('2-step login turned off');loadSecurity();});return;}
+  if(a==='sessions-revoke'){
+    if(!confirm('Sign out every other device and every team member?'))return;
+    secCall(t,'',a,{},function(){toast('Everyone else has been signed out ✓');loadSecurity();});return;
+  }
+  if(a==='audit-refresh'){loadSecurity(true);return;}
   if(a==='rc-open'){rcOpen();return;}
   if(a==='rc-run'){rcRun();return;}
   if(a==='rc-import'){rcImport(parseInt(t.dataset.idx,10),t);return;}
@@ -945,7 +1026,7 @@ document.addEventListener('click',function(e){
   if(e.target.classList&&e.target.classList.contains('modal-back')){closeModal();return;}
   var t=e.target.closest('button');if(!t)return;
   if(t.dataset.act){handleAct(t);return;}
-  if(t.dataset.sec){state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='team')loadTeam();else render();window.scrollTo(0,0);return;}
+  if(t.dataset.sec){state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='team')loadTeam();else if(t.dataset.sec==='security')loadSecurity();else render();window.scrollTo(0,0);return;}
   if(t.dataset.add){
     var L=listSpec(t.dataset.add),arr=getP(state.content,t.dataset.add),item=L.strings?'':clone(L.blank);
     if(item&&typeof item==='object'&&'id' in item)item.id=newId();
@@ -1097,8 +1178,11 @@ function boot(){
 }
 $('#loginForm').addEventListener('submit',function(e){
   e.preventDefault();var b=$('#loginBtn');b.disabled=true;b.textContent='Checking…';$('#loginErr').textContent='';
-  api('login',{body:{email:$('#em').value.trim(),password:$('#pw').value}}).then(function(){$('#pw').value='';boot();})
-   .catch(function(err){$('#loginErr').textContent=err.message;})
+  api('login',{body:{email:$('#em').value.trim(),password:$('#pw').value,code:$('#otp').value.trim()}}).then(function(res){
+    if(res&&res.needCode){$('#otpWrap').hidden=false;$('#loginErr').textContent='Enter the 6-digit code from your authenticator app.';$('#otp').focus();return;}
+    $('#pw').value='';$('#otp').value='';$('#otpWrap').hidden=true;boot();
+   })
+   .catch(function(err){if(err.data&&err.data.needCode)$('#otpWrap').hidden=false;$('#loginErr').textContent=err.message;})
    .then(function(){b.disabled=false;b.textContent='Log in';});
 });
 
