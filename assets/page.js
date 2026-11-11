@@ -195,16 +195,26 @@
     }).join(''));
     var form=$('contactForm'),msg=$('cfMsg'),btn=$('cfBtn');
     if(!form||form._wired)return;form._wired=true;
+    /* Optional human check (Cloudflare Turnstile), only when the site owner has switched it on */
+    var tsKey=(c.security&&c.security.turnstileSiteKey)||'',tsToken='',tsId=null;
+    if(tsKey){
+      var holder=document.createElement('div');holder.id='cfTurnstile';holder.style.margin='10px 0';
+      btn.parentNode.insertBefore(holder,btn);
+      var ts=document.createElement('script');ts.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';ts.async=true;
+      ts.onload=function(){tsId=window.turnstile.render(holder,{sitekey:tsKey,callback:function(t){tsToken=t;},'expired-callback':function(){tsToken='';},'error-callback':function(){tsToken='';}});};
+      document.head.appendChild(ts);
+    }
     form.addEventListener('submit',function(e){
       e.preventDefault();
-      var d={name:form.name.value,email:form.email.value,subject:form.subject.value,message:form.message.value,website:form.website.value};
+      if(tsKey&&!tsToken){msg.className='cf-msg err';msg.textContent='Please complete the check above the button.';return;}
+      var d={name:form.name.value,email:form.email.value,subject:form.subject.value,message:form.message.value,website:form.website.value,turnstile:tsToken};
       msg.className='cf-msg';msg.textContent='';
       btn.disabled=true;btn.textContent='Sending\u2026';
       fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)})
         .then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok)throw new Error(j.message||'Something went wrong. Please try again.');return j;});})
         .then(function(){msg.className='cf-msg ok';msg.textContent=c.pages.contact.successText||'Thanks! Your message has been sent.';form.reset();})
         .catch(function(err){msg.className='cf-msg err';msg.textContent=err.message;})
-        .then(function(){btn.disabled=false;btn.textContent='Send message';});
+        .then(function(){btn.disabled=false;btn.textContent='Send message';if(tsKey&&window.turnstile&&tsId!==null){window.turnstile.reset(tsId);tsToken='';}});
     });
   };
 
