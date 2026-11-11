@@ -14,6 +14,24 @@ export function escapeHtml(value) {
   }[c]));
 }
 
+/* Names and phone numbers come from the buyer's browser, so never trust their size or content. */
+export function cleanName(value, fallback = 'Game Tribe Guest') {
+  const s = String(value == null ? '' : value)
+    .replace(/[\u0000-\u001f\u007f<>]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return s || fallback;
+}
+
+export function cleanPhone(value) {
+  return String(value == null ? '' : value)
+    .replace(/[^\d+()\-\s.]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 20);
+}
+
 /* References already start with "GT-", so don't add a second "GT-". */
 export function ticketNumberFor(reference) {
   const ref = String(reference || '');

@@ -7,13 +7,24 @@
  * simply fails and re-reads, so nobody is ever admitted twice. The database
  * also has a CHECK constraint as a last safety net (see supabase/upgrade.sql).
  */
-import { sb } from './supabase.js';
+import { sb, supabaseConfigured } from './supabase.js';
 
 const enc = encodeURIComponent;
 
 export async function getSale(reference) {
   const rows = await sb('/rest/v1/ticket_sales?select=*&reference=eq.' + enc(reference) + '&limit=1');
   return (rows && rows[0]) || null;
+}
+
+/* True when the ticket email for this payment was already sent (so we never send it twice). */
+export async function alreadyEmailed(reference) {
+  if (!supabaseConfigured()) return false;
+  try {
+    const sale = await getSale(reference);
+    return Boolean(sale && sale.email_sent);
+  } catch (e) {
+    return false;
+  }
 }
 
 async function writeLog(reference, action, delta, byName, byRole) {
