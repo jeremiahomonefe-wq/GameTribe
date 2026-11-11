@@ -5,22 +5,15 @@ import {
 import * as team from './_lib/team.js';
 import * as gate from './_lib/checkin.js';
 import * as paystack from './_lib/paystack.js';
+import * as sec from './_lib/security.js';
+import * as totp from './_lib/totp.js';
 import {
-  checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, HARD_MAX_QUANTITY
+  checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, HARD_MAX_QUANTITY
 } from './_lib/tickets.js';
 import { supabaseConfigured, supabaseUrl, sb } from './_lib/supabase.js';
 import {
   getContent, saveContent, listSales, getTicketMap, recordSale, createSignedUpload, MEDIA_BUCKET
 } from './_lib/store.js';
-
-/* Very small in-memory brake on password guessing (per server instance). */
-const attempts = new Map();
-function tooManyAttempts(ip) {
-  const now = Date.now();
-  const entry = (attempts.get(ip) || []).filter((t) => now - t < 15 * 60 * 1000);
-  attempts.set(ip, entry);
-  return entry.length >= 8;
-}
 
 /*
  * Who may do what. The main admin (owner) can do everything. Team members are
@@ -49,11 +42,10 @@ const naira = (n) => '₦' + Number(n || 0).toLocaleString('en-NG');
 /* The buyer's name as Paystack knows it. */
 function buyerName(tx) {
   const c = tx.customer || {};
-  return (
+  return cleanName(
     tx.metadata.customer_name ||
     [c.first_name, c.last_name].filter(Boolean).join(' ').trim() ||
-    (c.email ? String(c.email).split('@')[0] : '') ||
-    'Game Tribe Guest'
+    (c.email ? String(c.email).split('@')[0] : '')
   );
 }
 
@@ -76,6 +68,7 @@ function fmtTime(iso) {
   } catch (e) { return ''; }
 }
 
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 const ALLOWED_UPLOADS = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
   'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov',
@@ -175,38 +168,72 @@ export default async function handler(req, res) {
 
     /* ---- login / logout / session ---- */
     if (action === 'login' && req.method === 'POST') {
-      const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
-      if (tooManyAttempts(ip)) {
+      const ip = sec.clientIp(req);
+      if ((await sec.countEvents('login_fail', ip)) >= 10) {
+        await sec.audit(req, '', '', 'login_blocked', 'too many failed attempts from this address');
         return res.status(429).json({ message: 'Too many attempts. Try again in 15 minutes.' });
       }
       const body = await readBody(req);
       const email = team.normEmail(body.email);
+
+      /* One wrong attempt: remember it (stored in Supabase, so it counts across all servers), slow the reply down, and answer. */
+      const fail = async (message, why, extra = {}) => {
+        const fails = await sec.countEvents('login_fail', ip);
+        await sec.addEvent('login_fail', ip);
+        if (email) await sec.addEvent('login_fail_email', email);
+        await sec.audit(req, email || 'Main admin', '', 'login_failed', why);
+        await sec.sleep(sec.failDelayMs(fails));
+        return res.status(401).json({ message, ...extra });
+      };
+
       if (!email) {
-        /* Main admin: password only. */
+        /* Main admin: password (and an authenticator code if 2-step login is on). */
         if (!passwordMatches(body.password)) {
-          attempts.get(ip).push(Date.now());
-          await new Promise((r) => setTimeout(r, 700));
-          return res.status(401).json({ message: 'Wrong password.' });
+          await sec.addEvent('owner_fail', 'all');
+          if ((await sec.countEvents('owner_fail', 'all')) >= 10) {
+            await sec.alertOnce('bruteforce', 'Repeated failed admin sign-ins',
+              'There have been 10 or more failed sign-in attempts on your Game Tribe admin in the last 15 minutes. Latest one came from address ' + ip +
+              '. If this was not you, change ADMIN_PASSWORD in Vercel (that also signs everyone out) and turn on 2-step login on the Security page.');
+          }
+          return fail('Wrong password.', 'wrong password');
         }
-        res.setHeader('Set-Cookie', sessionCookie());
+        const state = await sec.getSecurity();
+        const needCode = Boolean(state.totp_enabled && state.totp_secret) && process.env.ADMIN_2FA_OFF !== 'true';
+        if (needCode) {
+          if (!body.code) return res.status(200).json({ needCode: true });
+          if ((await sec.countEvents('totp_fail', 'owner')) >= 20) {
+            return res.status(429).json({ message: 'Too many wrong codes. Try again in 15 minutes.', needCode: true });
+          }
+          const step = totp.verifyTotp(state.totp_secret, body.code, { lastStep: Number(state.totp_last_step) || 0 });
+          if (!step) {
+            await sec.addEvent('totp_fail', 'owner');
+            return fail('That code is not right. Use the newest code from your authenticator app.', 'wrong 2-step code', { needCode: true });
+          }
+          await sec.patchSecurity({ totp_last_step: step });
+        }
+        res.setHeader('Set-Cookie', sessionCookie({ ep: Number(state.session_epoch) || 0 }));
+        await sec.audit(req, 'Main admin', 'owner', 'login_ok', needCode ? 'with authenticator code' : '');
         return res.status(200).json({ ok: true, role: 'owner' });
       }
+
       /* Team member: email + password. */
       if (!supabaseConfigured()) {
         return res.status(503).json({ message: 'Supabase is not connected yet, so team logins are unavailable.' });
       }
+      if ((await sec.countEvents('login_fail_email', email)) >= 8) {
+        await sec.audit(req, email, '', 'login_blocked', 'too many failed attempts for this account');
+        return res.status(429).json({ message: 'Too many attempts for this account. Try again in 15 minutes.' });
+      }
       const member = await team.findByEmail(email);
       const active = Boolean(member && member.status === 'active');
       const good = await team.checkPassword(body.password, active ? member.password_hash : null);
-      if (!active || !good) {
-        attempts.get(ip).push(Date.now());
-        await new Promise((r) => setTimeout(r, 700));
-        return res.status(401).json({ message: 'Wrong email or password.' });
-      }
+      if (!active || !good) return fail('Wrong email or password.', 'wrong email or password');
       try { await team.touchLogin(member.id); } catch (e) { /* not important */ }
+      const state = await sec.getSecurity();
       res.setHeader('Set-Cookie', sessionCookie({
-        role: member.role, uid: member.id, name: member.name || member.email, email: member.email
+        role: member.role, uid: member.id, name: member.name || member.email, email: member.email, ep: Number(state.session_epoch) || 0
       }));
+      await sec.audit(req, member.email, member.role, 'login_ok');
       return res.status(200).json({ ok: true, role: member.role });
     }
 
@@ -218,8 +245,11 @@ export default async function handler(req, res) {
     /* ---- invite links (no login yet: the secret token is the proof) ---- */
     if (action === 'invite-info' && req.method === 'GET') {
       if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected yet.' });
+      const ip = sec.clientIp(req);
+      if ((await sec.countEvents('invite_fail', ip)) >= 10) return res.status(429).json({ message: 'Too many attempts. Try again in 15 minutes.' });
       const member = await team.findByInvite(req.query && req.query.token);
       if (!member) {
+        await sec.addEvent('invite_fail', ip);
         return res.status(404).json({ message: 'This invite link is invalid or has expired. Ask the main admin to send a new one.' });
       }
       return res.status(200).json({
@@ -229,8 +259,8 @@ export default async function handler(req, res) {
     }
 
     if (action === 'invite-accept' && req.method === 'POST') {
-      const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
-      if (tooManyAttempts(ip)) return res.status(429).json({ message: 'Too many attempts. Try again in 15 minutes.' });
+      const ip = sec.clientIp(req);
+      if ((await sec.countEvents('invite_fail', ip)) >= 10) return res.status(429).json({ message: 'Too many attempts. Try again in 15 minutes.' });
       if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected yet.' });
       const { token, password } = await readBody(req);
       if (typeof password !== 'string' || password.length < 8 || password.length > 200) {
@@ -238,19 +268,29 @@ export default async function handler(req, res) {
       }
       const member = await team.findByInvite(token);
       if (!member) {
-        attempts.get(ip).push(Date.now());
+        await sec.addEvent('invite_fail', ip);
+        await sec.audit(req, '', '', 'invite_failed', 'invalid or expired invite link used');
         return res.status(404).json({ message: 'This invite link is invalid or has expired. Ask the main admin to send a new one.' });
       }
       await team.activate(member.id, await team.hashPassword(password));
+      const state = await sec.getSecurity();
       res.setHeader('Set-Cookie', sessionCookie({
-        role: member.role, uid: member.id, name: member.name || member.email, email: member.email
+        role: member.role, uid: member.id, name: member.name || member.email, email: member.email, ep: Number(state.session_epoch) || 0
       }));
+      await sec.audit(req, member.email, member.role, member.status === 'active' ? 'password_reset' : 'invite_accepted');
       return res.status(200).json({ ok: true, role: member.role });
     }
 
     /* ---- everything below needs a valid session ---- */
     const session = getSession(req);
     if (!session) return res.status(401).json({ message: 'Please log in.' });
+
+    /* "Sign out everywhere" ends every session created before the last time it was used. */
+    const secState = await sec.getSecurity();
+    if ((Number(session.ep) || 0) < Number(secState.session_epoch || 0)) {
+      res.setHeader('Set-Cookie', clearCookie());
+      return res.status(401).json({ message: 'You were signed out. Please log in again.' });
+    }
 
     let role = session.role;
     let who = { name: 'Main admin', email: '' };
@@ -294,6 +334,9 @@ export default async function handler(req, res) {
           ['Table ticket_sales has the quantity and check-in columns', '/rest/v1/ticket_sales?select=quantity,admits_total,admitted_count,checked_in_at&limit=1', 'Run supabase/upgrade.sql in the SQL Editor (new sales are still saved without it, but quantities are not).'],
           ['Table checkin_log is reachable', '/rest/v1/checkin_log?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table team_members is reachable', '/rest/v1/team_members?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
+          ['Table rate_events is reachable (login protection)', '/rest/v1/rate_events?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
+          ['Table audit_log is reachable (activity log)', '/rest/v1/audit_log?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
+          ['Table admin_security is reachable (2-step login, sign-out-everywhere)', '/rest/v1/admin_security?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Storage bucket "' + MEDIA_BUCKET + '" exists and is public', '/storage/v1/bucket/' + MEDIA_BUCKET, 'Run supabase/setup.sql, or create a public bucket with this name.']
         ];
         for (const [name, path, hint] of tests) {
@@ -350,6 +393,7 @@ export default async function handler(req, res) {
       const problem = validateContent(content);
       if (problem) return res.status(400).json({ message: problem });
       await saveContent(content);
+      await sec.audit(req, who.name, role, 'content_published');
       return res.status(200).json({ ok: true, savedAt: new Date().toISOString() });
     }
 
@@ -357,8 +401,11 @@ export default async function handler(req, res) {
       if (!supabaseConfigured()) {
         return res.status(503).json({ message: 'Supabase is not connected yet (see README step 2).' });
       }
-      const { filename, contentType, folder } = await readBody(req);
+      const { filename, contentType, folder, size } = await readBody(req);
       const ext = ALLOWED_UPLOADS[contentType];
+      if (size !== undefined && (!Number.isFinite(Number(size)) || Number(size) < 0 || Number(size) > MAX_UPLOAD_BYTES)) {
+        return res.status(400).json({ message: 'That file is too large. The limit is 50 MB per file.' });
+      }
       if (!ext) {
         return res.status(400).json({ message: 'That file type is not allowed. Use JPG, PNG, WEBP, GIF, MP4, WEBM, MOV or PDF.' });
       }
@@ -374,6 +421,81 @@ export default async function handler(req, res) {
       const sales = await listSales();
       /* role is included so an open dashboard notices a role change without a reload */
       return res.status(200).json({ sales, configured: true, role });
+    }
+
+    /* ---- security page (main admin only) ---- */
+    if (action === 'security-status' && req.method === 'GET') {
+      const state = await sec.getSecurity();
+      return res.status(200).json({
+        tablesReady: supabaseConfigured() && !state.unavailable,
+        totpEnabled: Boolean(state.totp_enabled && state.totp_secret),
+        totpPending: Boolean(state.totp_secret && !state.totp_enabled),
+        twoFactorOverride: process.env.ADMIN_2FA_OFF === 'true',
+        captcha: Boolean(process.env.TURNSTILE_SECRET_KEY && process.env.TURNSTILE_SITE_KEY),
+        alerts: Boolean(process.env.RESEND_API_KEY && (process.env.ALERT_EMAIL || process.env.CONTACT_TO_EMAIL))
+      });
+    }
+
+    if (action === 'audit-list' && req.method === 'GET') {
+      if (!supabaseConfigured()) return res.status(200).json({ log: [], configured: false });
+      try {
+        return res.status(200).json({ log: await sec.listAudit(100), configured: true });
+      } catch (e) {
+        return res.status(200).json({ log: [], configured: true, missingTable: true });
+      }
+    }
+
+    if (action === 'sessions-revoke' && req.method === 'POST') {
+      const ep = await sec.bumpEpoch();
+      res.setHeader('Set-Cookie', sessionCookie({ ep }));
+      await sec.audit(req, who.name, role, 'sessions_revoked', 'everyone else was signed out');
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action.indexOf('totp-') === 0) {
+      if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed.' });
+      if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected yet.' });
+      const body = await readBody(req);
+      const state = await sec.getSecurity();
+      if (state.unavailable) return res.status(503).json({ message: 'Run supabase/upgrade.sql in the Supabase SQL Editor first (it creates the security tables).' });
+
+      if (action === 'totp-setup') {
+        if (state.totp_enabled) return res.status(409).json({ message: '2-step login is already on. Turn it off first if you want to set it up again.' });
+        const secret = totp.newSecret();
+        await sec.patchSecurity({ totp_secret: secret, totp_enabled: false, totp_last_step: 0 });
+        return res.status(200).json({
+          secret: totp.groupSecret(secret),
+          uri: totp.otpauthUri({ secret, account: 'Main admin', issuer: 'Game Tribe Admin' })
+        });
+      }
+
+      if (action === 'totp-enable') {
+        if (!state.totp_secret || state.totp_enabled) return res.status(400).json({ message: 'Start the setup first.' });
+        const step = totp.verifyTotp(state.totp_secret, body.code, {});
+        if (!step) return res.status(400).json({ message: 'That code is not right. Check the newest code in your app and try again.' });
+        const ep = Date.now();
+        await sec.patchSecurity({ totp_enabled: true, totp_last_step: step, session_epoch: ep });
+        res.setHeader('Set-Cookie', sessionCookie({ ep }));
+        await sec.audit(req, who.name, role, '2step_enabled', 'all other sessions were signed out');
+        return res.status(200).json({ ok: true });
+      }
+
+      if (action === 'totp-disable') {
+        if (!state.totp_enabled) return res.status(400).json({ message: '2-step login is not on.' });
+        /* Turning it off needs the password AND a current code, so a stolen session alone cannot do it. */
+        const step = passwordMatches(body.password) ? totp.verifyTotp(state.totp_secret, body.code, { lastStep: Number(state.totp_last_step) || 0 }) : 0;
+        if (!step) {
+          await sec.addEvent('login_fail', sec.clientIp(req));
+          await sec.audit(req, who.name, role, '2step_disable_failed', 'wrong password or code');
+          return res.status(401).json({ message: 'The password or code was not right.' });
+        }
+        const ep = Date.now();
+        await sec.patchSecurity({ totp_enabled: false, totp_secret: null, totp_last_step: 0, session_epoch: ep });
+        res.setHeader('Set-Cookie', sessionCookie({ ep }));
+        await sec.audit(req, who.name, role, '2step_disabled', 'all other sessions were signed out');
+        await sec.alertOwner('2-step login was turned off', '2-step login for the Game Tribe admin was just turned off. If this was not you, change ADMIN_PASSWORD in Vercel immediately.');
+        return res.status(200).json({ ok: true });
+      }
     }
 
     /* ---- compare Paystack with the saved sales (main admin only) ---- */
@@ -467,7 +589,7 @@ export default async function handler(req, res) {
         ticket_number: ticketNumberFor(tx.reference),
         name,
         email: c.email,
-        phone: c.phone,
+        phone: cleanPhone(c.phone),
         ...saleFields(purchase),
         paid_at: tx.paid_at,
         source: 'recovered',
@@ -486,6 +608,7 @@ export default async function handler(req, res) {
           console.error('RECOVERY EMAIL ERROR:', e.message);
         }
       }
+      await sec.audit(req, who.name, role, 'payment_imported', tx.reference + ' · ' + name + ' · ' + purchase.quantity + ' × ' + purchase.ticket.label);
       return res.status(200).json({ ok: true, emailSent, emailError, name, ticket: purchase.ticket.label, quantity: purchase.quantity });
     }
 
@@ -500,7 +623,10 @@ export default async function handler(req, res) {
       const result = action === 'checkin'
         ? await gate.admit(reference, n, who.name, role)
         : await gate.undo(reference, n, who.name, role);
-      if (result.ok) return res.status(200).json({ ok: true, sale: result.sale });
+      if (result.ok) {
+        if (action === 'checkin-undo') await sec.audit(req, who.name, role, 'checkin_undone', reference + ' · removed ' + n);
+        return res.status(200).json({ ok: true, sale: result.sale });
+      }
 
       const sale = result.sale;
       if (result.error === 'not_found') return res.status(404).json({ message: 'That ticket was not found.' });
@@ -570,7 +696,9 @@ export default async function handler(req, res) {
         } else {
           member = await team.createMember({ email, name, role: body.role, invite });
         }
-        return res.status(200).json({ ok: true, ...(await deliver(member, invite, false)) });
+        const out = await deliver(member, invite, false);
+        await sec.audit(req, who.name, role, 'team_invited', email + ' as ' + body.role);
+        return res.status(200).json({ ok: true, ...out });
       }
 
       if (!team.isMemberId(body.id)) return res.status(400).json({ message: 'Unknown team member.' });
@@ -580,15 +708,19 @@ export default async function handler(req, res) {
       if (action === 'team-resend') {
         const invite = team.newInvite();
         const updated = await team.setInvite(member.id, invite);
-        return res.status(200).json({ ok: true, ...(await deliver(updated || member, invite, member.status === 'active')) });
+        const out = await deliver(updated || member, invite, member.status === 'active');
+        await sec.audit(req, who.name, role, member.status === 'active' ? 'team_reset_link' : 'team_invite_resent', member.email);
+        return res.status(200).json({ ok: true, ...out });
       }
       if (action === 'team-role') {
         if (!team.ROLES[body.role]) return res.status(400).json({ message: 'Choose a role.' });
         await team.setRole(member.id, body.role);
+        await sec.audit(req, who.name, role, 'team_role_changed', member.email + ': ' + member.role + ' → ' + body.role);
         return res.status(200).json({ ok: true });
       }
       if (action === 'team-remove') {
         await team.removeMember(member.id);
+        await sec.audit(req, who.name, role, 'team_removed', member.email);
         return res.status(200).json({ ok: true });
       }
     }

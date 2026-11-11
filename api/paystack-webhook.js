@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 
 import { getTicketMap, recordSale } from './_lib/store.js';
-import { checkPurchase, saleFields, sendTicketEmail, ticketNumberFor } from './_lib/tickets.js';
+import { checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone } from './_lib/tickets.js';
+import { alreadyEmailed } from './_lib/checkin.js';
 
 /*
  * Vercel needs the raw request body
@@ -173,14 +174,10 @@ export default async function handler(req, res) {
       transaction.customer &&
       transaction.customer.email;
 
-    const name =
-      (transaction.metadata &&
-        transaction.metadata.customer_name) ||
-
-      (transaction.customer &&
-        transaction.customer.first_name) ||
-
-      'Game Tribe Guest';
+    const name = cleanName(
+      (transaction.metadata && transaction.metadata.customer_name) ||
+      (transaction.customer && transaction.customer.first_name)
+    );
 
     if (!email) {
 
@@ -204,12 +201,16 @@ export default async function handler(req, res) {
      */
 
     /* Record the paid ticket for the admin dashboard (before the email, so a failed email never hides a sale). */
+    if (await alreadyEmailed(transaction.reference)) {
+      return res.status(200).json({ received: true, processed: true, alreadyDone: true });
+    }
+
     await recordSale({
       reference: transaction.reference,
       ticket_number: ticketNumberFor(transaction.reference),
       name,
       email,
-      phone: transaction.customer && transaction.customer.phone,
+      phone: cleanPhone(transaction.customer && transaction.customer.phone),
       ...saleFields(purchase),
       paid_at: transaction.paid_at,
       source: 'webhook',

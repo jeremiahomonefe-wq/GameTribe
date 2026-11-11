@@ -1,9 +1,9 @@
 import { getContent } from './_lib/store.js';
+import { allow, clientIp } from './_lib/security.js';
 
 /* Contact form: emails the message to your contact address using the same
    Resend setup as the ticket emails (RESEND_API_KEY + RESEND_FROM_EMAIL). */
 
-const hits = new Map();
 const esc = (v) =>
   String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -28,12 +28,35 @@ export default async function handler(req, res) {
   if (subject.length < 2 || subject.length > 120) return res.status(400).json({ message: 'Please add a subject.' });
   if (message.length < 10 || message.length > 4000) return res.status(400).json({ message: 'Please write a message of at least 10 characters.' });
 
-  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
-  const now = Date.now();
-  const recent = (hits.get(ip) || []).filter((t) => now - t < 15 * 60 * 1000);
-  if (recent.length >= 5) return res.status(429).json({ message: 'Too many messages. Please try again in a little while.' });
-  recent.push(now);
-  hits.set(ip, recent);
+  /* Limits are stored in Supabase, so they hold across all servers: 5 per person per 15 minutes... */
+  const ip = clientIp(req);
+  if (!(await allow('contact', ip, 5, 15 * 60 * 1000))) {
+    return res.status(429).json({ message: 'Too many messages. Please try again in a little while.' });
+  }
+
+  /* ...and, if Cloudflare Turnstile is switched on (TURNSTILE_SECRET_KEY), a human check. */
+  if (process.env.TURNSTILE_SECRET_KEY) {
+    const token = String(body.turnstile || '').slice(0, 2100);
+    let human = false;
+    if (token) {
+      try {
+        const check = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ secret: process.env.TURNSTILE_SECRET_KEY, response: token, remoteip: ip })
+        });
+        human = (await check.json()).success === true;
+      } catch (e) {
+        human = false;
+      }
+    }
+    if (!human) return res.status(400).json({ message: 'Please complete the check above the button and try again.' });
+  }
+
+  /* ...and never more than 60 in an hour overall, so nobody can flood your inbox. */
+  if (!(await allow('contact', 'all', 60, 60 * 60 * 1000))) {
+    return res.status(429).json({ message: 'We are getting a lot of messages right now. Please try again later or email us directly.' });
+  }
 
   if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
     return res.status(503).json({ message: 'Our contact form is not set up yet. Please email us directly.' });
