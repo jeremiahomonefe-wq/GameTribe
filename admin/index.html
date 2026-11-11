@@ -142,6 +142,12 @@ tr.row-used td{background:#FBF4F3}
 .hist{margin:10px 0 0;padding:0;list-style:none;font-size:13px}
 .hist li{padding:6px 0;border-top:1px solid var(--line)}
 .linkbox{display:flex;gap:8px;margin-top:8px}
+.modal.wide{max-width:780px}
+.rc-card{border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:10px}
+.rc-card.ready{border-color:#9AD2AE}.rc-card.review{border-color:#E8B2AC}.rc-card.done{border-color:#9AD2AE;background:#F2FAF5}
+.rc-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:800}
+.rc-meta{font-size:12px;color:var(--muted);font-weight:600;margin-top:3px;word-break:break-word}
+.rc-note{font-size:13px;font-weight:700;margin-top:8px;line-height:1.45}
 </style>
 </head>
 <body>
@@ -626,7 +632,7 @@ function roleLabel(r){return r==='tickets'?'Ticket in charge':(r==='sales'?'Sale
 function canCheckin(){return state.role==='owner'||state.role==='tickets';}
 
 /* ---------- modal ---------- */
-function openModal(html){$('#modalHost').innerHTML='<div class="modal-back"><div class="modal" role="dialog" aria-modal="true">'+html+'</div></div>';}
+function openModal(html,cls){$('#modalHost').innerHTML='<div class="modal-back"><div class="modal'+(cls?' '+cls:'')+'" role="dialog" aria-modal="true">'+html+'</div></div>';}
 function closeModal(){$('#modalHost').innerHTML='';}
 
 /* ---------- sales view (with gate check-in) ---------- */
@@ -673,7 +679,7 @@ function salesHtml(){
   h+='<div id="salesTop">'+salesTopHtml()+'</div>';
   h+='<div class="toolbar"><input type="search" id="salesSearch" placeholder="Search name, phone, reference or ticket no."'+(canCheckin()?' autocomplete="off"':'')+'>'+
     '<select id="salesFilter" style="max-width:210px" aria-label="Filter by check-in"><option value="all">Everyone</option><option value="none">Not yet checked in</option><option value="part">Partly checked in</option><option value="full">Fully used</option></select>'+
-    '<button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button>'+(state.role==='owner'?'<button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button>':'')+'</div>';
+    '<button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button>'+(state.role==='owner'?'<button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button><button class="btn btn-red sm" type="button" data-act="rc-open">Check against Paystack</button>':'')+'</div>';
   if(canCheckin())h+='<p class="help" style="margin:-4px 0 12px;font-size:13px;color:var(--muted)">At the gate: type or paste the buyer’s reference or ticket number, press Enter, then admit them. A ticket that is already used cannot be admitted again.</p>';
   h+='<div class="table-wrap"><table><thead><tr><th>Gate</th><th>Date</th><th>Name</th><th>Phone</th><th>Ticket</th><th>Qty</th><th>People</th><th>Ticket no.</th><th>Paid</th><th>Email</th><th>Contact</th></tr></thead><tbody id="salesBody"></tbody></table></div>';
   return h;
@@ -769,6 +775,68 @@ function loadHistory(ref){
   }).catch(function(e){ul.innerHTML='<li>'+esc(e.message)+'</li>';});
 }
 
+/* ---------- check against Paystack (main admin only) ---------- */
+function rcOpen(){
+  openModal('<h3>Check against Paystack</h3><p class="help" style="margin:0 0 6px;font-size:13px;color:var(--muted)">Compares the successful payments on Paystack with the tickets saved here, and lets you recover any that are missing.</p>'+
+    '<div class="row"><label for="rcDays" style="font-weight:800;font-size:13px">Look back</label><select id="rcDays" style="width:auto"><option value="1">24 hours</option><option value="3">3 days</option><option value="7" selected>7 days</option><option value="30">30 days</option></select>'+
+    '<button class="btn btn-ink sm" type="button" data-act="rc-run">Check again</button><button class="btn btn-line sm" type="button" data-act="mclose">Close</button></div><div id="rcBody"></div>','wide');
+  rcRun();
+}
+function rcRun(){
+  var days=parseInt(($('#rcDays')||{}).value,10)||7;
+  $('#rcBody').innerHTML='<div class="empty">Checking Paystack…</div>';
+  api('reconcile&days='+days).then(function(d){state.rc=d;rcRender();}).catch(function(e){
+    if(e.status===401)return showLogin();
+    if($('#rcBody'))$('#rcBody').innerHTML='<div class="banner bad">'+esc(e.message)+'</div>';
+  });
+}
+function rcMoney(n){return '₦'+Number(n||0).toLocaleString('en-NG');}
+function rcRender(){
+  var d=state.rc,box=$('#rcBody');if(!d||!box)return;
+  var open=d.missing.filter(function(m){return m.state!=='done';}),ready=open.filter(function(m){return m.state==='ready';});
+  var h='<div class="banner '+(open.length?'warn':'ok')+'" style="margin-top:12px">Paystack shows '+d.checked+' successful payment'+(d.checked===1?'':'s')+' in the last '+d.days+' day'+(d.days===1?'':'s')+'. '+
+    (open.length?open.length+' '+(open.length===1?'is':'are')+' missing here.':'Everything is saved here ✓')+'</div>';
+  if(d.truncated)h+='<div class="banner warn">There are more payments than could be checked at once. Choose a shorter period.</div>';
+  if(ready.length>1)h+='<div class="row"><button class="btn btn-red" type="button" data-act="rc-all">Import all '+ready.length+' valid payments</button></div>';
+  if(open.length||d.missing.length)h+='<label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-weight:700;font-size:13px"><input type="checkbox" id="rcEmail" checked> Email the ticket to the buyer when importing (they did not get one if the payment was never recorded)</label>';
+  d.missing.forEach(function(m,i){
+    var when=m.paidAt?timeShort(m.paidAt):'',meta=esc(m.email||'no email')+(m.phone?' · '+esc(m.phone):'')+(m.channel?' · paid by '+esc(m.channel):'')+' · '+esc(when)+'<br><code>'+esc(m.reference)+'</code>';
+    var top='<div class="rc-top"><span>'+esc(m.name)+'</span><span>'+rcMoney(m.amount)+'</span></div><div class="rc-meta">'+meta+'</div>';
+    if(m.state==='done'){h+='<div class="rc-card done">'+top+'<div class="rc-note" style="color:var(--ok)">'+esc(m.note)+'</div></div>';return;}
+    if(m.state==='ready'){
+      h+='<div class="rc-card ready">'+top+'<div class="rc-note">Looks like a valid ticket: '+esc(m.quantity)+' × '+esc(m.ticketLabel)+(m.admitsTotal>1?' (admits '+m.admitsTotal+')':'')+'.</div>'+
+        '<div class="row"><button class="btn btn-red sm" type="button" data-act="rc-import" data-idx="'+i+'">Import ticket</button></div></div>';
+      return;
+    }
+    var opts=d.tickets.map(function(t){return '<option value="'+esc(t.id)+'"'+(t.id===m.ticketType?' selected':'')+'>'+esc(t.label)+' — '+rcMoney(t.price)+'</option>';}).join('');
+    h+='<div class="rc-card review">'+top+'<div class="rc-note" style="color:var(--red)">Needs your decision: '+esc(m.reason)+'</div>'+
+      '<div class="row"><select id="rcT'+i+'" aria-label="Ticket type" style="width:auto;max-width:100%">'+opts+'</select><input type="number" id="rcQ'+i+'" min="1" max="500" value="'+esc(m.quantity||1)+'" aria-label="Quantity" style="width:80px">'+
+      '<button class="btn btn-ink sm" type="button" data-act="rc-import" data-idx="'+i+'">Import as chosen</button></div></div>';
+  });
+  box.innerHTML=h;
+}
+function rcImportOne(i){
+  var m=state.rc.missing[i];
+  var body={reference:m.reference,sendEmail:$('#rcEmail')?$('#rcEmail').checked:true};
+  if(m.state==='review'){body.ticketType=$('#rcT'+i).value;body.quantity=parseInt($('#rcQ'+i).value,10)||1;}
+  return api('reconcile-import',{body:body}).then(function(res){
+    m.state='done';m.note=(res.quantity>1?res.quantity+' × ':'')+res.ticket+' saved'+(res.emailSent?' and ticket emailed ✓':(body.sendEmail?' ✓ (email not sent: '+(res.emailError||'unknown')+')':' ✓'));
+    api('sales').then(function(d){state.sales=d;refreshSalesView();}).catch(function(){});
+  }).catch(function(e){
+    if(e.status===401){showLogin();throw e;}
+    if(e.data&&e.data.already){m.state='done';m.note='Already saved.';return;}
+    toast(e.message,true);throw e;
+  });
+}
+function rcImport(i,btn){btn.disabled=true;btn.textContent='Importing…';rcImportOne(i).then(rcRender,rcRender);}
+function rcImportAll(btn){
+  btn.disabled=true;
+  var idx=[];state.rc.missing.forEach(function(m,i){if(m.state==='ready')idx.push(i);});
+  var chain=Promise.resolve();
+  idx.forEach(function(i){chain=chain.then(function(){return rcImportOne(i);}).then(rcRender);});
+  chain.then(function(){toast('All valid payments imported ✓');},rcRender);
+}
+
 /* ---------- team (main admin only) ---------- */
 function teamHtml(){
   var h='<div class="notice">You are the only main admin. Team members can only do what their role allows, and you can remove them at any time. Removing someone, or changing their role, takes effect immediately.</div>';
@@ -850,6 +918,10 @@ function handleAct(t){
   if(a==='admit'){doAdmit(ref);return;}
   if(a==='undo'){doUndo(ref);return;}
   if(a==='history'){loadHistory(ref);return;}
+  if(a==='rc-open'){rcOpen();return;}
+  if(a==='rc-run'){rcRun();return;}
+  if(a==='rc-import'){rcImport(parseInt(t.dataset.idx,10),t);return;}
+  if(a==='rc-all'){rcImportAll(t);return;}
   if(a==='invite'){doInvite();return;}
   if(a==='copylink'){
     var i=$('#tmLink');if(!i)return;i.select();
