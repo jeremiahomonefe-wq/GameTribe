@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>(function(){var n=0,seen={};function send(m,s,l,a){try{if(n>=5)return;var k=m+'|'+s+'|'+l;if(seen[k])return;seen[k]=1;n++;var b=JSON.stringify({message:String(m).slice(0,300),source:String(s||'').slice(0,200),line:l||0,page:location.pathname,area:a||'browser'});if(navigator.sendBeacon){navigator.sendBeacon('/api/client-error',new Blob([b],{type:'application/json'}));}else{fetch('/api/client-error',{method:'POST',headers:{'Content-Type':'application/json'},body:b,keepalive:true});}}catch(e){}}window.addEventListener('error',function(e){if(!e.filename||e.filename.indexOf(location.origin)!==0)return;send(e.message,e.filename,e.lineno);});window.addEventListener('unhandledrejection',function(e){var r=e.reason;send(r&&r.message?r.message:String(r),'promise',0);});window.gtReport=send;})();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Game Tribe Fest — Abraka</title>
@@ -829,6 +830,7 @@ a{color:inherit}
 <input id="ticketQty" type="number" min="1" max="50" step="1" value="1" inputmode="numeric" aria-label="Number of tickets" style="width:100%;margin-top:8px;padding:12px;">
 <p class="qty-hint" id="ticketQtyHint">Need more than 10? Type the number above.</p>
 <div class="ticket-summary" id="ticketSummary" aria-live="polite"></div></div>
+<div id="ticketWaitBox" style="display:none;margin:10px 0;padding:14px;border-radius:12px;background:#FFF1C9;font-size:13px;font-weight:700;line-height:1.5;"><div>This ticket is sold out. Fill in your name, email and phone above and we will email you if tickets become available.</div><button type="button" id="ticketWaitBtn" style="width:100%;margin-top:10px;padding:12px;border:0;border-radius:999px;background:#1C1410;color:#FFF6E5;font-weight:800;cursor:pointer;">Join the waitlist</button></div>
 <button id="ticketPayButton" type="submit" class="btn btn-red" style="width:100%;margin-top:14px;padding:14px;">Proceed to Payment</button>
       <div id="ticketStatus" role="status" style="margin-top:14px;font-size:13px;"></div>
     </form>
@@ -1321,6 +1323,51 @@ document.querySelectorAll('.video-card').forEach(function(card){
   var TICKET_SETTINGS={paystackPublicKey:'pk_live_9fc882239cf6a6cd6832b2e100781f3ae93117b6',sponsored_single:{price:3000,admits:1},wave_single:{price:7000,admits:1},wave_group:{price:26000,admits:4}};
   var TICKET_MAX_QTY=50;
 
+  /* ----- how many are left / sold out / hold while paying ----- */
+  var TICKET_AVAIL={},SHOW_LEFT_BELOW=30,LAST_HOLD='';
+  function availFor(id){return TICKET_AVAIL[id]||{left:null,soldOut:false};}
+  function setWaitMode(on){
+    var box=document.getElementById('ticketWaitBox'),pay=document.getElementById('ticketPayButton');
+    if(box)box.style.display=on?'block':'none';
+    if(pay)pay.style.display=on?'none':'';
+  }
+  function refreshAvailabilityUI(){
+    var sel=document.getElementById('ticketType');if(!sel)return;
+    var firstFree=null;
+    Array.prototype.forEach.call(sel.options,function(o){
+      if(!o.value)return;
+      var base=o.getAttribute('data-label');
+      if(base===null){base=o.text;o.setAttribute('data-label',base);}
+      var a=availFor(o.value),txt=base;
+      if(a.soldOut){txt=base+' \u2014 SOLD OUT';o.disabled=true;}
+      else{
+        o.disabled=false;
+        if(a.left!==null&&SHOW_LEFT_BELOW>0&&a.left<=SHOW_LEFT_BELOW)txt=base+' \u2014 only '+a.left+' left';
+        if(firstFree===null)firstFree=o.value;
+      }
+      o.text=txt;
+    });
+    var cur=sel.options[sel.selectedIndex];
+    if(cur&&cur.disabled&&firstFree!==null)sel.value=firstFree;
+    updateTicketSummary();
+  }
+  function loadAvailability(){
+    return fetch('/api/availability').then(function(r){return r.json();}).then(function(d){
+      TICKET_AVAIL=d.tickets||{};SHOW_LEFT_BELOW=parseInt(d.showLeftBelow,10)||0;refreshAvailabilityUI();
+    }).catch(function(){});
+  }
+  /* Asks the server to hold the tickets. Only an explicit "sold out" stops the buyer; any other problem on our side lets them carry on. */
+  function reserveTickets(type,qty){
+    return fetch('/api/reserve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticketType:type,quantity:qty,release:LAST_HOLD})})
+      .then(function(r){
+        return r.json().catch(function(){return {};}).then(function(d){
+          if(r.status===409){var e=new Error(d.message||'Sorry, those tickets are no longer available.');e.soldOut=true;throw e;}
+          if(r.ok&&d.reference){LAST_HOLD=d.hold?d.reference:'';return d;}
+          return {};
+        });
+      },function(){return {};});
+  }
+
   /* ----- quantity picker ----- */
   function ticketMoney(n){return '\u20A6'+Number(n).toLocaleString('en-NG');}
   function getTicketQty(){
@@ -1350,7 +1397,10 @@ document.querySelectorAll('.video-card').forEach(function(card){
     Array.prototype.forEach.call(document.querySelectorAll('#ticketQtyQuick button'),function(b){
       b.className=(String(qty)===b.getAttribute('data-q'))?'on':'';
     });
+    var av=availFor(sel.value);
+    setWaitMode(Boolean(ticket&&av.soldOut));
     if(!ticket){box.textContent='';return;}
+    if(av.soldOut){box.innerHTML='<span style="color:#8d251d;font-weight:800">This ticket is sold out.</span>';return;}
     if(!qty){
       box.innerHTML='<span style="color:#8d251d">Enter a number of tickets from 1 to '+TICKET_MAX_QTY+'.</span>';
       return;
@@ -1358,7 +1408,8 @@ document.querySelectorAll('.video-card').forEach(function(card){
     var people=qty*(ticket.admits||1),
         label=sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text.split(' \u00B7 ')[0]:'';
     box.innerHTML='Total: <b>'+ticketMoney(ticket.price*qty)+'</b><br><span style="font-weight:600">'+
-      qty+' \u00D7 '+label.replace(/</g,'&lt;')+(people>1?' \u2014 admits '+people+' people':'')+'</span>';
+      qty+' \u00D7 '+label.replace(/</g,'&lt;')+(people>1?' \u2014 admits '+people+' people':'')+'</span>'+
+      (av.left!==null&&qty>av.left?'<br><span style="color:#8d251d;font-weight:800">Only '+av.left+' left. Please choose '+av.left+' or fewer.</span>':'');
   }
   (function(){
     var qi=document.getElementById('ticketQty'),qb=document.getElementById('ticketQtyQuick'),ts=document.getElementById('ticketType');
@@ -1370,6 +1421,17 @@ document.querySelectorAll('.video-card').forEach(function(card){
     });
     buildTicketQtyButtons();
     updateTicketSummary();
+    var wb=document.getElementById('ticketWaitBtn');
+    if(wb)wb.addEventListener('click',function(){
+      var name=document.getElementById('ticketName').value.trim(),email=document.getElementById('ticketEmail').value.trim(),phone=document.getElementById('ticketPhone').value.trim();
+      if(!name||!email){showTicketStatus('Please enter your name and email above first.',true);return;}
+      wb.disabled=true;wb.textContent='Saving\u2026';
+      fetch('/api/waitlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,email:email,phone:phone,ticketType:document.getElementById('ticketType').value,quantity:getTicketQty()||1})})
+        .then(function(r){return r.json().catch(function(){return {};}).then(function(d){return {ok:r.ok,d:d};});})
+        .then(function(x){showTicketStatus(x.d.message||(x.ok?'You are on the waitlist.':'Could not save your details. Please try again.'),!x.ok);})
+        .catch(function(){showTicketStatus('Could not reach the server. Please try again.',true);})
+        .then(function(){wb.disabled=false;wb.textContent='Join the waitlist';});
+    });
   })();
 
   function openTicketModal(){
@@ -1377,6 +1439,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
     modal.style.display='flex';
     modal.setAttribute('aria-hidden','false');
     document.body.style.overflow='hidden';
+    loadAvailability();
   }
 
   function closeTicketModal(){
@@ -1471,12 +1534,16 @@ document.querySelectorAll('.video-card').forEach(function(card){
       return;
     }
 
+    var av=availFor(type);
+    if(av.soldOut){showTicketStatus('Sorry, this ticket is sold out. You can join the waitlist above.',true);return;}
+    if(av.left!==null&&qty>av.left){showTicketStatus('Only '+av.left+' of these tickets are left. Please choose '+av.left+' or fewer.',true);return;}
+
     button.disabled=true;
-    button.textContent='Opening secure checkout…';
+    button.textContent='Checking availability…';
     showTicketStatus('');
 
-    var reference='GT-'+Date.now()+'-'+Math.random().toString(36).slice(2,8).toUpperCase();
-
+    function startPayment(reference){
+    button.textContent='Opening secure checkout…';
     new PaystackPop().newTransaction({
       key:TICKET_SETTINGS.paystackPublicKey,
       email:email,
@@ -1505,6 +1572,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
           button.disabled=false;
           button.textContent='Proceed to Payment';
           showTicketStatus('Payment confirmed. Your tickets have been created.',false);
+          LAST_HOLD='';
           setTicketQty(1);
 
           closeTicketModal();
@@ -1519,6 +1587,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
             ? error.message
             : 'Your payment was successful, but we could not finish confirming your ticket automatically.';
 
+          if(window.gtReport)window.gtReport('Payment confirmation failed after a successful payment. Reference '+transaction.reference+': '+((error&&error.message)||'unknown'),'checkout',0,'checkout');
           showTicketStatus('Payment was successful. Please contact us with your Paystack reference.',true);
           closeTicketModal();
           showTicketError(safeMessage,transaction.reference);
@@ -1530,6 +1599,16 @@ document.querySelectorAll('.video-card').forEach(function(card){
         button.textContent='Proceed to Payment';
         showTicketStatus('Checkout was cancelled. No payment was completed.',true);
       }
+    });
+    }
+
+    reserveTickets(type,qty).then(function(hold){
+      startPayment((hold&&hold.reference)||('GT-'+Date.now()+'-'+Math.random().toString(36).slice(2,8).toUpperCase()));
+    },function(err){
+      button.disabled=false;
+      button.textContent='Proceed to Payment';
+      showTicketStatus(err.message,true);
+      loadAvailability();
     });
   });
 </script>
@@ -1695,6 +1774,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
           : '<option value="">Tickets are not on sale right now</option>';
       }
       if(typeof buildTicketQtyButtons==='function'){buildTicketQtyButtons();updateTicketSummary();}
+      if(typeof loadAvailability==='function')loadAvailability();
     }
     var form=document.getElementById('ticketPurchaseForm');
     if(form&&!form._gtGuard){
