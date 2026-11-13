@@ -5,10 +5,13 @@ import {
 import * as team from './_lib/team.js';
 import * as gate from './_lib/checkin.js';
 import * as paystack from './_lib/paystack.js';
+import * as ann from './_lib/announce.js';
+import { referenceFromPayload } from './_lib/qr.js';
 import * as sec from './_lib/security.js';
 import * as totp from './_lib/totp.js';
+import { reportError, listErrors, runHealthChecks, checkOvercapacity } from './_lib/monitor.js';
 import {
-  checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, HARD_MAX_QUANTITY
+  checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, siteOrigin, ticketLink, HARD_MAX_QUANTITY
 } from './_lib/tickets.js';
 import { supabaseConfigured, supabaseUrl, sb } from './_lib/supabase.js';
 import {
@@ -22,7 +25,7 @@ import {
  */
 const PERMS = {
   owner: null, /* null = everything */
-  tickets: new Set(['me', 'sales', 'checkin', 'checkin-log']),
+  tickets: new Set(['me', 'sales', 'checkin', 'checkin-log', 'ticket-scan']),
   sales: new Set(['me', 'sales', 'checkin-log'])
 };
 function allowed(role, action) {
@@ -30,12 +33,6 @@ function allowed(role, action) {
   return p === null || Boolean(p && p.has(action));
 }
 
-function siteOrigin(req) {
-  if (process.env.SITE_URL) return String(process.env.SITE_URL).replace(/\/+$/, '');
-  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
-  const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
-  return proto + '://' + host;
-}
 
 const naira = (n) => '₦' + Number(n || 0).toLocaleString('en-NG');
 
@@ -69,6 +66,7 @@ function fmtTime(iso) {
 }
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+const COMP_CATEGORIES = ['Sponsor', 'Speaker', 'VIP', 'Media', 'Partner', 'Staff', 'Other'];
 const ALLOWED_UPLOADS = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
   'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov',
@@ -106,12 +104,21 @@ function validateContent(content) {
       if (t.admits !== undefined && (!Number.isInteger(t.admits) || t.admits < 1 || t.admits > 20)) {
         return 'People admitted per ticket for "' + t.label + '" must be a whole number from 1 to 20.';
       }
+      if (t.capacity !== undefined && (!Number.isInteger(t.capacity) || t.capacity < 0 || t.capacity > 100000)) {
+        return 'Max tickets to sell for "' + t.label + '" must be a whole number (0 means no limit).';
+      }
     }
   }
   if (content.ticketing !== undefined) {
     const q = content.ticketing && content.ticketing.maxQuantity;
     if (q !== undefined && q !== null && (!Number.isInteger(q) || q < 1 || q > 200)) {
       return 'Max tickets per order must be a whole number from 1 to 200.';
+    }
+    for (const [key, label] of [['capacityTotal', 'Total capacity'], ['showLeftBelow', 'Show "X left" below']]) {
+      const v = content.ticketing && content.ticketing[key];
+      if (v !== undefined && v !== null && (!Number.isInteger(v) || v < 0 || v > 100000)) {
+        return label + ' must be a whole number (0 means off / no limit).';
+      }
     }
   }
   const groups = content.sponsors && content.sponsors.groups;
@@ -337,6 +344,10 @@ export default async function handler(req, res) {
           ['Table rate_events is reachable (login protection)', '/rest/v1/rate_events?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table audit_log is reachable (activity log)', '/rest/v1/audit_log?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table admin_security is reachable (2-step login, sign-out-everywhere)', '/rest/v1/admin_security?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
+          ['Table error_log is reachable (error monitoring)', '/rest/v1/error_log?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
+          ['Table reservations is reachable (ticket holds)', '/rest/v1/reservations?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
+          ['Table waitlist is reachable', '/rest/v1/waitlist?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
+          ['Table announcements is reachable', '/rest/v1/announcements?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Storage bucket "' + MEDIA_BUCKET + '" exists and is public', '/storage/v1/bucket/' + MEDIA_BUCKET, 'Run supabase/setup.sql, or create a public bucket with this name.']
         ];
         for (const [name, path, hint] of tests) {
@@ -420,7 +431,8 @@ export default async function handler(req, res) {
       if (!supabaseConfigured()) return res.status(200).json({ sales: [], configured: false, role });
       const sales = await listSales();
       /* role is included so an open dashboard notices a role change without a reload */
-      return res.status(200).json({ sales, configured: true, role });
+      const capacityTotal = Number(((await getContent()).ticketing || {}).capacityTotal) || 0;
+      return res.status(200).json({ sales, configured: true, role, capacityTotal });
     }
 
     /* ---- security page (main admin only) ---- */
@@ -496,6 +508,12 @@ export default async function handler(req, res) {
         await sec.alertOwner('2-step login was turned off', '2-step login for the Game Tribe admin was just turned off. If this was not you, change ADMIN_PASSWORD in Vercel immediately.');
         return res.status(200).json({ ok: true });
       }
+    }
+
+    /* ---- site health (main admin only) ---- */
+    if (action === 'health-check' && req.method === 'GET') {
+      const health = await runHealthChecks();
+      return res.status(200).json({ ...health, errors: await listErrors(30), tokenSet: Boolean(process.env.HEALTH_TOKEN), origin: siteOrigin(req) });
     }
 
     /* ---- compare Paystack with the saved sales (main admin only) ---- */
@@ -595,12 +613,13 @@ export default async function handler(req, res) {
         source: 'recovered',
         email_sent: false
       }, { strict: true });
+      await checkOvercapacity();
 
       let emailSent = false;
       let emailError = '';
       if (body.sendEmail !== false && c.email) {
         try {
-          await sendTicketEmail({ email: c.email, name, ticket: purchase.ticket, reference: tx.reference, quantity: purchase.quantity, admitsTotal: purchase.admitsTotal });
+          await sendTicketEmail({ email: c.email, name, ticket: purchase.ticket, reference: tx.reference, quantity: purchase.quantity, admitsTotal: purchase.admitsTotal, origin: siteOrigin(req) });
           await recordSale({ reference: tx.reference, email_sent: true });
           emailSent = true;
         } catch (e) {
@@ -610,6 +629,167 @@ export default async function handler(req, res) {
       }
       await sec.audit(req, who.name, role, 'payment_imported', tx.reference + ' · ' + name + ' · ' + purchase.quantity + ' × ' + purchase.ticket.label);
       return res.status(200).json({ ok: true, emailSent, emailError, name, ticket: purchase.ticket.label, quantity: purchase.quantity });
+    }
+
+    /* ---- complimentary tickets (main admin only) ---- */
+    if (action === 'comp-issue') {
+      if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed.' });
+      if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected yet.' });
+      const body = await readBody(req);
+      const name = cleanName(body.name, '');
+      const email = team.normEmail(body.email);
+      const people = Number(body.people);
+      if (!name) return res.status(400).json({ message: 'Enter the guest\'s name.' });
+      if (email && !team.validEmail(email)) return res.status(400).json({ message: 'That email address does not look right.' });
+      if (!COMP_CATEGORIES.includes(body.category)) return res.status(400).json({ message: 'Choose who this pass is for.' });
+      if (!Number.isInteger(people) || people < 1 || people > 50) return res.status(400).json({ message: 'People admitted must be from 1 to 50.' });
+      const rid = /^[a-z0-9]{8,24}$/i.test(String(body.requestId || '')) ? String(body.requestId) : crypto.randomBytes(6).toString('hex');
+      const reference = 'GT-COMP-' + rid;
+      const origin = siteOrigin(req);
+      if (await gate.getSale(reference)) {
+        /* the same form submitted twice: do nothing the second time */
+        return res.status(200).json({ ok: true, duplicate: true, reference, ticketLink: ticketLink(origin, reference), emailSent: false });
+      }
+      const label = 'Complimentary — ' + body.category;
+      await recordSale({
+        reference, ticket_number: ticketNumberFor(reference), name, email: email || undefined, phone: cleanPhone(body.phone),
+        ticket_type: 'complimentary', ticket_label: label, amount: 0, quantity: 1, unit_price: 0,
+        admits_per_unit: people, admits_total: people, paid_at: new Date().toISOString(), source: 'complimentary', email_sent: false
+      }, { strict: true });
+      await sec.audit(req, who.name, role, 'comp_issued', name + ' · ' + body.category + ' · ' + people + (people === 1 ? ' person' : ' people'));
+      await checkOvercapacity();
+      let emailSent = false;
+      let emailError = '';
+      if (email && body.sendEmail !== false) {
+        try {
+          await sendTicketEmail({ email, name, ticket: { label }, reference, quantity: 1, admitsTotal: people, complimentary: true, origin });
+          await recordSale({ reference, email_sent: true });
+          emailSent = true;
+        } catch (e) { emailError = e.message; console.error('COMP EMAIL ERROR:', e.message); }
+      }
+      return res.status(200).json({ ok: true, reference, ticketLink: ticketLink(origin, reference), emailSent, emailError, name, people });
+    }
+
+    if (action === 'comp-delete') {
+      if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed.' });
+      const { reference } = await readBody(req);
+      const sale = typeof reference === 'string' && reference.length <= 100 ? await gate.getSale(reference) : null;
+      if (!sale) return res.status(404).json({ message: 'That ticket was not found.' });
+      if (sale.source !== 'complimentary') return res.status(400).json({ message: 'Only complimentary passes can be deleted here. Paid tickets stay on record.' });
+      if ((Number(sale.admitted_count) || 0) > 0) return res.status(409).json({ message: 'This pass has already been used at the gate, so it cannot be deleted.' });
+      await sb('/rest/v1/ticket_sales?reference=eq.' + encodeURIComponent(reference), { method: 'DELETE' });
+      await sec.audit(req, who.name, role, 'comp_deleted', sale.name + ' · ' + reference);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* ---- announcements + waitlist (main admin only) ---- */
+    if (action.indexOf('announce-') === 0 || action.indexOf('waitlist-') === 0) {
+      if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected yet.' });
+      if (action === 'waitlist-list' && req.method === 'GET') {
+        const rows = (await sb('/rest/v1/waitlist?select=id,created_at,name,email,phone,ticket_type,quantity,notified_at&order=id.asc&limit=2000')) || [];
+        return res.status(200).json({ waitlist: rows });
+      }
+      if (action === 'announce-list' && req.method === 'GET') {
+        const rows = (await sb('/rest/v1/announcements?select=id,created_at,created_by,subject,audience,total,next_index,sent_count,failed_count,status&order=id.desc&limit=10')) || [];
+        return res.status(200).json({ announcements: rows, audiences: ann.AUDIENCES, resendReady: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL) });
+      }
+      if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed.' });
+      const body = await readBody(req);
+
+      if (action === 'waitlist-remove') {
+        const id = Number(body.id);
+        if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Unknown entry.' });
+        await sb('/rest/v1/waitlist?id=eq.' + id, { method: 'DELETE' });
+        return res.status(200).json({ ok: true });
+      }
+      if (action === 'announce-preview') {
+        if (!ann.AUDIENCES[body.audience]) return res.status(400).json({ message: 'Choose who to send to.' });
+        const list = await ann.recipientsFor(body.audience);
+        return res.status(200).json({
+          count: list.length,
+          sample: list.slice(0, 5).map((r) => r.email),
+          withPhone: list.filter((r) => r.phone).length,
+          phones: body.withPhones ? list.filter((r) => r.phone).map((r) => ({ name: r.name, phone: r.phone })) : undefined,
+          tooMany: list.length > ann.MAX_RECIPIENTS
+        });
+      }
+      const subject = String(body.subject || '').trim();
+      const text = String(body.body || '').trim();
+      const needsText = action === 'announce-test' || action === 'announce-create';
+      if (needsText && (subject.length < 3 || subject.length > 150)) return res.status(400).json({ message: 'The subject must be 3 to 150 characters.' });
+      if (needsText && (text.length < 5 || text.length > 5000)) return res.status(400).json({ message: 'The message must be 5 to 5000 characters.' });
+
+      if (action === 'announce-test') {
+        const to = team.normEmail(body.to) || team.normEmail(process.env.ALERT_EMAIL || process.env.CONTACT_TO_EMAIL);
+        if (!team.validEmail(to)) return res.status(400).json({ message: 'Enter the email address to send the test to.' });
+        if (!(await sec.allow('announce-test', 'owner', 10, 3600 * 1000))) return res.status(429).json({ message: 'That is enough tests for now. Try again in an hour.' });
+        await ann.sendTest({ to, subject, body: text, audience: body.audience });
+        return res.status(200).json({ ok: true, to });
+      }
+      if (action === 'announce-create') {
+        if (!ann.AUDIENCES[body.audience]) return res.status(400).json({ message: 'Choose who to send to.' });
+        if (!(await sec.allow('announce-create', 'owner', 6, 3600 * 1000))) return res.status(429).json({ message: 'You have created several announcements in the last hour. Please wait a while.' });
+        const list = await ann.recipientsFor(body.audience);
+        if (!list.length) return res.status(400).json({ message: 'Nobody to send to yet.' });
+        if (list.length > ann.MAX_RECIPIENTS) return res.status(400).json({ message: 'That is more than ' + ann.MAX_RECIPIENTS + ' people. Contact your developer for a bigger send.' });
+        const rows = await sb('/rest/v1/announcements', {
+          method: 'POST',
+          headers: { Prefer: 'return=representation' },
+          body: { created_by: who.name, subject, body: text, audience: body.audience, recipients: list.map((r) => ({ email: r.email, name: r.name })), total: list.length }
+        });
+        await sec.audit(req, who.name, role, 'announcement_created', subject + ' → ' + list.length + ' people (' + body.audience + ')');
+        return res.status(200).json({ ok: true, id: rows[0].id, total: list.length });
+      }
+      if (action === 'announce-send') {
+        const id = Number(body.id);
+        if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Unknown announcement.' });
+        const found = (await sb('/rest/v1/announcements?select=*&id=eq.' + id + '&limit=1')) || [];
+        const row = found[0];
+        if (!row) return res.status(404).json({ message: 'That announcement was not found.' });
+        const progress = (r) => ({ id: r.id, total: r.total, next_index: r.next_index, sent_count: r.sent_count, failed_count: r.failed_count, status: r.status, errors: r.errors });
+        if (row.status !== 'sending') return res.status(200).json(progress(row));
+        const start = Number(row.next_index) || 0;
+        const chunk = (row.recipients || []).slice(start, start + ann.CHUNK);
+        if (!chunk.length) {
+          const done = await sb('/rest/v1/announcements?id=eq.' + id, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: { status: 'done' } });
+          return res.status(200).json(progress(done[0] || row));
+        }
+        /* Claim this chunk first; if another tab claimed it already, do nothing (nobody gets two emails). */
+        const claimed = await sb('/rest/v1/announcements?id=eq.' + id + '&next_index=eq.' + start, {
+          method: 'PATCH', headers: { Prefer: 'return=representation' }, body: { next_index: start + chunk.length }
+        });
+        if (!claimed || !claimed.length) return res.status(200).json(progress(row));
+        let result;
+        try {
+          result = await ann.sendChunk({ recipients: chunk, subject: row.subject, body: row.body, audience: row.audience, idempotencyKey: 'ann-' + id + '-' + start });
+        } catch (e) {
+          result = { sent: 0, failed: chunk.length, errors: [e.message] };
+        }
+        const finished = start + chunk.length >= row.total;
+        const errors = ((row.errors ? row.errors + '\n' : '') + result.errors.join('\n')).slice(0, 1500) || null;
+        const updated = await sb('/rest/v1/announcements?id=eq.' + id, {
+          method: 'PATCH', headers: { Prefer: 'return=representation' },
+          body: { sent_count: (Number(row.sent_count) || 0) + result.sent, failed_count: (Number(row.failed_count) || 0) + result.failed, errors, status: finished ? 'done' : 'sending' }
+        });
+        if (finished) {
+          await sec.audit(req, who.name, role, 'announcement_sent', row.subject + ' · sent ' + (updated[0] ? updated[0].sent_count : '?') + ' of ' + row.total);
+          if (row.audience === 'waitlist') {
+            for (const r of row.recipients || []) {
+              try { await sb('/rest/v1/waitlist?email=eq.' + encodeURIComponent(r.email), { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: { notified_at: new Date().toISOString() } }); } catch (e) { /* best effort */ }
+            }
+          }
+        }
+        return res.status(200).json(progress(updated[0] || row));
+      }
+    }
+
+    /* ---- gate scanner: a scanned QR code -> the ticket (signature checked) ---- */
+    if (action === 'ticket-scan' && req.method === 'GET') {
+      const scanned = referenceFromPayload(req.query && req.query.code);
+      if (!scanned) return res.status(400).json({ message: 'That QR code is not a Game Tribe ticket.' });
+      const found = await gate.getSale(scanned);
+      if (!found) return res.status(404).json({ message: 'That ticket is not in the system.' });
+      return res.status(200).json({ sale: found });
     }
 
     /* ---- gate check-in ---- */
@@ -728,6 +908,7 @@ export default async function handler(req, res) {
     return res.status(404).json({ message: 'Unknown action.' });
   } catch (error) {
     console.error('ADMIN ERROR:', action, error);
+    await reportError('admin:' + action, error, req);
     return res.status(500).json({ message: error.message || 'Something went wrong.' });
   }
 }

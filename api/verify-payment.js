@@ -1,7 +1,8 @@
 import { getTicketMap, recordSale } from './_lib/store.js';
-import { checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone } from './_lib/tickets.js';
+import { checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, siteOrigin } from './_lib/tickets.js';
 import { alreadyEmailed } from './_lib/checkin.js';
 import { allow, clientIp } from './_lib/security.js';
+import { reportError, checkOvercapacity } from './_lib/monitor.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -87,6 +88,7 @@ export default async function handler(req, res) {
       source: 'browser',
       email_sent: false
     });
+    await checkOvercapacity();
 
     const ticketNumber = await sendTicketEmail({
       email,
@@ -94,7 +96,8 @@ export default async function handler(req, res) {
       ticket: purchase.ticket,
       reference: transaction.reference,
       quantity: purchase.quantity,
-      admitsTotal: purchase.admitsTotal
+      admitsTotal: purchase.admitsTotal,
+      origin: siteOrigin(req)
     });
     await recordSale({ reference: transaction.reference, email_sent: true });
 
@@ -108,6 +111,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('VERIFY PAYMENT ERROR:', error);
+    await reportError('verify-payment', error, req);
     return res.status(500).json({
       message: 'Payment verification failed.',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined

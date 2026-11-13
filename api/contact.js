@@ -1,5 +1,6 @@
 import { getContent } from './_lib/store.js';
-import { allow, clientIp } from './_lib/security.js';
+import { allow, clientIp, turnstileOn, verifyTurnstile } from './_lib/security.js';
+import { reportError } from './_lib/monitor.js';
 
 /* Contact form: emails the message to your contact address using the same
    Resend setup as the ticket emails (RESEND_API_KEY + RESEND_FROM_EMAIL). */
@@ -35,22 +36,8 @@ export default async function handler(req, res) {
   }
 
   /* ...and, if Cloudflare Turnstile is switched on (TURNSTILE_SECRET_KEY), a human check. */
-  if (process.env.TURNSTILE_SECRET_KEY) {
-    const token = String(body.turnstile || '').slice(0, 2100);
-    let human = false;
-    if (token) {
-      try {
-        const check = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({ secret: process.env.TURNSTILE_SECRET_KEY, response: token, remoteip: ip })
-        });
-        human = (await check.json()).success === true;
-      } catch (e) {
-        human = false;
-      }
-    }
-    if (!human) return res.status(400).json({ message: 'Please complete the check above the button and try again.' });
+  if (turnstileOn() && !(await verifyTurnstile(body.turnstile, ip))) {
+    return res.status(400).json({ message: 'Please complete the check above the button and try again.' });
   }
 
   /* ...and never more than 60 in an hour overall, so nobody can flood your inbox. */
@@ -90,6 +77,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error('CONTACT ERROR:', e);
+    await reportError('contact', e, req);
     return res.status(502).json({ message: 'We couldn’t send your message right now. Please email us directly.' });
   }
 }
