@@ -144,6 +144,7 @@ tr.row-used td{background:#FBF4F3}
 .linkbox{display:flex;gap:8px;margin-top:8px}
 .modal.wide{max-width:780px}
 .keybox{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:18px;letter-spacing:2px;background:#fff;border:1.5px dashed var(--ink);border-radius:12px;padding:12px;word-break:break-word;margin:10px 0;font-weight:700}
+.pbar{height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px}.pbar i{display:block;height:100%;background:var(--red);width:0;transition:width .3s}
 .sec-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line);font-weight:700}
 .rc-card{border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:10px}
 .rc-card.ready{border-color:#9AD2AE}.rc-card.review{border-color:#E8B2AC}.rc-card.done{border-color:#9AD2AE;background:#F2FAF5}
@@ -314,6 +315,7 @@ var SECTIONS=[
 
  {id:'tickets',icon:'🎟️',title:'Tickets & prices',custom:'tickets'},
  {id:'sales',icon:'💰',title:'Sales & attendees',custom:'sales'},
+ {id:'announce',icon:'📣',title:'Announcements',custom:'announce'},
  {id:'team',icon:'👥',title:'Team & access',custom:'team'},
  {id:'security',icon:'🔒',title:'Security',custom:'security'},
 
@@ -430,7 +432,7 @@ var SECTIONS=[
 ];
 
 /* ============================================================ */
-var state={content:null,saved:'',dirty:false,section:'event',sales:null,team:null,teamResult:null,salesFilter:'all',role:'owner',me:null};
+var state={content:null,saved:'',dirty:false,section:'event',sales:null,team:null,teamResult:null,salesFilter:'all',role:'owner',me:null,ann:null,annDraft:{audience:'tickets_all',subject:'',body:'',to:'',preview:null},health:null,scanMode:false,compReq:''};
 var $=function(s,r){return (r||document).querySelector(s);};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function getP(o,p){return p.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
@@ -455,7 +457,7 @@ function markDirty(){
 window.addEventListener('beforeunload',function(e){if(state.dirty){e.preventDefault();e.returnValue='';}});
 document.addEventListener('keydown',function(e){
   if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();if(state.dirty)save();return;}
-  if(e.key==='Escape'&&$('#modalHost').firstChild){closeModal();return;}
+  if(e.key==='Escape'&&$('#modalHost').firstChild){state.scanMode=false;closeModal();return;}
   /* Gate shortcut: Enter in the search box opens the ticket if exactly one person matches */
   if(e.key==='Enter'&&e.target&&e.target.id==='salesSearch'&&canCheckin()&&state.sales){
     e.preventDefault();
@@ -617,12 +619,16 @@ function ticketsHtml(){
       '<button class="btn btn-ghost sm danger" type="button" data-tkdel="'+i+'">Delete</button></div>'+
       '<div class="grid two"><div class="field"><label>Name shown to buyers</label><input type="text" data-tk="'+i+'" data-tkf="label" value="'+esc(t.label)+'"></div>'+
       '<div class="field"><label>Price (₦, whole number)</label><input type="number" min="100" step="1" data-tk="'+i+'" data-tkf="price" value="'+esc(t.price)+'"></div>'+
-      '<div class="field"><label>People admitted per ticket</label><input type="number" min="1" max="20" step="1" data-tk="'+i+'" data-tkf="admits" value="'+esc(tkAdmits(t))+'"><p class="help">1 for a single ticket, 4 for a Group of 4. Buying 2 group tickets admits 8 people.</p></div></div></div>';
+      '<div class="field"><label>People admitted per ticket</label><input type="number" min="1" max="20" step="1" data-tk="'+i+'" data-tkf="admits" value="'+esc(tkAdmits(t))+'"><p class="help">1 for a single ticket, 4 for a Group of 4. Buying 2 group tickets admits 8 people.</p></div>'+
+      '<div class="field"><label>Max tickets to sell (0 = no limit)</label><input type="number" min="0" step="1" data-tk="'+i+'" data-tkf="capacity" value="'+esc(t.capacity||0)+'"><p class="help">Counts tickets of this type. When this many are sold the ticket shows SOLD OUT and the waitlist opens.</p></div></div></div>';
   });
   h+='<button class="btn btn-line" type="button" id="addTicket">+ Add ticket type</button></section>';
   var mq=getP(state.content,'ticketing.maxQuantity');
   h+='<section class="card"><h3>Buying several tickets at once</h3><p class="help">Buyers can pick a quantity at checkout and pay for it in one go. This is the most tickets one buyer can add to a single payment (they can always pay again for more).</p>'+
-    '<div class="field"><label>Max tickets per order</label><input type="number" min="1" max="200" step="1" data-bind="ticketing.maxQuantity" data-type="'+NUM+'" value="'+esc(mq==null?50:mq)+'"></div></section>';
+    '<div class="field"><label>Max tickets per order</label><input type="number" min="1" max="200" step="1" data-bind="ticketing.maxQuantity" data-type="'+NUM+'" value="'+esc(mq==null?50:mq)+'"></div></section>'+
+    '<section class="card"><h3>Capacity and sold out</h3><p class="help">Capacity counts <b>people</b> (a Group of 4 uses 4 places) and includes free passes. While someone is paying, their tickets are held for 15 minutes so the last ones cannot be sold twice. Leave at 0 for no limit.</p>'+
+    '<div class="grid two"><div class="field"><label>Total capacity (people)</label><input type="number" min="0" step="1" data-bind="ticketing.capacityTotal" data-type="'+NUM+'" value="'+esc(getP(state.content,'ticketing.capacityTotal')||0)+'"></div>'+
+    '<div class="field"><label>Show “only N left” when N is at most</label><input type="number" min="0" step="1" data-bind="ticketing.showLeftBelow" data-type="'+NUM+'" value="'+esc(getP(state.content,'ticketing.showLeftBelow')==null?30:getP(state.content,'ticketing.showLeftBelow'))+'"><p class="help">0 hides the “left” counter.</p></div></div></section>';
   return h;
 }
 
@@ -638,7 +644,7 @@ function canCheckin(){return state.role==='owner'||state.role==='tickets';}
 
 /* ---------- modal ---------- */
 function openModal(html,cls){$('#modalHost').innerHTML='<div class="modal-back"><div class="modal'+(cls?' '+cls:'')+'" role="dialog" aria-modal="true">'+html+'</div></div>';}
-function closeModal(){$('#modalHost').innerHTML='';}
+function closeModal(){if(typeof scanStop==='function')scanStop();$('#modalHost').innerHTML='';}
 
 /* ---------- sales view (with gate check-in) ---------- */
 function naira(n){return '₦'+Number(n||0).toLocaleString('en-NG');}
@@ -665,10 +671,19 @@ function admitBadge(r){
   return '<span class="badge none">Not yet · 0/'+t+'</span>';
 }
 function salesTopHtml(){
-  var rows=state.sales.sales||[],total=0,qty=0,people=0,inside=0,notSent=0,by={};
-  rows.forEach(function(r){total+=Number(r.amount||0);qty+=Number(r.quantity||1);people+=saleTotal(r);inside+=saleAdmitted(r);if(!r.email_sent)notSent++;var k=r.ticket_label||r.ticket_type||'Other';by[k]=(by[k]||0)+Number(r.quantity||1);});
-  var h='<div class="kpis"><div class="kpi"><b>'+qty+'</b><span>Tickets sold</span></div><div class="kpi"><b>'+people+'</b><span>People covered</span></div>'+
-    '<div class="kpi"><b style="color:var(--ok)">'+inside+' / '+people+'</b><span>Checked in at the gate</span></div><div class="kpi"><b>'+rows.length+'</b><span>Orders</span></div>'+
+  var rows=state.sales.sales||[],total=0,qty=0,orders=0,free=0,people=0,inside=0,notSent=0,by={};
+  rows.forEach(function(r){
+    var isFree=r.source==='complimentary';
+    total+=Number(r.amount||0);people+=saleTotal(r);inside+=saleAdmitted(r);
+    if(r.email&&!r.email_sent)notSent++;
+    if(isFree){free+=saleTotal(r);}else{qty+=Number(r.quantity||1);orders++;}
+    var k=r.ticket_label||r.ticket_type||'Other';by[k]=(by[k]||0)+(isFree?saleTotal(r):Number(r.quantity||1));
+  });
+  var cap=Number(state.sales.capacityTotal)||0;
+  var h='<div class="kpis"><div class="kpi"><b>'+qty+'</b><span>Tickets sold</span></div>'+
+    '<div class="kpi"><b>'+free+'</b><span>Free passes (people)</span></div>'+
+    '<div class="kpi"><b'+(cap&&people>cap?' style="color:var(--red)"':'')+'>'+people+(cap?' / '+cap:'')+'</b><span>People covered'+(cap?' (capacity)':'')+'</span></div>'+
+    '<div class="kpi"><b style="color:var(--ok)">'+inside+' / '+people+'</b><span>Checked in at the gate</span></div><div class="kpi"><b>'+orders+'</b><span>Paid orders</span></div>'+
     '<div class="kpi"><b>'+naira(total)+'</b><span>Total paid</span></div>'+
     '<div class="kpi"><b style="'+(notSent?'':'color:var(--ok)')+'">'+notSent+'</b><span>Emails not sent</span></div></div>';
   var bk=Object.keys(by);
@@ -684,7 +699,7 @@ function salesHtml(){
   h+='<div id="salesTop">'+salesTopHtml()+'</div>';
   h+='<div class="toolbar"><input type="search" id="salesSearch" placeholder="Search name, phone, reference or ticket no."'+(canCheckin()?' autocomplete="off"':'')+'>'+
     '<select id="salesFilter" style="max-width:210px" aria-label="Filter by check-in"><option value="all">Everyone</option><option value="none">Not yet checked in</option><option value="part">Partly checked in</option><option value="full">Fully used</option></select>'+
-    '<button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button>'+(state.role==='owner'?'<button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button><button class="btn btn-red sm" type="button" data-act="rc-open">Check against Paystack</button>':'')+'</div>';
+    '<button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button>'+(canCheckin()?'<button class="btn btn-red sm" type="button" data-act="scan-open">📷 Scan ticket</button>':'')+(state.role==='owner'?'<button class="btn btn-ink sm" type="button" data-act="comp-open">+ Free ticket</button><button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button><button class="btn btn-red sm" type="button" data-act="rc-open">Check against Paystack</button>':'')+'</div>';
   if(canCheckin())h+='<p class="help" style="margin:-4px 0 12px;font-size:13px;color:var(--muted)">At the gate: type or paste the buyer’s reference or ticket number, press Enter, then admit them. A ticket that is already used cannot be admitted again.</p>';
   h+='<div class="table-wrap"><table><thead><tr><th>Gate</th><th>Date</th><th>Name</th><th>Phone</th><th>Ticket</th><th>Qty</th><th>People</th><th>Ticket no.</th><th>Paid</th><th>Email</th><th>Contact</th></tr></thead><tbody id="salesBody"></tbody></table></div>';
   return h;
@@ -697,7 +712,7 @@ function salesRows(q){
     var dt=new Date(r.paid_at||r.created_at),st=saleStatus(r);
     var gate='<div style="white-space:nowrap">'+admitBadge(r)+(can?' <button type="button" class="btn sm '+(st==='full'?'btn-line':'btn-red')+'" data-act="gate" data-ref="'+esc(r.reference)+'">'+(st==='full'?'View':'Check in')+'</button>':'')+'</div>'+
       (r.checked_in_at?'<div class="small">'+esc(timeShort(r.checked_in_at))+(r.checked_in_by?' · '+esc(r.checked_in_by):'')+'</div>':'');
-    return '<tr'+(st==='full'?' class="row-used"':'')+'><td>'+gate+'</td><td>'+esc(isNaN(dt)?'':dt.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.phone)+'</td><td>'+esc(r.ticket_label||r.ticket_type)+'</td><td>'+esc(r.quantity||1)+'</td><td>'+saleTotal(r)+'</td><td><code>'+esc(r.ticket_number)+'</code></td><td>'+naira(r.amount)+'</td><td>'+(r.email_sent?'<span class="badge ok">Sent</span>':'<span class="badge warn">Not sent</span>')+'</td><td>'+esc(r.email)+'</td></tr>';
+    return '<tr'+(st==='full'?' class="row-used"':'')+'><td>'+gate+'</td><td>'+esc(isNaN(dt)?'':dt.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.phone)+'</td><td>'+esc(r.ticket_label||r.ticket_type)+(r.source==='complimentary'?' <span class="badge part">Free</span>':'')+'</td><td>'+esc(r.quantity||1)+'</td><td>'+saleTotal(r)+'</td><td><code>'+esc(r.ticket_number)+'</code></td><td>'+(r.source==='complimentary'?'Free':naira(r.amount))+'</td><td>'+(!r.email?'—':(r.email_sent?'<span class="badge ok">Sent</span>':'<span class="badge warn">Not sent</span>'))+'</td><td>'+esc(r.email)+'</td></tr>';
   }).join('');
 }
 function refreshSalesView(){
@@ -723,8 +738,8 @@ function csvCell(v){
 }
 function csvDownload(){
   var q=csvCell;
-  var head=['Date','Name','Email','Phone','Ticket','Quantity','People covered','People checked in','Amount (NGN)','Ticket number','Reference','Email sent'];
-  var lines=[head.join(',')].concat((state.sales.sales||[]).map(function(r){return [r.paid_at||r.created_at,r.name,r.email,r.phone,r.ticket_label||r.ticket_type,r.quantity||1,saleTotal(r),saleAdmitted(r),r.amount,r.ticket_number,r.reference,r.email_sent?'yes':'no'].map(q).join(',');}));
+  var head=['Date','Name','Email','Phone','Ticket','Quantity','People covered','People checked in','Amount (NGN)','Ticket number','Reference','Email sent','Type'];
+  var lines=[head.join(',')].concat((state.sales.sales||[]).map(function(r){return [r.paid_at||r.created_at,r.name,r.email,r.phone,r.ticket_label||r.ticket_type,r.quantity||1,saleTotal(r),saleAdmitted(r),r.amount,r.ticket_number,r.reference,r.email_sent?'yes':'no',r.source==='complimentary'?'Complimentary':'Paid'].map(q).join(',');}));
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv'}));a.download='game-tribe-tickets.csv';a.click();
 }
 
@@ -748,6 +763,8 @@ function gateModal(ref,problem){
     h+='<div class="row"><button class="btn btn-red" type="button" id="gateAdmit" data-act="admit" data-ref="'+er+'">Admit'+(t>1?'':' this person')+'</button><button class="btn btn-line" type="button" data-act="mclose">Close</button></div>';
   }else h+='<div class="row"><button class="btn btn-line" type="button" data-act="mclose">Close</button></div>';
   if(state.role==='owner'&&a>0)h+='<div class="row" style="border-top:1px solid var(--line);padding-top:12px"><span style="font-size:13px;font-weight:700">Admitted by mistake?</span><input type="number" id="undoCount" min="1" max="'+a+'" value="1" aria-label="How many to remove"><button class="btn btn-ghost sm danger" type="button" data-act="undo" data-ref="'+er+'">Remove from admitted</button></div>';
+  if(state.role==='owner'&&r.source==='complimentary'&&a===0)h+='<div class="row" style="border-top:1px solid var(--line);padding-top:12px"><span style="font-size:13px;font-weight:700">Issued by mistake?</span><button class="btn btn-ghost sm danger" type="button" data-act="comp-delete" data-ref="'+er+'">Delete this free pass</button></div>';
+  if(can)h+='<div class="row"><button class="btn btn-line sm" type="button" data-act="scan-open">📷 Scan next ticket</button></div>';
   h+='<div class="row"><button class="btn btn-ghost sm" type="button" data-act="history" data-ref="'+er+'">Show history</button></div><ul class="hist" id="gateHistory"></ul>';
   openModal(h);
   var c=$('#gateCount');if(c){c.focus();c.select();}else{var b=$('#gateAdmit');if(b)b.focus();}
@@ -760,6 +777,7 @@ function doAdmit(ref){
     updateSale(res.sale);closeModal();refreshSalesView();
     toast('✓ Admitted '+n+' — '+(res.sale.name||'')+' ('+saleAdmitted(res.sale)+' of '+saleTotal(res.sale)+')');
     var s=$('#salesSearch');if(s){s.focus();s.select();}
+    if(state.scanMode)scanOpen();
   }).catch(function(e){
     if(e.status===401)return showLogin();
     if(e.data&&e.data.sale){updateSale(e.data.sale);refreshSalesView();gateModal(ref,e.message);return;}
@@ -848,6 +866,231 @@ function rcImportAll(btn){
   chain.then(function(){toast('All valid payments imported ✓');},rcRender);
 }
 
+/* ---------- gate scanner (camera) ---------- */
+var scan={stream:null,timer:0,detector:null,busy:false,last:'',lastAt:0,canvas:null};
+function scanMsg(t,bad){var m=$('#scanMsg');if(m){m.textContent=t;m.style.color=bad?'var(--red)':'';}}
+function scanOpen(){
+  state.scanMode=true;
+  openModal('<h3>Scan a ticket</h3><div style="background:#000;border-radius:14px;overflow:hidden;min-height:160px"><video id="scanVideo" playsinline muted autoplay style="width:100%;display:block"></video></div><p class="rc-note" id="scanMsg">Starting the camera…</p><div class="row"><button class="btn btn-line" type="button" data-act="scan-close">Close</button></div>');
+  scanStart();
+}
+function scanStop(){
+  if(scan.timer){clearInterval(scan.timer);scan.timer=0;}
+  if(scan.stream){try{scan.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}scan.stream=null;}
+  scan.busy=false;
+}
+function scanLoadDecoder(){
+  if('BarcodeDetector' in window){try{scan.detector=new window.BarcodeDetector({formats:['qr_code']});return Promise.resolve();}catch(e){}}
+  if(window.jsQR)return Promise.resolve();
+  return new Promise(function(res,rej){var el=document.createElement('script');el.src='/admin/jsQR.js';el.onload=res;el.onerror=function(){rej(new Error('Could not load the QR reader.'));};document.head.appendChild(el);});
+}
+function scanStart(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){scanMsg('This browser cannot use the camera. Close this and type the reference in the search box instead.',true);return;}
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280}},audio:false}).then(function(stream){
+    var v=$('#scanVideo');
+    if(!v){stream.getTracks().forEach(function(t){t.stop();});return;}
+    scan.stream=stream;v.srcObject=stream;var pl=v.play();if(pl&&pl.catch)pl.catch(function(){});
+    return scanLoadDecoder().then(function(){scanMsg('Point the camera at the QR code…');scan.timer=setInterval(scanTick,150);});
+  }).catch(function(e){
+    var n=String(e&&(e.name+' '+e.message));
+    scanMsg(/NotAllowed|Permission|denied/i.test(n)?'Camera permission was refused. Allow the camera for this site in your browser settings, then try again.':'Could not start the camera: '+((e&&e.message)||e),true);
+  });
+}
+function scanTick(){
+  var v=$('#scanVideo');if(!v){scanStop();return;}
+  if(scan.busy)return;
+  scan.busy=true;
+  var done=function(text){scan.busy=false;if(text)scanHandle(text);};
+  try{
+    if(scan.detector){scan.detector.detect(v).then(function(r){done(r&&r[0]&&r[0].rawValue);},function(){done();});return;}
+    var w=v.videoWidth,h=v.videoHeight;
+    if(!w||!h){scan.busy=false;return;}
+    var k=Math.min(1,640/w),cw=Math.round(w*k),ch=Math.round(h*k),c=scan.canvas||(scan.canvas=document.createElement('canvas'));
+    c.width=cw;c.height=ch;
+    var g=c.getContext('2d',{willReadFrequently:true});g.drawImage(v,0,0,cw,ch);
+    var img=g.getImageData(0,0,cw,ch),code=window.jsQR(img.data,cw,ch,{inversionAttempts:'dontInvert'});
+    done(code&&code.data);
+  }catch(e){scan.busy=false;}
+}
+function scanHandle(text){
+  var now=Date.now();
+  if(text===scan.last&&now-scan.lastAt<3000)return;
+  scan.last=text;scan.lastAt=now;scan.busy=true;scanMsg('Checking ticket…');
+  api('ticket-scan&code='+encodeURIComponent(text)).then(function(res){
+    scanStop();
+    if(navigator.vibrate){try{navigator.vibrate(60);}catch(e){}}
+    var sale=res.sale;
+    if(state.sales&&state.sales.sales){if(findSale(sale.reference))updateSale(sale);else state.sales.sales.unshift(sale);}
+    closeModal();refreshSalesView();gateModal(sale.reference);
+  }).catch(function(e){
+    if(e.status===401){scanStop();return showLogin();}
+    scan.busy=false;scanMsg(e.message,true);
+    if(navigator.vibrate){try{navigator.vibrate([80,60,80]);}catch(x){}}
+  });
+}
+
+/* ---------- free tickets (main admin only) ---------- */
+var COMP_CATS=['Sponsor','Speaker','VIP','Media','Partner','Staff','Other'];
+function compOpen(){
+  state.compReq=Math.random().toString(36).slice(2,12)+Date.now().toString(36).slice(-4);
+  openModal('<h3>Issue a free ticket</h3><p class="help" style="margin:0 0 8px;font-size:13px;color:var(--muted)">For sponsors, speakers, VIPs or media. It gets the same QR code and gate check-in as a paid ticket, with no payment.</p>'+
+    '<div class="field"><label for="cpName">Guest name</label><input type="text" id="cpName" maxlength="80"></div>'+
+    '<div class="field"><label for="cpEmail">Email (the pass is sent here)</label><input type="email" id="cpEmail" placeholder="optional"></div>'+
+    '<div class="field"><label for="cpPhone">Phone (optional)</label><input type="text" id="cpPhone" maxlength="20"></div>'+
+    '<div class="grid two"><div class="field"><label for="cpCat">This pass is for</label><select id="cpCat">'+COMP_CATS.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div>'+
+    '<div class="field"><label for="cpPeople">People admitted</label><input type="number" id="cpPeople" min="1" max="50" value="1"></div></div>'+
+    '<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-weight:700;font-size:13px"><input type="checkbox" id="cpSend" checked> Email the pass now</label>'+
+    '<div id="cpResult"></div><div class="row"><button class="btn btn-red" type="button" id="cpGo" data-act="comp-go">Issue pass</button><button class="btn btn-line" type="button" data-act="mclose">Close</button></div>','wide');
+  var n=$('#cpName');if(n)n.focus();
+}
+function compGo(){
+  var b=$('#cpGo'),body={name:$('#cpName').value.trim(),email:$('#cpEmail').value.trim(),phone:$('#cpPhone').value.trim(),category:$('#cpCat').value,people:parseInt($('#cpPeople').value,10),sendEmail:$('#cpSend').checked,requestId:state.compReq};
+  if(!body.name){toast('Enter the guest’s name.',true);return;}
+  b.disabled=true;b.textContent='Issuing…';
+  api('comp-issue',{body:body}).then(function(res){
+    var note=res.emailSent?' Emailed ✓':(body.email&&body.sendEmail?' The email could not be sent'+(res.emailError?' ('+esc(res.emailError)+')':'')+'.':' Share the link below with them.');
+    $('#cpResult').innerHTML='<div class="banner ok" style="margin-top:12px">Pass issued for '+esc(body.name)+' ('+esc(body.people)+(body.people===1?' person':' people')+').'+note+'</div>'+
+      '<div class="linkbox"><input type="text" id="cpLink" readonly value="'+esc(res.ticketLink)+'"><button class="btn btn-line sm" type="button" data-act="comp-copy">Copy link</button></div><div class="small">This link opens the pass with its QR code. Anyone who has it can use the pass, so only share it with the guest.</div>';
+    b.textContent='Issue another';b.disabled=false;b.setAttribute('data-act','comp-again');
+    api('sales').then(function(d){state.sales=d;followRole(d);refreshSalesView();}).catch(function(){});
+  }).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);b.disabled=false;b.textContent='Issue pass';});
+}
+function compDelete(ref){
+  var r=findSale(ref);
+  if(!r||!confirm('Delete the free pass for '+(r.name||'this guest')+'? This cannot be undone.'))return;
+  api('comp-delete',{body:{reference:ref}}).then(function(){
+    state.sales.sales=state.sales.sales.filter(function(x){return x.reference!==ref;});closeModal();refreshSalesView();toast('Free pass deleted');
+  }).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
+}
+
+/* ---------- announcements + waitlist (main admin only) ---------- */
+function annCountText(){
+  var d=state.annDraft;
+  if(!d.preview)return 'Counting…';
+  if(!d.preview.count)return 'Nobody to send to for this choice.';
+  return d.preview.count+(d.preview.count===1?' person':' people')+' will get this'+(d.preview.sample.length?' (for example '+d.preview.sample.slice(0,3).map(esc).join(', ')+')':'')+'.';
+}
+function announceHtml(){
+  var d=state.ann;if(!d)return '<div class="empty">Loading…</div>';
+  var dr=state.annDraft,h='';
+  if(!d.resendReady)h+='<div class="notice">Email is not set up yet: <code>RESEND_API_KEY</code> and <code>RESEND_FROM_EMAIL</code> must be set in Vercel.</div>';
+  h+='<section class="card"><h3>Send an update by email</h3><p class="help">For venue changes, the schedule, reminders. Write <code>{name}</code> to add each person’s first name. Replies go to your contact inbox. Always send yourself a test first. Note: free Resend accounts allow about 100 emails a day, so a large send may need a paid plan.</p>'+
+    '<div class="field"><label for="anAud">Who should get it?</label><select id="anAud">'+Object.keys(d.audiences).map(function(k){return '<option value="'+k+'"'+(dr.audience===k?' selected':'')+'>'+esc(d.audiences[k])+'</option>';}).join('')+'</select><p class="help" id="anCount">'+annCountText()+'</p></div>'+
+    '<div class="field"><label for="anSub">Subject</label><input type="text" id="anSub" maxlength="150" value="'+esc(dr.subject)+'" placeholder="e.g. Doors open at 3pm, venue update"></div>'+
+    '<div class="field"><label for="anBody">Message</label><textarea id="anBody" rows="8" maxlength="5000" placeholder="Hi {name},&#10;&#10;...">'+esc(dr.body)+'</textarea></div>'+
+    '<div class="field"><label for="anTo">Send a test to</label><input type="email" id="anTo" value="'+esc(dr.to)+'" placeholder="your email (empty = the security-alert address)"></div>'+
+    '<p style="margin:14px 0 0"><button class="btn btn-line" type="button" data-act="an-test">Send me a test</button> <button class="btn btn-red" type="button" id="anSend" data-act="an-send">Send to everyone</button></p><div id="anProgress"></div></section>';
+  h+='<section class="card"><h3>WhatsApp or SMS</h3><p class="help">Many buyers see WhatsApp before email. Download the phone numbers for the group chosen above, then paste the same message into a WhatsApp Broadcast list. (Sending WhatsApp or SMS automatically needs an account with a provider such as Termii or Twilio.)</p>'+
+    '<p style="margin:0"><button class="btn btn-line sm" type="button" data-act="an-phones">Download phone numbers (CSV)</button> <button class="btn btn-line sm" type="button" data-act="an-copy">Copy the message text</button></p></section>';
+  h+='<section class="card"><h3>Recent announcements</h3>';
+  if(!d.list.length)h+='<div class="empty">None yet.</div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Subject</th><th>To</th><th>Sent</th><th>Failed</th><th>Status</th></tr></thead><tbody>'+d.list.map(function(a){
+    var open=a.status==='sending';
+    return '<tr><td style="white-space:nowrap">'+esc(timeShort(a.created_at))+'</td><td>'+esc(a.subject)+'</td><td>'+esc(d.audiences[a.audience]||a.audience)+'</td><td>'+esc(a.sent_count)+' / '+esc(a.total)+'</td><td>'+(a.failed_count?'<span class="badge warn">'+esc(a.failed_count)+'</span>':'0')+'</td><td>'+(open?'<span class="badge warn">Unfinished</span> <button class="btn btn-line sm" type="button" data-act="an-resume" data-id="'+esc(a.id)+'" data-total="'+esc(a.total)+'">Resume</button>':'<span class="badge ok">Done</span>')+'</td></tr>';
+  }).join('')+'</tbody></table></div>';
+  h+='</section><section class="card"><h3>Waitlist ('+d.waitlist.length+')</h3><p class="help">People who asked to be told when a sold-out ticket becomes available. To tell them, choose “The waitlist” above and send.</p>'+
+    '<p style="margin:0 0 10px"><button class="btn btn-line sm" type="button" data-act="an-waitlist">Email the waitlist</button></p>';
+  if(!d.waitlist.length)h+='<div class="empty">Nobody on the waitlist.</div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Wanted</th><th>Signed up</th><th>Told</th><th></th></tr></thead><tbody>'+d.waitlist.map(function(w){
+    return '<tr><td>'+esc(w.name)+'</td><td>'+esc(w.email)+'</td><td>'+esc(w.phone||'')+'</td><td>'+esc(w.quantity)+' × '+esc(w.ticket_type||'any')+'</td><td>'+esc(timeShort(w.created_at))+'</td><td>'+(w.notified_at?'<span class="badge ok">Yes</span>':'—')+'</td><td><button class="btn btn-ghost sm danger" type="button" data-act="wl-remove" data-id="'+esc(w.id)+'">Remove</button></td></tr>';
+  }).join('')+'</tbody></table></div>';
+  return h+'</section>';
+}
+function loadAnnounce(){
+  state.ann=null;render();
+  Promise.all([api('announce-list'),api('waitlist-list')]).then(function(r){
+    state.ann={list:r[0].announcements,audiences:r[0].audiences,resendReady:r[0].resendReady,waitlist:r[1].waitlist};render();annPreviewRefresh();
+  }).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
+}
+function annPreviewRefresh(){
+  var d=state.annDraft;d.preview=null;var c=$('#anCount');if(c)c.textContent=annCountText();
+  var want=d.audience;
+  api('announce-preview',{body:{audience:want}}).then(function(res){
+    if(state.annDraft.audience!==want)return;
+    state.annDraft.preview=res;var el=$('#anCount');if(el)el.textContent=annCountText();
+    var b=$('#anSend');if(b)b.textContent=res.count?'Send to '+res.count+(res.count===1?' person':' people'):'Send to everyone';
+  }).catch(function(){});
+}
+function annDraftRead(){
+  var d=state.annDraft;
+  if($('#anSub'))d.subject=$('#anSub').value;if($('#anBody'))d.body=$('#anBody').value;if($('#anTo'))d.to=$('#anTo').value;if($('#anAud'))d.audience=$('#anAud').value;
+  return d;
+}
+function annTest(btn){
+  var d=annDraftRead();btn.disabled=true;
+  api('announce-test',{body:{subject:d.subject,body:d.body,to:d.to,audience:d.audience}}).then(function(res){toast('Test sent to '+res.to+' ✓');btn.disabled=false;})
+    .catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);btn.disabled=false;});
+}
+function annSend(btn){
+  var d=annDraftRead(),n=d.preview&&d.preview.count;
+  if(!n){toast('There is nobody to send to for this choice.',true);return;}
+  if(!confirm('Send “'+d.subject+'” to '+n+(n===1?' person':' people')+' now? This cannot be undone.'))return;
+  btn.disabled=true;
+  api('announce-create',{body:{subject:d.subject,body:d.body,audience:d.audience}}).then(function(res){annLoop(res.id,res.total);})
+    .catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);btn.disabled=false;});
+}
+function annLoop(id,total){
+  var box=$('#anProgress');
+  var show=function(sent,failed,note){
+    if(!$('#anProgress'))return;
+    var pct=total?Math.min(100,Math.round((sent+failed)/total*100)):0;
+    $('#anProgress').innerHTML='<div class="small" style="margin-top:12px">'+esc(note)+' '+(sent+failed)+' of '+total+'</div><div class="pbar"><i style="width:'+pct+'%"></i></div>';
+  };
+  if(box)show(0,0,'Sending…');
+  var step=function(){
+    api('announce-send',{body:{id:id}}).then(function(r){
+      show(r.sent_count,r.failed_count,r.status==='done'?'Finished.':'Sending…');
+      if(r.status==='done'){
+        toast(r.failed_count?'Sent to '+r.sent_count+', '+r.failed_count+' failed':'Sent to everyone ✓',!!r.failed_count);
+        if(r.errors&&$('#anProgress'))$('#anProgress').insertAdjacentHTML('beforeend','<div class="notice" style="margin-top:10px;white-space:pre-wrap">'+esc(r.errors)+'</div>');
+        state.annDraft.subject='';state.annDraft.body='';
+        if($('#anSub'))$('#anSub').value='';if($('#anBody'))$('#anBody').value='';
+        api('announce-list').then(function(l){state.ann.list=l.announcements;}).catch(function(){});
+        return;
+      }
+      setTimeout(step,250);
+    }).catch(function(e){
+      if(e.status===401)return showLogin();
+      if($('#anProgress'))$('#anProgress').insertAdjacentHTML('beforeend','<div class="banner bad" style="margin-top:10px">Stopped: '+esc(e.message)+'. Nothing is lost: use Resume in the table below.</div>');
+      loadAnnounce();
+    });
+  };
+  step();
+}
+function annPhones(btn){
+  var d=annDraftRead();btn.disabled=true;
+  api('announce-preview',{body:{audience:d.audience,withPhones:true}}).then(function(res){
+    var lines=['Name,Phone'].concat((res.phones||[]).map(function(p){return csvCell(p.name)+','+csvCell(p.phone);}));
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv'}));a.download='game-tribe-phone-numbers.csv';a.click();
+    toast((res.phones||[]).length+' phone numbers downloaded');btn.disabled=false;
+  }).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);btn.disabled=false;});
+}
+
+/* ---------- site health (shown on the Security page) ---------- */
+function healthHtml(){
+  var hl=state.health,h='<section class="card"><h3>Site health</h3><p class="help">Checks the parts checkout depends on: settings, database, Paystack and ticket emails.</p><p style="margin:0 0 10px"><button class="btn btn-line sm" type="button" data-act="health-run">Run health check</button></p>';
+  if(!hl)h+='<div class="empty">Not run yet.</div>';
+  else if(hl.loading)h+='<div class="empty">Checking…</div>';
+  else if(hl.error)h+='<div class="banner bad">'+esc(hl.error)+'</div>';
+  else{
+    h+='<div class="banner '+(hl.ok?'ok':'bad')+'">'+(hl.ok?'Everything checkout needs is working.':'Something checkout needs is NOT working. See below.')+'</div>';
+    h+=hl.checks.map(function(c){return '<div class="sec-row"><span>'+esc(c.name)+'<div class="small">'+esc(c.detail)+(c.ms?' · '+esc(c.ms)+' ms':'')+'</div></span><span class="badge '+(c.ok?'ok':(c.critical?'used':'warn'))+'">'+(c.ok?'OK':(c.critical?'Problem':'Warning'))+'</span></div>';}).join('');
+  }
+  h+='</section>';
+  if(hl&&hl.errors){
+    h+='<section class="card"><h3>Recent problems</h3>'+(hl.errors.length?'<div class="table-wrap"><table><thead><tr><th>When</th><th>Where</th><th>What</th></tr></thead><tbody>'+hl.errors.map(function(x){return '<tr><td style="white-space:nowrap">'+esc(timeShort(x.created_at))+'</td><td>'+esc(x.area)+'</td><td>'+esc(x.message)+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No problems logged.</div>')+'</section>';
+  }
+  h+='<section class="card"><h3>Uptime alerts</h3><p class="help">A free monitor (UptimeRobot, Better Stack…) can check your site every 5 minutes and message you when it is down. Add an HTTP monitor for this address:</p>'+
+    '<div class="keybox" style="font-size:14px;letter-spacing:0">'+esc(location.origin)+'/api/health?deep=1&amp;token=YOUR_HEALTH_TOKEN</div>'+
+    '<p class="help">Replace YOUR_HEALTH_TOKEN with a long random text that you also save in Vercel as <code>HEALTH_TOKEN</code> ('+(hl&&hl.tokenSet?'<b>it is set ✓</b>':'<b>not set yet</b>')+'). That address answers OK when checkout works and an error when it is at risk, so the monitor alerts you, and we also email you which part failed. Add a second monitor on <code>'+esc(location.origin)+'/api/health</code> (no token) to learn if the site itself is down.</p></section>';
+  return h;
+}
+function healthRun(){
+  state.health={loading:true};var box=$('#healthBox');if(box)box.innerHTML=healthHtml();
+  api('health-check').then(function(d){state.health=d;}).catch(function(e){if(e.status===401)return showLogin();state.health={error:e.message};})
+    .then(function(){var b=$('#healthBox');if(b)b.innerHTML=healthHtml();});
+}
+
 /* ---------- security (main admin only) ---------- */
 var AUDIT_LABELS={login_ok:'Signed in',login_failed:'Failed sign-in',login_blocked:'Blocked: too many tries',content_published:'Published website changes',
   team_invited:'Invited a team member',team_invite_resent:'Re-sent an invite',team_reset_link:'Sent a password reset link',team_role_changed:'Changed a role',team_removed:'Removed a team member',
@@ -892,12 +1135,13 @@ function securityHtml(){
   else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Who</th><th>What</th><th>Details</th><th>Address</th></tr></thead><tbody>'+d.audit.log.map(function(a){
     return '<tr><td style="white-space:nowrap">'+esc(timeShort(a.created_at))+'</td><td>'+esc(a.actor||'—')+'</td><td>'+(auditBad(a.action)?'<span class="badge warn">':'<span class="badge ok">')+esc(AUDIT_LABELS[a.action]||a.action)+'</span></td><td>'+esc(a.detail||'')+'</td><td><code>'+esc(a.ip||'')+'</code></td></tr>';
   }).join('')+'</tbody></table></div>';
-  return h+'</section>';
+  h+='</section><div id="healthBox">'+healthHtml()+'</div>';
+  return h;
 }
 function loadSecurity(keepSetup){
   if(!keepSetup)state.secSetup=null;
   state.secInfo=null;render();
-  Promise.all([api('security-status'),api('audit-list')]).then(function(r){state.secInfo={status:r[0],audit:r[1]};render();})
+  Promise.all([api('security-status'),api('audit-list')]).then(function(r){state.secInfo={status:r[0],audit:r[1]};render();healthRun();})
     .catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
 }
 function secCall(btn,label,action,body,done){
@@ -973,6 +1217,7 @@ function render(){
   if(sec.custom==='tickets')h=ticketsHtml();
   else if(sec.custom==='sales')h=salesHtml();
   else if(sec.custom==='team')h=teamHtml();
+  else if(sec.custom==='announce')h=announceHtml();
   else if(sec.custom==='security')h=securityHtml();
   else h=sec.blocks.map(blockHtml).join('');
   v.innerHTML=h;
@@ -986,7 +1231,7 @@ function render(){
 function handleAct(t){
   var a=t.dataset.act,ref=t.dataset.ref;
   if(a==='gate'){gateModal(ref);return;}
-  if(a==='mclose'){closeModal();return;}
+  if(a==='mclose'){state.scanMode=false;closeModal();return;}
   if(a==='admit'){doAdmit(ref);return;}
   if(a==='undo'){doUndo(ref);return;}
   if(a==='history'){loadHistory(ref);return;}
@@ -999,6 +1244,20 @@ function handleAct(t){
     secCall(t,'',a,{},function(){toast('Everyone else has been signed out ✓');loadSecurity();});return;
   }
   if(a==='audit-refresh'){loadSecurity(true);return;}
+  if(a==='scan-open'){scanOpen();return;}
+  if(a==='scan-close'){state.scanMode=false;closeModal();return;}
+  if(a==='comp-open'||a==='comp-again'){compOpen();return;}
+  if(a==='comp-go'){compGo();return;}
+  if(a==='comp-copy'){var cl=$('#cpLink');if(cl){cl.select();if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(cl.value);else document.execCommand('copy');toast('Link copied');}return;}
+  if(a==='comp-delete'){compDelete(ref);return;}
+  if(a==='an-test'){annTest(t);return;}
+  if(a==='an-send'){annSend(t);return;}
+  if(a==='an-resume'){annLoop(parseInt(t.dataset.id,10),parseInt(t.dataset.total,10)||0);return;}
+  if(a==='an-phones'){annPhones(t);return;}
+  if(a==='an-copy'){var d=annDraftRead(),txt=String(d.body||'').replace(/\{name\}/gi,'there');if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){toast('Message copied');});return;}
+  if(a==='an-waitlist'){state.annDraft.audience='waitlist';render();annPreviewRefresh();window.scrollTo(0,0);return;}
+  if(a==='wl-remove'){if(!confirm('Remove this person from the waitlist?'))return;api('waitlist-remove',{body:{id:parseInt(t.dataset.id,10)}}).then(function(){toast('Removed');loadAnnounce();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});return;}
+  if(a==='health-run'){healthRun();return;}
   if(a==='rc-open'){rcOpen();return;}
   if(a==='rc-run'){rcRun();return;}
   if(a==='rc-import'){rcImport(parseInt(t.dataset.idx,10),t);return;}
@@ -1023,10 +1282,10 @@ function handleAct(t){
   }
 }
 document.addEventListener('click',function(e){
-  if(e.target.classList&&e.target.classList.contains('modal-back')){closeModal();return;}
+  if(e.target.classList&&e.target.classList.contains('modal-back')){state.scanMode=false;closeModal();return;}
   var t=e.target.closest('button');if(!t)return;
   if(t.dataset.act){handleAct(t);return;}
-  if(t.dataset.sec){state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='team')loadTeam();else if(t.dataset.sec==='security')loadSecurity();else render();window.scrollTo(0,0);return;}
+  if(t.dataset.sec){state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='team')loadTeam();else if(t.dataset.sec==='announce')loadAnnounce();else if(t.dataset.sec==='security')loadSecurity();else render();window.scrollTo(0,0);return;}
   if(t.dataset.add){
     var L=listSpec(t.dataset.add),arr=getP(state.content,t.dataset.add),item=L.strings?'':clone(L.blank);
     if(item&&typeof item==='object'&&'id' in item)item.id=newId();
@@ -1052,7 +1311,7 @@ document.addEventListener('click',function(e){
     var base=name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,28)||'ticket',id=base,n=1;
     while(state.content.tickets.some(function(x){return x.id===id;}))id=base+'_'+(++n);
     var admits=parseInt(prompt('How many people does ONE of these tickets admit? (1 for a single, 4 for a Group of 4)','1'),10);if(!(admits>=1&&admits<=20)){toast('Enter a number from 1 to 20.',true);return;}
-    state.content.tickets.push({id:id,label:name.trim(),price:price,admits:admits,active:true});markDirty();render();return;
+    state.content.tickets.push({id:id,label:name.trim(),price:price,admits:admits,capacity:0,active:true});markDirty();render();return;
   }
   if(t.dataset.tkdel!==undefined){if(confirm('Delete this ticket type? Turning it off is usually safer.')){state.content.tickets.splice(+t.dataset.tkdel,1);markDirty();render();}return;}
   if(t.dataset.upload){
@@ -1076,10 +1335,11 @@ document.addEventListener('click',function(e){
 
 document.addEventListener('input',function(e){
   var el=e.target;
+  if(el.id==='anSub'||el.id==='anBody'||el.id==='anTo'){annDraftRead();return;}
   if(el.id==='salesSearch'){$('#salesBody').innerHTML=salesRows(el.value);return;}
   if(el.dataset.tk!==undefined){
     var tk=state.content.tickets[+el.dataset.tk],f=el.dataset.tkf;
-    tk[f]=el.type==='checkbox'?el.checked:(f==='price'?parseInt(el.value,10)||0:(f==='admits'?Math.min(20,Math.max(1,parseInt(el.value,10)||1)):el.value));markDirty();return;
+    tk[f]=el.type==='checkbox'?el.checked:(f==='price'?parseInt(el.value,10)||0:(f==='admits'?Math.min(20,Math.max(1,parseInt(el.value,10)||1)):(f==='capacity'?Math.max(0,parseInt(el.value,10)||0):el.value)));markDirty();return;
   }
   if(!el.dataset.bind)return;
   var type=el.dataset.type,v=el.value;
@@ -1090,6 +1350,7 @@ document.addEventListener('input',function(e){
 document.addEventListener('change',function(e){
   var el=e.target;
   if(el.id==='salesFilter'){state.salesFilter=el.value;refreshSalesView();return;}
+  if(el.id==='anAud'){annDraftRead();annPreviewRefresh();return;}
   if(el.dataset.teamrole){
     el.disabled=true;
     api('team-role',{body:{id:el.dataset.teamrole,role:el.value}}).then(function(){toast('Role updated ✓');return reloadTeamList();}).catch(function(err){if(err.status===401)return showLogin();toast(err.message,true);reloadTeamList();});
