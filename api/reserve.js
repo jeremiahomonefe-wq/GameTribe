@@ -2,7 +2,7 @@
  * Called just before a buyer opens Paystack. It does two things:
  *  - refuses if the tickets are sold out (or fewer are left than they want), and
  *  - holds the tickets for 15 minutes so two people cannot pay for the last one.
- * It returns the payment reference to use. If anything goes wrong on OUR side the
+ * It returns th e payment reference to use. If anything goes wrong on OUR side the
  * website carries on without a hold, so a fault here never stops a sale.
  */
 import crypto from 'crypto';

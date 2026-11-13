@@ -76,7 +76,7 @@ export default async function handler(req, res) {
       });
     }
 
-    /* Record the sale BEFORE the email, so a failed email never hides a sale. */
+    /* Record the sale  BEFORE the email, so a failed email never hides a sale. */
     await recordSale({
       reference: transaction.reference,
       ticket_number: ticketNumberFor(transaction.reference),

@@ -3,7 +3,7 @@
  *   GET /api/health                           quick "the site's code is running" answer
  *   GET /api/health?deep=1&token=HEALTH_TOKEN checks the database, Paystack and email too.
  *                                             Answers 200 when all is well, 503 when checkout is at risk.
- * The deep check needs the secret HEALTH_TOKEN (set it in Vercel) so strangers cannot trigger it.
+ * The deep c heck needs the secret HEALTH_TOKEN (set it in Vercel) so strangers cannot trigger it.
  */
 import { runHealthChecks, tokenMatches } from './_lib/monitor.js';
 import { alertOnce } from './_lib/security.js';

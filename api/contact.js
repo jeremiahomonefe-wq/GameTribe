@@ -3,7 +3,7 @@ import { allow, clientIp, turnstileOn, verifyTurnstile } from './_lib/security.j
 import { reportError } from './_lib/monitor.js';
 
 /* Contact form: emails the message to your contact address using the same
-   Resend setup as the ticket emails (RESEND_API_KEY + RESEND_FROM_EMAIL). */
+   Resend set up as the ticket emails (RESEND_API_KEY + RESEND_FROM_EMAIL). */
 
 const esc = (v) =>
   String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

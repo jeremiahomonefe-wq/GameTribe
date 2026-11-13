@@ -3,7 +3,7 @@
  *   GET /api/ticket?t=<token>           -> JSON about the ticket
  *   GET /api/ticket?t=<token>&qr=1      -> the QR code as a PNG
  * The token is only ever sent to the buyer's email, and it is signed, so it
- * cannot be guessed or edited.
+ * cannot  be guessed or edited.
  */
 import { supabaseConfigured } from './_lib/supabase.js';
 import { getSale } from './_lib/checkin.js';

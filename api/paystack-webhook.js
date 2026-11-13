@@ -7,7 +7,7 @@ import { reportError, checkOvercapacity } from './_lib/monitor.js';
 
 /*
  * Vercel needs the raw request body
- * so we can verify Paystack's signature.
+ * so we can  verify Paystack's signature.
  */
 export const config = {
   api: {

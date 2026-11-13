@@ -3,7 +3,7 @@
  * with. If we have tickets for it, we email them to the address ON FILE.
  * The answer on screen is always the same, so nobody can use this page to find
  * out whose email or phone has tickets, and nothing is ever sent to an
- * address the visitor typed unless it is already the one on file.
+ * address th e visitor typed unless it is already the one on file.
  */
 import { listSales } from './_lib/store.js';
 import { supabaseConfigured } from './_lib/supabase.js';

@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'public, s-maxage=8, stale-while-revalidate=30');
     return res.status(200).json({ tickets: a.tickets, showLeftBelow: a.showLeftBelow });
   } catch (e) {
-    /* The page then just shows everything as available, as before. */
+    /* The page  then just shows everything as available, as before. */
     return res.status(200).json({ tickets: {}, showLeftBelow: 0 });
   }
 }

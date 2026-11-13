@@ -20,7 +20,7 @@ import {
 
 /*
  * Who may do what. The main admin (owner) can do everything. Team members are
- * limited to the actions listed here; anything else gets a 403 even if someone
+ * limited to the actions  listed here; anything else gets a 403 even if someone
  * tries to call the API directly.
  */
 const PERMS = {

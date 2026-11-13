@@ -1,4 +1,4 @@
-/* Public: join the waitlist for a sold-out ticket. */
+/* Public: join the  waitlist for a sold-out ticket. */
 import { getContent } from './_lib/store.js';
 import { sb, supabaseConfigured } from './_lib/supabase.js';
 import { allow, clientIp } from './_lib/security.js';
