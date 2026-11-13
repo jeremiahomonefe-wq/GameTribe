@@ -120,6 +120,7 @@ export async function recordSale(row, opts = {}) {
   };
   try {
     await send(clean);
+    if (clean.reference) { try { await releaseReservation(clean.reference); } catch (e) { /* hold simply expires */ } }
   } catch (error) {
     /* If the SQL update has not been run yet, the new columns do not exist.
        Still save the sale in the old format rather than losing it. */
@@ -160,4 +161,80 @@ export async function createSignedUpload(path) {
     path,
     publicUrl: supabaseUrl() + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path
   };
+}
+
+/* ---------- capacity, sold out, seat holds ---------- */
+const HOLD_MINUTES = 15;
+const encU = encodeURIComponent;
+
+export async function createReservation(row) {
+  const rows = await sb('/rest/v1/reservations', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: {
+      reference: row.reference,
+      ticket_type: row.ticket_type,
+      quantity: row.quantity,
+      people: row.people,
+      expires_at: new Date(Date.now() + HOLD_MINUTES * 60 * 1000).toISOString()
+    }
+  });
+  return rows && rows[0];
+}
+
+export async function releaseReservation(reference) {
+  if (!supabaseConfigured()) return;
+  await sb('/rest/v1/reservations?reference=eq.' + encU(reference), { method: 'DELETE' });
+}
+
+/*
+ * How many tickets are left. "Held" tickets belong to people who are paying right now
+ * (held for 15 minutes). People are counted, not tickets: a Group of 4 uses 4 places.
+ * beforeId: count only holds made before that one (used to settle two people grabbing the last ticket).
+ */
+export async function getAvailability({ beforeId } = {}) {
+  const content = await getContent();
+  const cfg = content.ticketing || {};
+  const capTotal = Number(cfg.capacityTotal) || 0;
+  const out = { capacityTotal: capTotal, showLeftBelow: Number(cfg.showLeftBelow) || 0, peopleSold: 0, peopleHeld: 0, peopleLeft: null, tickets: {}, limited: {}, over: false };
+  const list = (content.tickets || []).filter((t) => t && t.id);
+  if (!supabaseConfigured()) {
+    list.forEach((t) => { out.tickets[t.id] = { left: null, soldOut: false }; out.limited[t.id] = false; });
+    return out;
+  }
+  const sales = (await sb('/rest/v1/ticket_sales?select=reference,ticket_type,quantity,admits_total&limit=5000')) || [];
+  let holds = [];
+  try {
+    holds = (await sb('/rest/v1/reservations?select=id,reference,ticket_type,quantity,people&expires_at=gte.' + encU(new Date().toISOString()) + '&limit=2000')) || [];
+  } catch (e) { holds = []; }   /* table not created yet: no holds */
+  const sold = new Set(sales.map((x) => x.reference));
+  holds = holds.filter((h) => !sold.has(h.reference) && (beforeId === undefined || Number(h.id) < Number(beforeId)));
+
+  const unitsSold = {};
+  const unitsHeld = {};
+  for (const x of sales) {
+    out.peopleSold += Number(x.admits_total) || 1;
+    unitsSold[x.ticket_type] = (unitsSold[x.ticket_type] || 0) + (Number(x.quantity) || 1);
+  }
+  for (const h of holds) {
+    out.peopleHeld += Number(h.people) || 0;
+    unitsHeld[h.ticket_type] = (unitsHeld[h.ticket_type] || 0) + (Number(h.quantity) || 0);
+  }
+  if (capTotal) out.peopleLeft = capTotal - out.peopleSold - out.peopleHeld;
+  for (const t of list) {
+    const cap = Number(t.capacity) || 0;
+    const admits = ticketAdmits(t);
+    let left = null;
+    if (cap) left = cap - (unitsSold[t.id] || 0) - (unitsHeld[t.id] || 0);
+    if (capTotal) {
+      const byPeople = Math.floor(out.peopleLeft / admits);
+      left = left === null ? byPeople : Math.min(left, byPeople);
+    }
+    if (left !== null) left = Math.max(left, left < 0 ? left : 0);
+    out.limited[t.id] = Boolean(cap || capTotal);
+    out.tickets[t.id] = { left: left === null ? null : Math.max(0, left), soldOut: left !== null && left <= 0 };
+    if (left !== null && left < 0) out.over = true;
+  }
+  if (out.peopleLeft !== null && out.peopleLeft < 0) out.over = true;
+  return out;
 }

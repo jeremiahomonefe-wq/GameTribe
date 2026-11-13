@@ -153,3 +153,22 @@ export async function alertOnce(key, subject, text, everyMs = 3600 * 1000) {
   await addEvent('alert', key);
   await alertOwner(subject, text);
 }
+
+/* ---------- Cloudflare Turnstile (optional human check) ---------- */
+export const turnstileOn = () => Boolean(process.env.TURNSTILE_SECRET_KEY);
+
+/* True only if Cloudflare confirms the visitor passed. Any error counts as "not confirmed". */
+export async function verifyTurnstile(token, ip) {
+  const value = String(token || '').slice(0, 2100);
+  if (!value) return false;
+  try {
+    const check = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret: process.env.TURNSTILE_SECRET_KEY, response: value, remoteip: ip })
+    });
+    return (await check.json()).success === true;
+  } catch (e) {
+    return false;
+  }
+}
