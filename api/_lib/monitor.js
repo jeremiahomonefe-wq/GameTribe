@@ -1,7 +1,7 @@
 /*
  * Error monitoring and health checks.
  *  - reportError(): saves the problem in the error log and emails the owner
- *    (at most one email per area every 30 minutes, and 6 an hour overall).
+ *    (at  most one email per area every 30 minutes, and 6 an hour overall).
  *  - runHealthChecks(): checks that the things checkout depends on are working.
  * Monitoring must never break the site, so everything here swallows its own errors.
  */

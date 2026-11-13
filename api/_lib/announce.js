@@ -19,7 +19,7 @@ export const MAX_RECIPIENTS = 2000;
 
 const firstName = (n) => String(n || '').trim().split(/\s+/)[0] || 'there';
 
-/* -> [{ email, name, phone }] with duplicates removed (one person with 3 tickets gets one email) */
+/* -> [{email, name, phone }] with duplicates removed (one person with 3 tickets gets one email) */
 export async function recipientsFor(audience) {
   const out = new Map();
   if (audience === 'waitlist') {

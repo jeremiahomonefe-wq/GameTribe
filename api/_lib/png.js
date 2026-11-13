@@ -1,6 +1,6 @@
 /*
  * Tiny PNG writer for QR codes: 1-bit black & white, no dependencies
- * (emails need a PNG; many mail apps do not show SVG).
+ * (emails  need a PNG; many mail apps do not show SVG).
  */
 import zlib from 'zlib';
 

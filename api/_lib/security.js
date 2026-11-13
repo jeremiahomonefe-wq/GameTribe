@@ -3,7 +3,7 @@
  *  - persistent rate limiting (stored in Supabase, so it works across all
  *    server instances; falls back to server memory if the table is missing)
  *  - audit log of important actions
- *  - "sign out everywhere" (session epoch) and the 2-step login secret
+ *  - "sign  out everywhere" (session epoch) and the 2-step login secret
  *  - alert emails to the owner
  */
 import { sb, supabaseConfigured } from './supabase.js';

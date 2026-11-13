@@ -16,7 +16,7 @@ export function escapeHtml(value) {
   }[c]));
 }
 
-/* Names and phone numbers come from the buyer's browser, so never trust their size or content. */
+/* Names a nd phone numbers come from the buyer's browser, so never trust their size or content. */
 export function cleanName(value, fallback = 'Game Tribe Guest') {
   const s = String(value == null ? '' : value)
     .replace(/[\u0000-\u001f\u007f<>]/g, ' ')

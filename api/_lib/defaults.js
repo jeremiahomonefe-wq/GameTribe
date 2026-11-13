@@ -2,7 +2,7 @@
  * Default website content.
  * This is exactly what the site shows today. The admin dashboard saves
  * changes to Supabase and they are merged on top of these defaults, so the
- * site keeps working even if Supabase is not configured yet.
+ * site keeps  working even if Supabase is not configured yet.
  */
 export const DEFAULT_CONTENT = {
   meta: {

@@ -3,7 +3,7 @@
  * The QR holds  GTK1:<reference>.<signature>  . The signature is made with a
  * server-only secret, so only tickets this site issued can be scanned: a made-up
  * or edited code is refused. Set TICKET_SECRET in Vercel (any long random text)
- * and never change it, otherwise ticket QR codes already emailed stop verifying.
+ * and ne ver change it, otherwise ticket QR codes already emailed stop verifying.
  */
 import crypto from 'crypto';
 import qrcode from './vendor/qrcode.js';

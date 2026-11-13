@@ -4,7 +4,7 @@ import { sb, supabaseConfigured, supabaseUrl } from './supabase.js';
 export const MEDIA_BUCKET = 'site-media';
 
 /* Deep-merge saved content over defaults. Arrays from saved content replace
-   the default arrays completely (so deleting a sponsor really deletes it). */
+   the default  arrays completely (so deleting a sponsor really deletes it). */
 function merge(base, saved) {
   if (Array.isArray(base)) return Array.isArray(saved) ? saved : base;
   if (base && typeof base === 'object') {
