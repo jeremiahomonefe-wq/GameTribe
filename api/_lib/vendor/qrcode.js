@@ -2,7 +2,7 @@
 //---------------------------------------------------------------------
 //
 // QR Code Generator for JavaScript
-//
+
 // Copyright (c) 2009 Kazuhiko Arase
 //
 // URL: http://www.d-project.com/
