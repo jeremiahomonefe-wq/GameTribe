@@ -120,7 +120,7 @@ const MAX_INLINE_QR = 5; /* more tickets than this in one email: the rest get a 
  * One email carrying one or more tickets, each with its own QR code.
  * items: [{ ticket: { label }, reference, quantity, admitsTotal, complimentary }]
  */
-export async function sendTicketsEmail({ to, name, items, origin = '', subject, idempotencyKey }) {
+export async function sendTicketsEmail({ to, name, items, origin = '', subject, intro: customIntro, idempotencyKey }) {
   if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY is not configured.');
   if (!process.env.RESEND_FROM_EMAIL) throw new Error('RESEND_FROM_EMAIL is not configured.');
 
@@ -128,7 +128,9 @@ export async function sendTicketsEmail({ to, name, items, origin = '', subject, 
   const blocks = [];
   const textBlocks = [];
   items.forEach((it, i) => {
-    const number = ticketNumberFor(it.reference);
+    /* the ticket number people already have (old tickets may read GT-GT-...), then the reference */
+    const number = it.ticketNumber || ticketNumberFor(it.reference);
+    const showRef = number !== it.reference;
     const qty = Number(it.quantity) || 1;
     const admits = Number(it.admitsTotal) || 1;
     const order = qty > 1 ? qty + ' × ' + it.ticket.label : it.ticket.label;
@@ -152,19 +154,20 @@ export async function sendTicketsEmail({ to, name, items, origin = '', subject, 
         <strong>${escapeHtml(order)}</strong><br>
         ${admits > 1 ? 'People admitted: ' + escapeHtml(admits) + '<br>' : ''}
         Ticket Number: ${escapeHtml(number)}
+        ${showRef ? '<br>Reference: ' + escapeHtml(it.reference) : ''}
         ${qrNote}
         ${link ? '<div style="text-align:center;font-size:13px"><a href="' + escapeHtml(link) + '">Open this ticket online</a></div>' : ''}
       </div>`);
     textBlocks.push(
       'Ticket: ' + order + '\n' + (admits > 1 ? 'People admitted: ' + admits + '\n' : '') +
-      'Ticket Number: ' + number + (link ? '\nOpen your ticket (with QR code): ' + link : '')
+      'Ticket Number: ' + number + (showRef ? '\nReference: ' + it.reference : '') + (link ? '\nOpen your ticket (with QR code): ' + link : '')
     );
   });
 
   const first = items[0];
   const comp = Boolean(first && first.complimentary);
   const many = items.length > 1;
-  const intro = comp
+  const intro = customIntro ? customIntro : comp
     ? 'You have been given a complimentary pass to Game Tribe Fest 2026.'
     : many
       ? 'Here are your Game Tribe tickets.'
@@ -219,7 +222,10 @@ We can't wait to see you at Game Tribe Fest 2026.
   const responseText = await response.text();
   if (!response.ok) {
     console.error('RESEND ERROR:', responseText);
-    throw new Error('Resend failed: ' + response.status + ' ' + responseText);
+    const err = new Error('Resend failed: ' + response.status + ' ' + responseText);
+    err.status = response.status;
+    err.body = responseText;
+    throw err;
   }
   console.log('Ticket email sent:', { to, tickets: items.length });
 }
@@ -238,6 +244,7 @@ export async function sendTicketEmail({ email, name, ticket, reference, quantity
 
 /* Tickets as saved in the sales table (used by "Find my ticket" and resends). */
 export const itemFromSale = (sale) => ({
+  ticketNumber: sale.ticket_number || '',
   ticket: { label: sale.ticket_label || sale.ticket_type || 'Game Tribe ticket' },
   reference: sale.reference,
   quantity: Number(sale.quantity) || 1,

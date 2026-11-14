@@ -97,7 +97,7 @@ export async function getTicketMap() {
   return map;
 }
 
-const NEW_SALE_COLUMNS = ['quantity', 'unit_price', 'admits_per_unit', 'admits_total'];
+const NEW_SALE_COLUMNS = ['quantity', 'unit_price', 'admits_per_unit', 'admits_total', 'qr_sent_at'];
 
 /* Record a paid ticket. Safe to call more than once for the same reference
    (webhook + browser verification both call it).
@@ -237,4 +237,13 @@ export async function getAvailability({ beforeId } = {}) {
   }
   if (out.peopleLeft !== null && out.peopleLeft < 0) out.over = true;
   return out;
+}
+
+/* Remember that these tickets have been emailed with a QR code (so "send QR tickets" can skip them next time). Best effort. */
+export async function markQrSent(references) {
+  if (!supabaseConfigured()) return;
+  const now = new Date().toISOString();
+  for (const ref of references) {
+    try { await sb('/rest/v1/ticket_sales?reference=eq.' + encodeURIComponent(ref), { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: { qr_sent_at: now } }); } catch (e) { /* column missing until the SQL is run: ignore */ }
+  }
 }
