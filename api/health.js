@@ -1,26 +1,54 @@
 /*
- * For uptime monitors (UptimeRobot, Better Stack...):
- *   GET /api/health                           quick "the site's code is running" answer
- *   GET /api/health?deep=1&token=HEALTH_TOKEN checks the database, Paystack and email too.
- *                                             Answers 200 when all is well, 503 when checkout is at risk.
- * The deep c heck needs the secret HEALTH_TOKEN (set it in Vercel) so strangers cannot trigger it.
+ * Public: a buyer's own ticket page data + QR image.
+ *   GET /api/ticket?t=<token>           -> JSON about the ticket
+ *   GET /api/ticket?t=<token>&qr=1      -> the QR code as a PNG
+ * The token is only ever sent to the buyer's email, and it is signed, so it
+ * cannot  be guessed or edited.
  */
-import { runHealthChecks, tokenMatches } from './_lib/monitor.js';
-import { alertOnce } from './_lib/security.js';
+import { supabaseConfigured } from './_lib/supabase.js';
+import { getSale } from './_lib/checkin.js';
+import { allow, clientIp } from './_lib/security.js';
+import { referenceFromToken, ticketToken, ticketQrPng } from './_lib/qr.js';
+import { ticketNumberFor } from './_lib/tickets.js';
+
+/* "Ada Obi" -> "Ada O." : enough for the buyer to recognise their ticket */
+function shortName(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'Guest';
+  return parts.length === 1 ? parts[0] : parts[0] + ' ' + parts[parts.length - 1][0] + '.';
+}
 
 export default async function handler(req, res) {
-  res.setHeader('Cache-Control', 'no-store');
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    res.setHeader('Allow', 'GET, HEAD');
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
     return res.status(405).json({ message: 'Method not allowed.' });
   }
-  if (!req.query || !req.query.deep) return res.status(200).json({ ok: true });
-  if (!tokenMatches(req.query.token)) return res.status(403).json({ message: 'Forbidden.' });
-
-  const result = await runHealthChecks();
-  if (!result.ok) {
-    const bad = result.checks.filter((c) => !c.ok && c.critical).map((c) => c.name + ': ' + c.detail).join('\n');
-    await alertOnce('health', 'Checkout health check FAILED', 'Your uptime monitor ran the deep health check and these parts of checkout are not working:\n\n' + bad, 30 * 60 * 1000);
+  if (!(await allow('ticket-page', clientIp(req), 120, 10 * 60 * 1000))) {
+    return res.status(429).json({ message: 'Too many requests. Please try again in a few minutes.' });
   }
-  return res.status(result.ok ? 200 : 503).json({ ok: result.ok, at: result.at, checks: result.checks.map((c) => ({ name: c.name, ok: c.ok, detail: c.detail })) });
+  const reference = referenceFromToken(req.query && req.query.t);
+  if (!reference) return res.status(404).json({ message: 'This ticket link is not valid.' });
+  if (!supabaseConfigured()) return res.status(503).json({ message: 'Tickets are not available right now.' });
+
+  let sale = null;
+  try { sale = await getSale(reference); } catch (e) { return res.status(503).json({ message: 'Tickets are not available right now. Please try again shortly.' }); }
+  if (!sale) return res.status(404).json({ message: 'We could not find this ticket.' });
+
+  if (req.query.qr) {
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    return res.status(200).send(ticketQrPng(reference, 10));
+  }
+  const token = ticketToken(reference);
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.status(200).json({
+    name: shortName(sale.name),
+    ticket: sale.ticket_label || sale.ticket_type || 'Game Tribe ticket',
+    quantity: Number(sale.quantity) || 1,
+    people: Number(sale.admits_total) || 1,
+    admitted: Number(sale.admitted_count) || 0,
+    ticketNumber: ticketNumberFor(sale.reference),
+    complimentary: sale.source === 'complimentary' || Number(sale.amount) === 0,
+    qr: '/api/ticket?qr=1&t=' + encodeURIComponent(token)
+  });
 }
