@@ -451,7 +451,7 @@ var SECTIONS=[
 ];
 
 /* ============================================================ */
-var state={content:null,saved:'',dirty:false,section:'event',sales:null,team:null,teamResult:null,salesFilter:'all',role:'owner',me:null,ann:null,annDraft:{audience:'tickets_all',subject:'',body:'',to:'',preview:null},health:null,scanMode:false,compReq:''};
+var state={content:null,saved:'',dirty:false,section:'event',sales:null,team:null,teamResult:null,salesFilter:'all',role:'owner',me:null,ann:null,annDraft:{audience:'tickets_all',subject:'',body:'',to:'',preview:null},qr:{mode:'pending',preview:null},health:null,scanMode:false,compReq:''};
 var $=function(s,r){return (r||document).querySelector(s);};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function getP(o,p){return p.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
@@ -784,10 +784,17 @@ function gateModal(ref,problem){
   }else h+='<div class="row"><button class="btn btn-line" type="button" data-act="mclose">Close</button></div>';
   if(state.role==='owner'&&a>0)h+='<div class="row" style="border-top:1px solid var(--line);padding-top:12px"><span style="font-size:13px;font-weight:700">Admitted by mistake?</span><input type="number" id="undoCount" min="1" max="'+a+'" value="1" aria-label="How many to remove"><button class="btn btn-ghost sm danger" type="button" data-act="undo" data-ref="'+er+'">Remove from admitted</button></div>';
   if(state.role==='owner'&&r.source==='complimentary'&&a===0)h+='<div class="row" style="border-top:1px solid var(--line);padding-top:12px"><span style="font-size:13px;font-weight:700">Issued by mistake?</span><button class="btn btn-ghost sm danger" type="button" data-act="comp-delete" data-ref="'+er+'">Delete this free pass</button></div>';
-  if(can)h+='<div class="row"><button class="btn btn-line sm" type="button" data-act="scan-open">📷 Scan next ticket</button></div>';
+  if(can)h+='<div class="row"><button class="btn btn-line sm" type="button" data-act="scan-open">📷 Scan next ticket</button>'+(r.email?'<button class="btn btn-line sm" type="button" data-act="ticket-resend" data-ref="'+er+'">✉ Resend ticket to '+esc(r.email)+'</button>':'')+'</div>';
   h+='<div class="row"><button class="btn btn-ghost sm" type="button" data-act="history" data-ref="'+er+'">Show history</button></div><ul class="hist" id="gateHistory"></ul>';
   openModal(h);
   var c=$('#gateCount');if(c){c.focus();c.select();}else{var b=$('#gateAdmit');if(b)b.focus();}
+}
+function ticketResend(ref,btn){
+  var r=findSale(ref);if(!r||!r.email)return;
+  if(!confirm('Email this ticket, with its QR code, to '+r.email+'?'))return;
+  btn.disabled=true;
+  api('ticket-resend',{body:{reference:ref}}).then(function(res){toast('Ticket sent to '+res.to+' ✓');btn.disabled=false;})
+    .catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);btn.disabled=false;});
 }
 function doAdmit(ref){
   var c=$('#gateCount'),n=c?parseInt(c.value,10):1,btn=$('#gateAdmit');
@@ -990,10 +997,27 @@ function annCountText(){
   if(!d.preview.count)return 'Nobody to send to for this choice.';
   return d.preview.count+(d.preview.count===1?' person':' people')+' will get this'+(d.preview.sample.length?' (for example '+d.preview.sample.slice(0,3).map(esc).join(', ')+')':'')+'.';
 }
+function annHistoryHtml(d){
+  var h='';
+  if(!d.list.length)h+='<div class="empty">None yet.</div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Subject</th><th>To</th><th>Sent</th><th>Failed</th><th>Status</th></tr></thead><tbody>'+d.list.map(function(a){
+    var open=a.status==='sending'||a.status==='paused',isQr=a.audience==='qr_tickets';
+    return '<tr><td style="white-space:nowrap">'+esc(timeShort(a.created_at))+'</td><td>'+esc(a.subject)+'</td><td>'+esc(isQr?'QR tickets to ticket holders':(d.audiences[a.audience]||a.audience))+'</td><td>'+esc(a.sent_count)+' / '+esc(a.total)+'</td><td>'+(a.failed_count?'<span class="badge warn">'+esc(a.failed_count)+'</span>':'0')+'</td><td>'+(open?'<span class="badge warn">'+(a.status==='paused'?'Paused (email limit)':'Unfinished')+'</span> <button class="btn btn-line sm" type="button" data-act="'+(isQr?'qr-resume':'an-resume')+'" data-id="'+esc(a.id)+'" data-total="'+esc(a.total)+'">Resume</button>':'<span class="badge ok">Done</span>')+'</td></tr>';
+  }).join('')+'</tbody></table></div>';
+  return h;
+}
+function annHistoryRefresh(){
+  return api('announce-list').then(function(l){if(state.ann)state.ann.list=l.announcements;var box=$('#annHistory');if(box&&state.ann)box.innerHTML=annHistoryHtml(state.ann);}).catch(function(){});
+}
 function announceHtml(){
   var d=state.ann;if(!d)return '<div class="empty">Loading…</div>';
   var dr=state.annDraft,h='';
   if(!d.resendReady)h+='<div class="notice">Email is not set up yet: <code>RESEND_API_KEY</code> and <code>RESEND_FROM_EMAIL</code> must be set in Vercel.</div>';
+  h+='<section class="card"><h3>Send QR tickets to existing ticket holders</h3>'+
+    '<p class="help">Everyone who already bought gets <b>one email</b> with their ticket (or tickets): the <b>same ticket number and reference as before</b>, now with a QR code for fast check-in and a link to their ticket page. People with several tickets get a single email. To resend to just one person, open their ticket in Sales and press “Resend ticket”.</p>'+
+    '<div class="field"><label for="qrMode">Who should get it?</label><select id="qrMode"><option value="pending"'+(state.qr.mode==='pending'?' selected':'')+'>People who have not been sent a QR ticket yet</option><option value="all"'+(state.qr.mode==='all'?' selected':'')+'>Everyone with a ticket (even if already sent)</option></select><p class="help" id="qrCount">'+qrCountText()+'</p></div>'+
+    '<p style="margin:12px 0 0"><button class="btn btn-red" type="button" id="qrSend" data-act="qr-send">Send QR tickets</button></p><div id="qrProgress"></div>'+
+    '<p class="help" style="margin-top:12px">Free Resend plans send about 100 emails a day. If that limit is reached the send <b>pauses safely</b> and nobody is emailed twice; press Resume the next day.</p></section>';
   h+='<section class="card"><h3>Send an update by email</h3><p class="help">For venue changes, the schedule, reminders. Write <code>{name}</code> to add each person’s first name. Replies go to your contact inbox. Always send yourself a test first. Note: free Resend accounts allow about 100 emails a day, so a large send may need a paid plan.</p>'+
     '<div class="field"><label for="anAud">Who should get it?</label><select id="anAud">'+Object.keys(d.audiences).map(function(k){return '<option value="'+k+'"'+(dr.audience===k?' selected':'')+'>'+esc(d.audiences[k])+'</option>';}).join('')+'</select><p class="help" id="anCount">'+annCountText()+'</p></div>'+
     '<div class="field"><label for="anSub">Subject</label><input type="text" id="anSub" maxlength="150" value="'+esc(dr.subject)+'" placeholder="e.g. Doors open at 3pm, venue update"></div>'+
@@ -1002,12 +1026,7 @@ function announceHtml(){
     '<p style="margin:14px 0 0"><button class="btn btn-line" type="button" data-act="an-test">Send me a test</button> <button class="btn btn-red" type="button" id="anSend" data-act="an-send">Send to everyone</button></p><div id="anProgress"></div></section>';
   h+='<section class="card"><h3>WhatsApp or SMS</h3><p class="help">Many buyers see WhatsApp before email. Download the phone numbers for the group chosen above, then paste the same message into a WhatsApp Broadcast list. (Sending WhatsApp or SMS automatically needs an account with a provider such as Termii or Twilio.)</p>'+
     '<p style="margin:0"><button class="btn btn-line sm" type="button" data-act="an-phones">Download phone numbers (CSV)</button> <button class="btn btn-line sm" type="button" data-act="an-copy">Copy the message text</button></p></section>';
-  h+='<section class="card"><h3>Recent announcements</h3>';
-  if(!d.list.length)h+='<div class="empty">None yet.</div>';
-  else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Subject</th><th>To</th><th>Sent</th><th>Failed</th><th>Status</th></tr></thead><tbody>'+d.list.map(function(a){
-    var open=a.status==='sending';
-    return '<tr><td style="white-space:nowrap">'+esc(timeShort(a.created_at))+'</td><td>'+esc(a.subject)+'</td><td>'+esc(d.audiences[a.audience]||a.audience)+'</td><td>'+esc(a.sent_count)+' / '+esc(a.total)+'</td><td>'+(a.failed_count?'<span class="badge warn">'+esc(a.failed_count)+'</span>':'0')+'</td><td>'+(open?'<span class="badge warn">Unfinished</span> <button class="btn btn-line sm" type="button" data-act="an-resume" data-id="'+esc(a.id)+'" data-total="'+esc(a.total)+'">Resume</button>':'<span class="badge ok">Done</span>')+'</td></tr>';
-  }).join('')+'</tbody></table></div>';
+  h+='<section class="card"><h3>Recent announcements</h3><div id="annHistory">'+annHistoryHtml(d)+'</div>';
   h+='</section><section class="card"><h3>Waitlist ('+d.waitlist.length+')</h3><p class="help">People who asked to be told when a sold-out ticket becomes available. To tell them, choose “The waitlist” above and send.</p>'+
     '<p style="margin:0 0 10px"><button class="btn btn-line sm" type="button" data-act="an-waitlist">Email the waitlist</button></p>';
   if(!d.waitlist.length)h+='<div class="empty">Nobody on the waitlist.</div>';
@@ -1019,8 +1038,60 @@ function announceHtml(){
 function loadAnnounce(){
   state.ann=null;render();
   Promise.all([api('announce-list'),api('waitlist-list')]).then(function(r){
-    state.ann={list:r[0].announcements,audiences:r[0].audiences,resendReady:r[0].resendReady,waitlist:r[1].waitlist};render();annPreviewRefresh();
+    state.ann={list:r[0].announcements,audiences:r[0].audiences,resendReady:r[0].resendReady,waitlist:r[1].waitlist};render();annPreviewRefresh();qrPreviewRefresh();
   }).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
+}
+function qrCountText(){
+  var p=state.qr.preview;
+  if(!p)return 'Counting…';
+  if(!p.people)return state.qr.mode==='pending'?'Nobody left to send to: everyone with a ticket has already been sent a QR ticket.':'Nobody to send to.';
+  return p.people+(p.people===1?' person':' people')+' ('+p.tickets+(p.tickets===1?' ticket':' tickets')+') will get their ticket'+(p.tickets===1?'':'s')+' with a QR code'+(p.sample.length?' (for example '+p.sample.slice(0,3).map(esc).join(', ')+')':'')+'.';
+}
+function qrPreviewRefresh(){
+  state.qr.preview=null;var c=$('#qrCount');if(c)c.textContent=qrCountText();
+  var want=state.qr.mode;
+  api('qr-resend-preview',{body:{mode:want}}).then(function(res){
+    if(state.qr.mode!==want)return;
+    state.qr.preview=res;var el=$('#qrCount');if(el)el.textContent=qrCountText();
+    var b=$('#qrSend');if(b)b.textContent=res.people?'Send QR tickets to '+res.people+(res.people===1?' person':' people'):'Send QR tickets';
+  }).catch(function(){});
+}
+function qrSend(btn){
+  var p=state.qr.preview;
+  if(!p||!p.people){toast('There is nobody to send to for this choice.',true);return;}
+  if(!confirm('Email '+p.people+(p.people===1?' person':' people')+' their ticket with a QR code now? This cannot be undone.'))return;
+  btn.disabled=true;
+  api('qr-resend-create',{body:{mode:state.qr.mode}}).then(function(res){qrLoop(res.id,res.total);})
+    .catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);btn.disabled=false;});
+}
+function qrLoop(id,total){
+  var show=function(sent,failed,note){
+    if(!$('#qrProgress'))return;
+    var pct=total?Math.min(100,Math.round((sent+failed)/total*100)):0;
+    $('#qrProgress').innerHTML='<div class="small" style="margin-top:12px">'+esc(note)+' '+(sent+failed)+' of '+total+' people</div><div class="pbar"><i style="width:'+pct+'%"></i></div>';
+  };
+  show(0,0,'Sending…');
+  var step=function(){
+    api('qr-resend-send',{body:{id:id}}).then(function(r){
+      show(r.sent_count,r.failed_count,r.status==='done'?'Finished.':(r.status==='paused'?'Paused.':'Sending…'));
+      var after=function(){annHistoryRefresh();qrPreviewRefresh();var b=$('#qrSend');if(b)b.disabled=false;};
+      if(r.status==='done'){
+        toast(r.failed_count?'Sent to '+r.sent_count+', '+r.failed_count+' failed':'Everyone has been sent their QR ticket ✓',!!r.failed_count);
+        if(r.errors&&$('#qrProgress'))$('#qrProgress').insertAdjacentHTML('beforeend','<div class="notice" style="margin-top:10px;white-space:pre-wrap">'+esc(r.errors)+'</div>');
+        after();return;
+      }
+      if(r.status==='paused'){
+        if($('#qrProgress'))$('#qrProgress').insertAdjacentHTML('beforeend','<div class="banner warn" style="margin-top:10px">Paused: your email provider’s daily sending limit is used up. Nothing is lost and nobody will get two emails. Come back later (tomorrow on a free Resend plan) and press Resume in the table below.</div>');
+        after();return;
+      }
+      setTimeout(step,200);
+    }).catch(function(e){
+      if(e.status===401)return showLogin();
+      if($('#qrProgress'))$('#qrProgress').insertAdjacentHTML('beforeend','<div class="banner bad" style="margin-top:10px">Stopped: '+esc(e.message)+'. Nothing is lost: use Resume in the table below.</div>');
+      loadAnnounce();
+    });
+  };
+  step();
 }
 function annPreviewRefresh(){
   var d=state.annDraft;d.preview=null;var c=$('#anCount');if(c)c.textContent=annCountText();
@@ -1065,7 +1136,7 @@ function annLoop(id,total){
         if(r.errors&&$('#anProgress'))$('#anProgress').insertAdjacentHTML('beforeend','<div class="notice" style="margin-top:10px;white-space:pre-wrap">'+esc(r.errors)+'</div>');
         state.annDraft.subject='';state.annDraft.body='';
         if($('#anSub'))$('#anSub').value='';if($('#anBody'))$('#anBody').value='';
-        api('announce-list').then(function(l){state.ann.list=l.announcements;}).catch(function(){});
+        annHistoryRefresh();
         return;
       }
       setTimeout(step,250);
@@ -1284,6 +1355,9 @@ function handleAct(t){
   if(a==='comp-delete'){compDelete(ref);return;}
   if(a==='an-test'){annTest(t);return;}
   if(a==='an-send'){annSend(t);return;}
+  if(a==='qr-send'){qrSend(t);return;}
+  if(a==='qr-resume'){window.scrollTo(0,0);qrLoop(parseInt(t.dataset.id,10),parseInt(t.dataset.total,10)||0);return;}
+  if(a==='ticket-resend'){ticketResend(ref,t);return;}
   if(a==='an-resume'){annLoop(parseInt(t.dataset.id,10),parseInt(t.dataset.total,10)||0);return;}
   if(a==='an-phones'){annPhones(t);return;}
   if(a==='an-copy'){var d=annDraftRead(),txt=String(d.body||'').replace(/\{name\}/gi,'there');if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){toast('Message copied');});return;}
@@ -1385,6 +1459,7 @@ document.addEventListener('change',function(e){
   var el=e.target;
   if(el.id==='salesFilter'){state.salesFilter=el.value;refreshSalesView();return;}
   if(el.id==='anAud'){annDraftRead();annPreviewRefresh();return;}
+  if(el.id==='qrMode'){state.qr.mode=el.value;qrPreviewRefresh();return;}
   if(el.dataset.teamrole){
     el.disabled=true;
     api('team-role',{body:{id:el.dataset.teamrole,role:el.value}}).then(function(){toast('Role updated ✓');return reloadTeamList();}).catch(function(err){if(err.status===401)return showLogin();toast(err.message,true);reloadTeamList();});
