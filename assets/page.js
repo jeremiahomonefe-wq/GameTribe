@@ -1,3 +1,4 @@
+(function(){var n=0,seen={};function send(m,s,l,a){try{if(n>=5)return;var k=m+'|'+s+'|'+l;if(seen[k])return;seen[k]=1;n++;var b=JSON.stringify({message:String(m).slice(0,300),source:String(s||'').slice(0,200),line:l||0,page:location.pathname,area:a||'browser'});if(navigator.sendBeacon){navigator.sendBeacon('/api/health?report=1',new Blob([b],{type:'application/json'}));}else{fetch('/api/health?report=1',{method:'POST',headers:{'Content-Type':'application/json'},body:b,keepalive:true});}}catch(e){}}window.addEventListener('error',function(e){if(!e.filename||e.filename.indexOf(location.origin)!==0)return;send(e.message,e.filename,e.lineno);});window.addEventListener('unhandledrejection',function(e){var r=e.reason;send(r&&r.message?r.message:String(r),'promise',0);});window.gtReport=send;})();
 /* Game Tribe sub-pages: loads content saved from the admin dashboard and draws the page. */
 (function(){
   'use strict';
