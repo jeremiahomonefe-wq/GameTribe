@@ -5,7 +5,7 @@
  * out whose email or phone has tickets, and nothing is ever sent to an
  * address th e visitor typed unless it is already the one on file.
  */
-import { listSales } from './_lib/store.js';
+import { listSales, markQrSent } from './_lib/store.js';
 import { supabaseConfigured } from './_lib/supabase.js';
 import { allow, clientIp, turnstileOn, verifyTurnstile } from './_lib/security.js';
 import { sendTicketsEmail, itemFromSale, siteOrigin } from './_lib/tickets.js';
@@ -63,6 +63,7 @@ export default async function handler(req, res) {
         items: sales.slice(0, 10).map(itemFromSale),
         origin
       });
+      await markQrSent(sales.slice(0, 10).map((s) => s.reference));
     }
   } catch (e) {
     await reportError('find-ticket', e, req);

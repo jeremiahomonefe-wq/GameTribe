@@ -228,7 +228,7 @@ export default async function handler(req, res) {
         admitsTotal: purchase.admitsTotal,
         origin: siteOrigin(req)
       });
-    await recordSale({ reference: transaction.reference, email_sent: true });
+    await recordSale({ reference: transaction.reference, email_sent: true, qr_sent_at: new Date().toISOString() });
 
     console.log(
       'GAME TRIBE PAYMENT PROCESSED:',

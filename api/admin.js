@@ -6,16 +6,17 @@ import * as team from './_lib/team.js';
 import * as gate from './_lib/checkin.js';
 import * as paystack from './_lib/paystack.js';
 import * as ann from './_lib/announce.js';
+import * as qrr from './_lib/qrresend.js';
 import { referenceFromPayload } from './_lib/qr.js';
 import * as sec from './_lib/security.js';
 import * as totp from './_lib/totp.js';
 import { reportError, listErrors, runHealthChecks, checkOvercapacity } from './_lib/monitor.js';
 import {
-  checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, siteOrigin, ticketLink, HARD_MAX_QUANTITY
+  checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, siteOrigin, ticketLink, sendTicketsEmail, itemFromSale, HARD_MAX_QUANTITY
 } from './_lib/tickets.js';
 import { supabaseConfigured, supabaseUrl, sb } from './_lib/supabase.js';
 import {
-  getContent, saveContent, listSales, getTicketMap, recordSale, createSignedUpload, MEDIA_BUCKET
+  getContent, saveContent, listSales, getTicketMap, recordSale, markQrSent, createSignedUpload, MEDIA_BUCKET
 } from './_lib/store.js';
 
 /*
@@ -25,7 +26,7 @@ import {
  */
 const PERMS = {
   owner: null, /* null = everything */
-  tickets: new Set(['me', 'sales', 'checkin', 'checkin-log', 'ticket-scan']),
+  tickets: new Set(['me', 'sales', 'checkin', 'checkin-log', 'ticket-scan', 'ticket-resend']),
   sales: new Set(['me', 'sales', 'checkin-log'])
 };
 function allowed(role, action) {
@@ -66,6 +67,19 @@ function fmtTime(iso) {
 }
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+/* Recipients for the QR-ticket send, or a plain-English answer if the database needs one more step. */
+async function qrRecipientsOrExplain(mode, res) {
+  try {
+    return await qrr.qrRecipients(mode);
+  } catch (e) {
+    if (e && e.code === 'MISSING_QR_COLUMN') {
+      res.status(400).json({ message: 'One more database step is needed first: run supabase/add-qr-sent-at.sql in the Supabase SQL Editor (it adds a "qr_sent_at" column), then reload this page.' });
+      return null;
+    }
+    throw e;
+  }
+}
 const COMP_CATEGORIES = ['Sponsor', 'Speaker', 'VIP', 'Media', 'Partner', 'Staff', 'Other'];
 const ALLOWED_UPLOADS = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
@@ -344,6 +358,7 @@ export default async function handler(req, res) {
           ['Table rate_events is reachable (login protection)', '/rest/v1/rate_events?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table audit_log is reachable (activity log)', '/rest/v1/audit_log?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table admin_security is reachable (2-step login, sign-out-everywhere)', '/rest/v1/admin_security?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
+          ['Column ticket_sales.qr_sent_at exists (needed to send QR tickets)', '/rest/v1/ticket_sales?select=qr_sent_at&limit=1', 'Run supabase/add-qr-sent-at.sql in the SQL Editor.'],
           ['Table error_log is reachable (error monitoring)', '/rest/v1/error_log?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table reservations is reachable (ticket holds)', '/rest/v1/reservations?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table waitlist is reachable', '/rest/v1/waitlist?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
@@ -620,7 +635,7 @@ export default async function handler(req, res) {
       if (body.sendEmail !== false && c.email) {
         try {
           await sendTicketEmail({ email: c.email, name, ticket: purchase.ticket, reference: tx.reference, quantity: purchase.quantity, admitsTotal: purchase.admitsTotal, origin: siteOrigin(req) });
-          await recordSale({ reference: tx.reference, email_sent: true });
+          await recordSale({ reference: tx.reference, email_sent: true, qr_sent_at: new Date().toISOString() });
           emailSent = true;
         } catch (e) {
           emailError = e.message;
@@ -663,7 +678,7 @@ export default async function handler(req, res) {
       if (email && body.sendEmail !== false) {
         try {
           await sendTicketEmail({ email, name, ticket: { label }, reference, quantity: 1, admitsTotal: people, complimentary: true, origin });
-          await recordSale({ reference, email_sent: true });
+          await recordSale({ reference, email_sent: true, qr_sent_at: new Date().toISOString() });
           emailSent = true;
         } catch (e) { emailError = e.message; console.error('COMP EMAIL ERROR:', e.message); }
       }
@@ -680,6 +695,120 @@ export default async function handler(req, res) {
       await sb('/rest/v1/ticket_sales?reference=eq.' + encodeURIComponent(reference), { method: 'DELETE' });
       await sec.audit(req, who.name, role, 'comp_deleted', sale.name + ' · ' + reference);
       return res.status(200).json({ ok: true });
+    }
+
+    /* ---- resend ONE ticket (with its QR) to the address on file ---- */
+    if (action === 'ticket-resend') {
+      if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed.' });
+      const { reference } = await readBody(req);
+      const sale = typeof reference === 'string' && reference.length <= 100 ? await gate.getSale(reference) : null;
+      if (!sale) return res.status(404).json({ message: 'That ticket was not found.' });
+      if (!team.validEmail(team.normEmail(sale.email))) return res.status(400).json({ message: 'This ticket has no email address on file. Use "Free ticket" style link sharing or contact the buyer.' });
+      if (!(await sec.allow('ticket-resend', reference, 3, 3600 * 1000))) return res.status(429).json({ message: 'This ticket was already re-sent a few times in the last hour. Please wait, or ask the buyer to check their spam folder.' });
+      try {
+        await sendTicketsEmail({
+          to: sale.email, name: sale.name || 'there', items: [itemFromSale(sale)], origin: siteOrigin(req),
+          subject: 'Your Game Tribe ticket (resent)', intro: 'Here is your Game Tribe ticket again, with its QR code. Your reference number has not changed.'
+        });
+      } catch (e) {
+        return res.status(502).json({ message: 'The email could not be sent. ' + String(e.message).slice(0, 120) });
+      }
+      await markQrSent([sale.reference]);
+      await sec.audit(req, who.name, role, 'ticket_resent', sale.reference + ' → ' + sale.email);
+      return res.status(200).json({ ok: true, to: sale.email });
+    }
+
+    /* ---- send QR tickets to everyone who already bought (main admin only) ---- */
+    if (action.indexOf('qr-resend-') === 0) {
+      if (!supabaseConfigured()) return res.status(503).json({ message: 'Supabase is not connected yet.' });
+      if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed.' });
+      const body = await readBody(req);
+
+      if (action === 'qr-resend-preview') {
+        if (!qrr.MODES[body.mode]) return res.status(400).json({ message: 'Choose who to send to.' });
+        const list = await qrRecipientsOrExplain(body.mode, res);
+        if (!list) return;
+        return res.status(200).json({
+          people: list.length,
+          tickets: list.reduce((n, r) => n + r.refs.length, 0),
+          sample: list.slice(0, 5).map((r) => r.email),
+          tooMany: list.length > ann.MAX_RECIPIENTS
+        });
+      }
+
+      if (action === 'qr-resend-create') {
+        if (!qrr.MODES[body.mode]) return res.status(400).json({ message: 'Choose who to send to.' });
+        if (!(await sec.allow('qr-create', 'owner', 6, 3600 * 1000))) return res.status(429).json({ message: 'You have started several sends in the last hour. Please wait a while.' });
+        const list = await qrRecipientsOrExplain(body.mode, res);
+        if (!list) return;
+        if (!list.length) return res.status(400).json({ message: 'Nobody to send to: everyone has already been sent a QR ticket.' });
+        if (list.length > ann.MAX_RECIPIENTS) return res.status(400).json({ message: 'That is more than ' + ann.MAX_RECIPIENTS + ' people. Contact your developer for a bigger send.' });
+        const rows = await sb('/rest/v1/announcements', {
+          method: 'POST', headers: { Prefer: 'return=representation' },
+          body: { created_by: who.name, subject: 'QR tickets: ' + qrr.MODES[body.mode], body: qrr.QR_SUBJECT, audience: 'qr_tickets', recipients: list, total: list.length }
+        });
+        await sec.audit(req, who.name, role, 'qr_resend_created', list.length + ' people (' + body.mode + ')');
+        return res.status(200).json({ ok: true, id: rows[0].id, total: list.length });
+      }
+
+      if (action === 'qr-resend-send') {
+        const id = Number(body.id);
+        if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Unknown send.' });
+        const found = (await sb('/rest/v1/announcements?select=*&id=eq.' + id + '&audience=eq.qr_tickets&limit=1')) || [];
+        const row = found[0];
+        if (!row) return res.status(404).json({ message: 'That send was not found.' });
+        const progress = (r, extra = {}) => ({ id: r.id, total: r.total, next_index: r.next_index, sent_count: r.sent_count, failed_count: r.failed_count, status: r.status, errors: r.errors, ...extra });
+        if (row.status === 'done') return res.status(200).json(progress(row));
+        const start = Number(row.next_index) || 0;
+        const chunk = (row.recipients || []).slice(start, start + qrr.QR_CHUNK);
+        if (!chunk.length) {
+          const done = await sb('/rest/v1/announcements?id=eq.' + id, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: { status: 'done' } });
+          return res.status(200).json(progress(done[0] || row));
+        }
+        /* claim this batch first, so two open tabs can never email the same person twice */
+        const claimed = await sb('/rest/v1/announcements?id=eq.' + id + '&next_index=eq.' + start, {
+          method: 'PATCH', headers: { Prefer: 'return=representation' }, body: { next_index: start + chunk.length, status: 'sending' }
+        });
+        if (!claimed || !claimed.length) return res.status(200).json(progress(row));
+
+        const origin = siteOrigin(req);
+        const spacing = process.env.QR_SPACING_MS !== undefined ? Number(process.env.QR_SPACING_MS) || 0 : 600;
+        let sent = 0; let failed = 0; let processed = 0; let quota = false;
+        const errors = [];
+        for (let i = 0; i < chunk.length; i++) {
+          let outcome = 'sent';
+          try {
+            await qrr.sendQrTickets(chunk[i], { origin });
+          } catch (e) {
+            if (qrr.isRateLimit(e)) {
+              await sec.sleep(1200);
+              try { await qrr.sendQrTickets(chunk[i], { origin }); } catch (e2) { outcome = qrr.isQuotaError(e2) ? 'quota' : 'failed'; if (outcome === 'failed') errors.push(chunk[i].email + ': ' + String(e2.message).slice(0, 100)); }
+            } else if (qrr.isQuotaError(e)) {
+              outcome = 'quota';
+            } else {
+              outcome = 'failed';
+              errors.push(chunk[i].email + ': ' + String(e.message).slice(0, 100));
+            }
+          }
+          if (outcome === 'quota') { quota = true; break; }
+          if (outcome === 'sent') sent++; else failed++;
+          processed++;
+          if (i < chunk.length - 1) await sec.sleep(spacing);
+        }
+        const finished = !quota && start + processed >= row.total;
+        const joined = ((row.errors ? row.errors + '\n' : '') + errors.join('\n')).slice(0, 1500) || null;
+        const updated = await sb('/rest/v1/announcements?id=eq.' + id, {
+          method: 'PATCH', headers: { Prefer: 'return=representation' },
+          body: {
+            next_index: start + processed, sent_count: (Number(row.sent_count) || 0) + sent, failed_count: (Number(row.failed_count) || 0) + failed,
+            errors: quota ? ((joined ? joined + '\n' : '') + 'Your email provider says the daily sending limit is used up. Nothing is lost: press Resume later (tomorrow on a free Resend plan).').slice(0, 1500) : joined,
+            status: quota ? 'paused' : (finished ? 'done' : 'sending')
+          }
+        });
+        if (finished) await sec.audit(req, who.name, role, 'qr_resend_finished', 'sent ' + (updated[0] ? updated[0].sent_count : '?') + ' of ' + row.total);
+        if (quota) await sec.audit(req, who.name, role, 'qr_resend_paused', 'email limit reached after ' + (start + processed) + ' of ' + row.total);
+        return res.status(200).json(progress(updated[0] || row, { paused: quota }));
+      }
     }
 
     /* ---- announcements + waitlist (main admin only) ---- */
@@ -746,6 +875,7 @@ export default async function handler(req, res) {
         const found = (await sb('/rest/v1/announcements?select=*&id=eq.' + id + '&limit=1')) || [];
         const row = found[0];
         if (!row) return res.status(404).json({ message: 'That announcement was not found.' });
+        if (row.audience === 'qr_tickets') return res.status(400).json({ message: 'This is a QR ticket send. Use the QR tickets section to continue it.' });
         const progress = (r) => ({ id: r.id, total: r.total, next_index: r.next_index, sent_count: r.sent_count, failed_count: r.failed_count, status: r.status, errors: r.errors });
         if (row.status !== 'sending') return res.status(200).json(progress(row));
         const start = Number(row.next_index) || 0;
