@@ -1,5 +1,4 @@
 import { ticketQrPng, ticketToken } from './qr.js';
-import { getCouponByCode } from './store.js';
 
 /*
  * Shared ticket logic used by BOTH api/verify-payment.js (browser) and
@@ -91,32 +90,6 @@ export function checkPurchase(transaction, ticketMap) {
   };
 }
 
-/* Validate coupon metadata against the live server-side coupon record.
-   If metadata has a coupon, its final unit price must match the configured coupon. */
-export async function checkPurchaseWithCoupon(transaction, ticketMap) {
-  const metadata = (transaction && transaction.metadata) || {};
-  const code = String(metadata.coupon_code || '').trim().toUpperCase();
-  if (!code) return checkPurchase(transaction, ticketMap);
-  const base = checkPurchase(transaction, ticketMap);
-  if (!base.ok && base.reason !== 'Invalid ticket amount.') return base;
-  const ticket = ticketMap[metadata.ticket_type];
-  const quantity = readQuantity(metadata);
-  if (!ticket || !quantity || transaction.currency !== 'NGN') return checkPurchase(transaction, ticketMap);
-  let coupon;
-  try { coupon = await getCouponByCode(code); } catch (e) {
-    return {ok:false,status:503,message:'Could not validate this coupon at the moment.',reason:'Coupon database unavailable.'};
-  }
-  if (!coupon || !coupon.active) return {ok:false,status:400,message:'This coupon is no longer valid.',reason:'Coupon inactive or missing.'};
-  if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now()) return {ok:false,status:400,message:'This coupon has expired.',reason:'Coupon expired.'};
-  const types = Array.isArray(coupon.ticket_types) ? coupon.ticket_types : [];
-  if (types.length && !types.includes(metadata.ticket_type)) return {ok:false,status:400,message:'This coupon does not apply to this ticket.',reason:'Coupon ticket restriction.'};
-  const finalUnit = Number(coupon.final_price);
-  if (!Number.isInteger(finalUnit) || finalUnit < 100 || finalUnit > ticket.amount) return {ok:false,status:400,message:'This coupon is not valid for this ticket price.',reason:'Coupon price invalid.'};
-  const expected = finalUnit * quantity * 100;
-  if (Number(transaction.amount) !== expected) return {ok:false,status:400,message:'Payment amount does not match the discounted ticket price.',reason:'Invalid discounted amount.',expected};
-  return {ok:true,ticketType:metadata.ticket_type,ticket,quantity,totalNaira:finalUnit*quantity,admitsPerUnit:ticket.admits||1,admitsTotal:(ticket.admits||1)*quantity,originalUnitPrice:ticket.amount,unitPrice:finalUnit,couponCode:code,couponName:coupon.name||code,savings:(ticket.amount-finalUnit)*quantity};
-}
-
 /* The columns recordSale() stores for a purchase. */
 export function saleFields(purchase) {
   return {
@@ -124,9 +97,7 @@ export function saleFields(purchase) {
     ticket_label: purchase.ticket.label,
     amount: purchase.totalNaira,
     quantity: purchase.quantity,
-    unit_price: purchase.unitPrice === undefined ? purchase.ticket.amount : purchase.unitPrice,
-    coupon_code: purchase.couponCode || null,
-    discount_amount: purchase.savings || 0,
+    unit_price: purchase.ticket.amount,
     admits_per_unit: purchase.admitsPerUnit,
     admits_total: purchase.admitsTotal
   };
@@ -149,7 +120,7 @@ const MAX_INLINE_QR = 5; /* more tickets than this in one email: the rest get a 
  * One email carrying one or more tickets, each with its own QR code.
  * items: [{ ticket: { label }, reference, quantity, admitsTotal, complimentary }]
  */
-export async function sendTicketsEmail({ to, name, items, origin = '', subject, idempotencyKey }) {
+export async function sendTicketsEmail({ to, name, items, origin = '', subject, intro: customIntro, idempotencyKey }) {
   if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY is not configured.');
   if (!process.env.RESEND_FROM_EMAIL) throw new Error('RESEND_FROM_EMAIL is not configured.');
 
@@ -157,7 +128,9 @@ export async function sendTicketsEmail({ to, name, items, origin = '', subject, 
   const blocks = [];
   const textBlocks = [];
   items.forEach((it, i) => {
-    const number = ticketNumberFor(it.reference);
+    /* the ticket number people already have (old tickets may read GT-GT-...), then the reference */
+    const number = it.ticketNumber || ticketNumberFor(it.reference);
+    const showRef = number !== it.reference;
     const qty = Number(it.quantity) || 1;
     const admits = Number(it.admitsTotal) || 1;
     const order = qty > 1 ? qty + ' × ' + it.ticket.label : it.ticket.label;
@@ -181,19 +154,20 @@ export async function sendTicketsEmail({ to, name, items, origin = '', subject, 
         <strong>${escapeHtml(order)}</strong><br>
         ${admits > 1 ? 'People admitted: ' + escapeHtml(admits) + '<br>' : ''}
         Ticket Number: ${escapeHtml(number)}
+        ${showRef ? '<br>Reference: ' + escapeHtml(it.reference) : ''}
         ${qrNote}
         ${link ? '<div style="text-align:center;font-size:13px"><a href="' + escapeHtml(link) + '">Open this ticket online</a></div>' : ''}
       </div>`);
     textBlocks.push(
       'Ticket: ' + order + '\n' + (admits > 1 ? 'People admitted: ' + admits + '\n' : '') +
-      'Ticket Number: ' + number + (link ? '\nOpen your ticket (with QR code): ' + link : '')
+      'Ticket Number: ' + number + (showRef ? '\nReference: ' + it.reference : '') + (link ? '\nOpen your ticket (with QR code): ' + link : '')
     );
   });
 
   const first = items[0];
   const comp = Boolean(first && first.complimentary);
   const many = items.length > 1;
-  const intro = comp
+  const intro = customIntro ? customIntro : comp
     ? 'You have been given a complimentary pass to Game Tribe Fest 2026.'
     : many
       ? 'Here are your Game Tribe tickets.'
@@ -248,7 +222,10 @@ We can't wait to see you at Game Tribe Fest 2026.
   const responseText = await response.text();
   if (!response.ok) {
     console.error('RESEND ERROR:', responseText);
-    throw new Error('Resend failed: ' + response.status + ' ' + responseText);
+    const err = new Error('Resend failed: ' + response.status + ' ' + responseText);
+    err.status = response.status;
+    err.body = responseText;
+    throw err;
   }
   console.log('Ticket email sent:', { to, tickets: items.length });
 }
@@ -267,6 +244,7 @@ export async function sendTicketEmail({ email, name, ticket, reference, quantity
 
 /* Tickets as saved in the sales table (used by "Find my ticket" and resends). */
 export const itemFromSale = (sale) => ({
+  ticketNumber: sale.ticket_number || '',
   ticket: { label: sale.ticket_label || sale.ticket_type || 'Game Tribe ticket' },
   reference: sale.reference,
   quantity: Number(sale.quantity) || 1,
