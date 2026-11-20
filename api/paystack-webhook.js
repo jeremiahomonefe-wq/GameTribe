@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 import { getTicketMap, recordSale } from './_lib/store.js';
-import { checkPurchaseWithCoupon, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, siteOrigin } from './_lib/tickets.js';
+import { checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, siteOrigin } from './_lib/tickets.js';
 import { alreadyEmailed } from './_lib/checkin.js';
 import { reportError, checkOvercapacity } from './_lib/monitor.js';
 
@@ -156,7 +156,7 @@ export default async function handler(req, res) {
      * cannot issue tickets for it, and a retry would not change that.
      */
     const TICKETS = await getTicketMap();
-    const purchase = await checkPurchaseWithCoupon(transaction, TICKETS);
+    const purchase = checkPurchase(transaction, TICKETS);
 
     if (!purchase.ok) {
       console.error('Game Tribe webhook rejected:', purchase.reason, transaction.reference);
@@ -228,7 +228,7 @@ export default async function handler(req, res) {
         admitsTotal: purchase.admitsTotal,
         origin: siteOrigin(req)
       });
-    await recordSale({ reference: transaction.reference, email_sent: true });
+    await recordSale({ reference: transaction.reference, email_sent: true, qr_sent_at: new Date().toISOString() });
 
     console.log(
       'GAME TRIBE PAYMENT PROCESSED:',
