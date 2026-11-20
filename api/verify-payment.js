@@ -1,5 +1,5 @@
 import { getTicketMap, recordSale } from './_lib/store.js';
-import { checkPurchaseWithCoupon, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, siteOrigin } from './_lib/tickets.js';
+import { checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, siteOrigin } from './_lib/tickets.js';
 import { alreadyEmailed } from './_lib/checkin.js';
 import { allow, clientIp } from './_lib/security.js';
 import { reportError, checkOvercapacity } from './_lib/monitor.js';
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
     /* Ticket type and quantity come from Paystack metadata (never trust the
        browser), and the amount paid must equal price x quantity. */
     const TICKETS = await getTicketMap();
-    const purchase = await checkPurchaseWithCoupon(transaction, TICKETS);
+    const purchase = checkPurchase(transaction, TICKETS);
     if (!purchase.ok) {
       return res.status(purchase.status).json({ message: purchase.message });
     }
@@ -99,7 +99,7 @@ export default async function handler(req, res) {
       admitsTotal: purchase.admitsTotal,
       origin: siteOrigin(req)
     });
-    await recordSale({ reference: transaction.reference, email_sent: true });
+    await recordSale({ reference: transaction.reference, email_sent: true, qr_sent_at: new Date().toISOString() });
 
     return res.status(200).json({
       verified: true,
