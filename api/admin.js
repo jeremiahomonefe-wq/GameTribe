@@ -176,6 +176,55 @@ async function readBody(req) {
   try { return JSON.parse(req.body || '{}'); } catch (e) { return {}; }
 }
 
+/* ---- coupon helpers ---- */
+
+function normalizeCouponCode(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function validateCouponCode(value) {
+  return /^[A-Z0-9_-]{3,40}$/.test(value);
+}
+
+function validateCouponPrice(value) {
+  const price = Number(value);
+  return Number.isInteger(price) && price >= 100 && price <= 10000000;
+}
+
+function validateCouponExpiry(value) {
+  if (value === null || value === undefined || value === '') return true;
+  return !isNaN(new Date(value).getTime());
+}
+
+function validateCouponLimit(value) {
+  if (value === null || value === undefined || value === '') return true;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= 1000000;
+}
+
+async function validateCouponTicketTypes(types) {
+  if (types === undefined || types === null) return { ok: true, types: [] };
+  if (!Array.isArray(types)) return { ok: false, message: 'Ticket types must be a list.' };
+
+  const content = await getContent();
+  const tickets = Array.isArray(content.tickets) ? content.tickets : [];
+  const validIds = new Set(tickets.map(t => t.id));
+
+  for (const id of types) {
+    if (typeof id !== 'string' || !validIds.has(id)) {
+      return {
+        ok: false,
+        message: 'Invalid ticket type: ' + String(id)
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    types: [...new Set(types)]
+  };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const action = String((req.query && req.query.action) || '');
@@ -449,6 +498,309 @@ export default async function handler(req, res) {
       const capacityTotal = Number(((await getContent()).ticketing || {}).capacityTotal) || 0;
       return res.status(200).json({ sales, configured: true, role, capacityTotal });
     }
+
+    /* ---- coupons (main admin only) ---- */
+if (action.indexOf('coupon-') === 0) {
+  if (!supabaseConfigured()) {
+    return res.status(503).json({
+      message: 'Supabase is not connected yet.'
+    });
+  }
+
+  /* List all coupons */
+  if (action === 'coupon-list' && req.method === 'GET') {
+    const coupons = await sb(
+      '/rest/v1/coupons?select=*&order=created_at.desc'
+    );
+
+    return res.status(200).json({ coupons: coupons || [] });
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed.' });
+  }
+
+  const body = await readBody(req);
+
+  /* Create a coupon */
+  if (action === 'coupon-create') {
+    const code = normalizeCouponCode(body.code);
+    const name = String(body.name || '').trim().slice(0, 100);
+    const finalPrice = Number(body.final_price);
+    const ticketTypes = body.ticket_types;
+    const expiresAt = body.expires_at || null;
+    const usageLimit = body.usage_limit === '' || body.usage_limit === undefined
+      ? null
+      : body.usage_limit;
+
+    if (!validateCouponCode(code)) {
+      return res.status(400).json({
+        message: 'Coupon code must be 3-40 characters and contain only letters, numbers, hyphens or underscores.'
+      });
+    }
+
+    if (!name) {
+      return res.status(400).json({
+        message: 'Enter a name for this coupon.'
+      });
+    }
+
+    if (!validateCouponPrice(finalPrice)) {
+      return res.status(400).json({
+        message: 'The final ticket price must be a whole number between ₦100 and ₦10,000,000.'
+      });
+    }
+
+    if (!validateCouponExpiry(expiresAt)) {
+      return res.status(400).json({
+        message: 'The expiry date is invalid.'
+      });
+    }
+
+    if (!validateCouponLimit(usageLimit)) {
+      return res.status(400).json({
+        message: 'The usage limit must be a positive whole number, or left empty for unlimited use.'
+      });
+    }
+
+    const typesCheck = await validateCouponTicketTypes(ticketTypes);
+    if (!typesCheck.ok) {
+      return res.status(400).json({ message: typesCheck.message });
+    }
+
+    const existing = await sb(
+      '/rest/v1/coupons?code=eq.' + encodeURIComponent(code) + '&select=code'
+    );
+
+    if (existing && existing.length) {
+      return res.status(409).json({
+        message: 'A coupon with this code already exists.'
+      });
+    }
+
+    const created = await sb('/rest/v1/coupons', {
+      method: 'POST',
+      headers: { Prefer: 'return=representation' },
+      body: {
+        code,
+        name,
+        final_price: finalPrice,
+        ticket_types: typesCheck.types,
+        active: body.active !== false,
+        expires_at: expiresAt,
+        usage_limit: usageLimit === null ? null : Number(usageLimit)
+      }
+    });
+
+    await sec.audit(
+      req,
+      who.name,
+      role,
+      'coupon_created',
+      code + ' · ' + name + ' · final price ' + naira(finalPrice)
+    );
+
+    return res.status(201).json({
+      ok: true,
+      coupon: created && created[0]
+    });
+  }
+
+  /* Update coupon details */
+  if (action === 'coupon-update') {
+    const oldCode = normalizeCouponCode(body.old_code || body.code);
+    const code = normalizeCouponCode(body.code);
+    const name = String(body.name || '').trim().slice(0, 100);
+    const finalPrice = Number(body.final_price);
+    const expiresAt = body.expires_at || null;
+    const usageLimit = body.usage_limit === '' || body.usage_limit === undefined
+      ? null
+      : body.usage_limit;
+
+    if (!validateCouponCode(oldCode)) {
+      return res.status(400).json({
+        message: 'Invalid existing coupon code.'
+      });
+    }
+
+    if (!validateCouponCode(code)) {
+      return res.status(400).json({
+        message: 'Coupon code must be 3-40 characters and contain only letters, numbers, hyphens or underscores.'
+      });
+    }
+
+    if (!name) {
+      return res.status(400).json({
+        message: 'Enter a name for this coupon.'
+      });
+    }
+
+    if (!validateCouponPrice(finalPrice)) {
+      return res.status(400).json({
+        message: 'The final ticket price must be a whole number between ₦100 and ₦10,000,000.'
+      });
+    }
+
+    if (!validateCouponExpiry(expiresAt)) {
+      return res.status(400).json({
+        message: 'The expiry date is invalid.'
+      });
+    }
+
+    if (!validateCouponLimit(usageLimit)) {
+      return res.status(400).json({
+        message: 'The usage limit must be a positive whole number, or left empty for unlimited use.'
+      });
+    }
+
+    const typesCheck = await validateCouponTicketTypes(body.ticket_types);
+    if (!typesCheck.ok) {
+      return res.status(400).json({ message: typesCheck.message });
+    }
+
+    const current = await sb(
+      '/rest/v1/coupons?code=eq.' + encodeURIComponent(oldCode) + '&select=*'
+    );
+
+    if (!current || !current.length) {
+      return res.status(404).json({
+        message: 'That coupon was not found.'
+      });
+    }
+
+    if (code !== oldCode) {
+      const duplicate = await sb(
+        '/rest/v1/coupons?code=eq.' + encodeURIComponent(code) + '&select=code'
+      );
+
+      if (duplicate && duplicate.length) {
+        return res.status(409).json({
+          message: 'Another coupon already uses this code.'
+        });
+      }
+    }
+
+    const updated = await sb(
+      '/rest/v1/coupons?code=eq.' + encodeURIComponent(oldCode),
+      {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: {
+          code,
+          name,
+          final_price: finalPrice,
+          ticket_types: typesCheck.types,
+          expires_at: expiresAt,
+          usage_limit: usageLimit === null ? null : Number(usageLimit)
+        }
+      }
+    );
+
+    await sec.audit(
+      req,
+      who.name,
+      role,
+      'coupon_updated',
+      oldCode + (code !== oldCode ? ' → ' + code : '') +
+      ' · final price ' + naira(finalPrice)
+    );
+
+    return res.status(200).json({
+      ok: true,
+      coupon: updated && updated[0]
+    });
+  }
+
+  /* Enable or disable coupon */
+  if (action === 'coupon-toggle') {
+    const code = normalizeCouponCode(body.code);
+
+    if (!validateCouponCode(code) || typeof body.active !== 'boolean') {
+      return res.status(400).json({
+        message: 'Provide a valid coupon code and active status.'
+      });
+    }
+
+    const updated = await sb(
+      '/rest/v1/coupons?code=eq.' + encodeURIComponent(code),
+      {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: { active: body.active }
+      }
+    );
+
+    if (!updated || !updated.length) {
+      return res.status(404).json({
+        message: 'That coupon was not found.'
+      });
+    }
+
+    await sec.audit(
+      req,
+      who.name,
+      role,
+      body.active ? 'coupon_enabled' : 'coupon_disabled',
+      code
+    );
+
+    return res.status(200).json({
+      ok: true,
+      coupon: updated[0]
+    });
+  }
+
+  /* Delete coupon */
+  if (action === 'coupon-delete') {
+    const code = normalizeCouponCode(body.code);
+
+    if (!validateCouponCode(code)) {
+      return res.status(400).json({
+        message: 'Invalid coupon code.'
+      });
+    }
+
+    const found = await sb(
+      '/rest/v1/coupons?code=eq.' + encodeURIComponent(code) + '&select=*'
+    );
+
+    if (!found || !found.length) {
+      return res.status(404).json({
+        message: 'That coupon was not found.'
+      });
+    }
+
+    const coupon = found[0];
+    const redeemed = Number(coupon.redemption_count || 0);
+
+    /* Preserve coupon history if it has ever been used */
+    if (redeemed > 0) {
+      return res.status(409).json({
+        message: 'This coupon has already been used ' + redeemed +
+          ' time(s). Disable it instead of deleting it.'
+      });
+    }
+
+    await sb(
+      '/rest/v1/coupons?code=eq.' + encodeURIComponent(code),
+      { method: 'DELETE' }
+    );
+
+    await sec.audit(
+      req,
+      who.name,
+      role,
+      'coupon_deleted',
+      code + ' · ' + coupon.name
+    );
+
+    return res.status(200).json({ ok: true });
+  }
+
+  return res.status(404).json({
+    message: 'Unknown coupon action.'
+  });
+}
 
     /* ---- security page (main admin only) ---- */
     if (action === 'security-status' && req.method === 'GET') {
