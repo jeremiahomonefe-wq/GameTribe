@@ -2,6 +2,14 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/api/availability",
+      "destination": "/api/ticket?availability=1"
+    },
+    {
+      "source": "/api/find-ticket",
+      "destination": "/api/ticket"
+    },
+    {
       "source": "/admin",
       "destination": "/admin/index.html"
     },
