@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { sb, supabaseConfigured } from './_lib/supabase.js';
 import { allow, clientIp } from './_lib/security.js';
+import { sendMerchOrderEmail } from './_lib/merch-email.js';
 
 const PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY || 'pk_live_9fc882239cf6a6cd6832b2e100781f3ae93117b6';
 const emailOk = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(value || ''));
@@ -18,7 +19,10 @@ async function orderFor(referenceValue) {
 async function confirm(referenceValue) {
   const order = await orderFor(referenceValue);
   if (!order) throw new Error('We could not find this order.');
-  if (['paid', 'ready', 'collected'].includes(order.status)) return order;
+  if (['paid', 'ready', 'collected'].includes(order.status)) {
+    try { await sendMerchOrderEmail(order); } catch (error) { console.error('MERCH CONFIRMATION EMAIL ERROR:', error.message); }
+    return order;
+  }
   const response = await fetch('https://api.paystack.co/transaction/verify/' + encodeURIComponent(referenceValue), { headers: { Authorization: 'Bearer ' + process.env.PAYSTACK_SECRET_KEY } });
   const result = await response.json().catch(() => ({}));
   const tx = result.data;
@@ -27,7 +31,9 @@ async function confirm(referenceValue) {
   const metadata = typeof tx.metadata === 'string' ? JSON.parse(tx.metadata || '{}') : (tx.metadata || {});
   if (metadata.order_kind !== 'merch' || metadata.merch_reference !== referenceValue) throw new Error('This payment does not belong to this merch order.');
   const paid = await sb('/rest/v1/rpc/pay_merch_order', { method: 'POST', body: { p_reference: referenceValue } });
-  return paid;
+  const confirmed = await orderFor(referenceValue);
+  try { await sendMerchOrderEmail(confirmed); } catch (error) { console.error('MERCH CONFIRMATION EMAIL ERROR:', error.message); }
+  return confirmed || paid;
 }
 
 export default async function handler(req, res) {
