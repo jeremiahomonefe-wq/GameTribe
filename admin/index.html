@@ -162,6 +162,7 @@ tr.row-used td{background:#FBF4F3}
 .hist li{padding:6px 0;border-top:1px solid var(--line)}
 .linkbox{display:flex;gap:8px;margin-top:8px}
 .modal.wide{max-width:780px}
+.modal .help{font-size:12px;color:var(--muted);margin:5px 0 0;line-height:1.4}.modal .field{margin-top:12px}.modal .field label{display:block;font-size:13px;font-weight:800;margin-bottom:5px}.modal .field input,.modal .field select,.modal .field textarea{width:100%}.modal .field textarea{min-height:96px;resize:vertical}.modal .check-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:8px}.modal .check-list label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:9px;font-size:13px;font-weight:700;cursor:pointer}.modal .check-list input{width:auto;margin-top:2px}.modal .photo-preview{height:170px;border:1px dashed var(--line);border-radius:14px;background:#F8F3E8 center/contain no-repeat;display:grid;place-items:center;color:var(--muted);font-size:12px;font-weight:800;margin-top:8px;overflow:hidden}.modal .photo-preview.has-image{color:transparent;background-size:cover}.modal .upload-status{min-height:18px;font-size:12px;font-weight:700;margin-top:6px}
 .keybox{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:18px;letter-spacing:2px;background:#fff;border:1.5px dashed var(--ink);border-radius:12px;padding:12px;word-break:break-word;margin:10px 0;font-weight:700}
 .pbar{height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px}.pbar i{display:block;height:100%;background:var(--red);width:0;transition:width .3s}
 .sec-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line);font-weight:700}
@@ -1313,13 +1314,27 @@ function couponsHtml(){
 function loadCoupons(){state.coupons=null;render();api('coupon-list').then(function(data){state.coupons=data;render();}).catch(function(error){if(error.status===401)return showLogin();toast(error.message,true);});}
 function couponEditor(code){
   var old=(state.coupons.coupons||[]).filter(function(c){return c.code===code;})[0]||{code:'',name:'',final_price:0,ticket_types:[],active:true};
-  var next={};next.code=prompt('Coupon code (letters, numbers, hyphens and underscores)',old.code);if(next.code===null)return;
-  next.name=prompt('Display name',old.name);if(next.name===null)return;
-  next.finalPrice=parseInt(prompt('Exact final price in naira. Use 0 for a complimentary ticket.',old.final_price),10);
-  var choices=(state.content.tickets||[]).map(function(ticket){return ticket.id+' ('+ticket.label+')';}).join(', ');
-  next.ticketTypes=String(prompt('Ticket IDs, separated by commas. Leave blank for all tickets. Available: '+choices,(old.ticket_types||[]).join(','))||'').split(',').map(function(value){return value.trim();}).filter(Boolean);
-  next.active=confirm('Activate this coupon now? Click Cancel to save it inactive.');
-  api('coupon-save',{body:next}).then(function(){toast('Coupon saved ✓');loadCoupons();}).catch(function(error){if(error.status===401)return showLogin();toast(error.message,true);});
+  var tickets=state.content.tickets||[],editing=Boolean(code);
+  openModal('<div class="item-head"><h3>'+ (editing?'Edit coupon':'Create coupon') +'</h3><button type="button" class="btn btn-ghost sm" data-act="mclose">Close</button></div>'+
+    '<p class="help">Set the exact amount a buyer pays. Use ₦0 for a complimentary ticket. Coupon prices are securely checked again before payment.</p>'+
+    '<form id="couponEditorForm"><div class="grid two">'+
+      '<div class="field"><label for="couponCode">Coupon code</label><input id="couponCode" maxlength="32" autocomplete="off" placeholder="e.g. CHURCH50" value="'+esc(old.code)+'"'+(editing?' readonly':'')+' required><p class="help">Letters, numbers, hyphens and underscores only.</p></div>'+
+      '<div class="field"><label for="couponPrice">Final ticket price (₦)</label><input id="couponPrice" type="number" min="0" step="1" value="'+esc(old.final_price)+'" required><p class="help">Original ticket price is never changed.</p></div></div>'+
+      '<div class="field"><label for="couponName">Display name</label><input id="couponName" maxlength="120" value="'+esc(old.name)+'" placeholder="e.g. Church Community Discount" required></div>'+
+      '<div class="field"><label>Applicable ticket types</label><p class="help">Leave every box unticked to apply the code to all ticket types.</p><div class="check-list">'+tickets.map(function(ticket){var on=(old.ticket_types||[]).indexOf(ticket.id)>-1;return '<label><input type="checkbox" name="couponTicket" value="'+esc(ticket.id)+'"'+(on?' checked':'')+'><span>'+esc(ticket.label)+'<br><small>'+naira(ticket.price)+'</small></span></label>';}).join('')+'</div></div>'+
+      '<div class="field"><label class="switch"><input id="couponActive" type="checkbox"'+(old.active?' checked':'')+'><span>Coupon is active and can be used at checkout</span></label></div>'+
+      '<div class="row"><button class="btn btn-red" id="couponSave" type="submit">'+(editing?'Save coupon':'Create coupon')+'</button><button class="btn btn-line" type="button" data-act="mclose">Cancel</button></div><p id="couponFormError" class="msg err" role="alert"></p></form>');
+  var form=$('#couponEditorForm');
+  form.addEventListener('submit',function(event){
+    event.preventDefault();
+    var button=$('#couponSave'),error=$('#couponFormError'),price=Number($('#couponPrice').value);
+    var next={code:$('#couponCode').value.trim().toUpperCase(),name:$('#couponName').value.trim(),finalPrice:price,ticketTypes:Array.prototype.map.call(form.querySelectorAll('input[name="couponTicket"]:checked'),function(input){return input.value;}),active:$('#couponActive').checked};
+    if(!/^[A-Z0-9_-]{2,32}$/.test(next.code)){error.textContent='Use 2–32 letters, numbers, hyphens or underscores for the code.';return;}
+    if(next.name.length<2){error.textContent='Enter a display name.';return;}
+    if(!Number.isInteger(price)||price<0){error.textContent='Enter a whole final price of ₦0 or more.';return;}
+    button.disabled=true;button.textContent='Saving…';error.textContent='';
+    api('coupon-save',{body:next}).then(function(){closeModal();toast('Coupon saved ✓');loadCoupons();}).catch(function(e){if(e.status===401)return showLogin();error.textContent=e.message;button.disabled=false;button.textContent=editing?'Save coupon':'Create coupon';});
+  });
 }
 function leadsHtml(){
   if(!state.leads)return '<div class="empty">Loading advertising leads…</div>';
@@ -1333,15 +1348,36 @@ function loadMerch(){state.merch=null;render();Promise.all([api('merch-products'
 function loadLeads(){state.leads=null;render();api('advertising-leads').then(function(r){state.leads=r;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function productEditor(id){
   var old=(state.merch.products||[]).filter(function(p){return p.id===id;})[0]||{id:'',name:'',description:'',category:'Wearables',price:0,stock:0,image:'',active:true};
-  var next={};
-  next.id=prompt('Product ID (lowercase letters, numbers, hyphens or underscores)',old.id);if(next.id===null)return;
-  next.name=prompt('Product name',old.name);if(next.name===null)return;
-  next.price=parseInt(prompt('Price in naira',old.price||''),10);next.stock=parseInt(prompt('Stock available',old.stock||0),10);
-  next.category=prompt('Category',old.category||'Other');if(next.category===null)return;
-  next.description=prompt('Short description',old.description||'');if(next.description===null)return;
-  next.image=prompt('Image URL (optional)',old.image||'');if(next.image===null)return;
-  next.active=confirm('Put this product on sale now? Click Cancel to save it hidden.');
-  api('merch-product-save',{body:{product:next}}).then(function(){toast('Product saved ✓');loadMerch();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
+  var editing=Boolean(id),preview=srcUrl(old.image);
+  openModal('<div class="item-head"><h3>'+ (editing?'Edit merch product':'Add merch product') +'</h3><button type="button" class="btn btn-ghost sm" data-act="mclose">Close</button></div>'+
+    '<p class="help">Add the product information buyers see in the store. Festival pickup is shown after payment.</p>'+
+    '<form id="merchEditorForm"><div class="grid two">'+
+      '<div class="field"><label for="merchId">Product ID</label><input id="merchId" maxlength="60" autocomplete="off" placeholder="e.g. gametribe-tee-black" value="'+esc(old.id)+'"'+(editing?' readonly':'')+' required><p class="help">Lowercase letters, numbers, hyphens and underscores.</p></div>'+
+      '<div class="field"><label for="merchCategory">Category</label><input id="merchCategory" maxlength="60" value="'+esc(old.category)+'" placeholder="e.g. Wearables" required></div></div>'+
+      '<div class="field"><label for="merchName">Product name</label><input id="merchName" maxlength="100" value="'+esc(old.name)+'" placeholder="e.g. Game Tribe Fest T-shirt" required></div>'+
+      '<div class="field"><label for="merchDescription">Product details</label><textarea id="merchDescription" maxlength="500" placeholder="Describe the colour, size, material or anything buyers should know.">'+esc(old.description)+'</textarea></div>'+
+      '<div class="grid two"><div class="field"><label for="merchPrice">Price (₦)</label><input id="merchPrice" type="number" min="100" step="1" value="'+esc(old.price)+'" required></div><div class="field"><label for="merchStock">Stock available</label><input id="merchStock" type="number" min="0" step="1" value="'+esc(old.stock)+'" required></div></div>'+
+      '<div class="field"><label for="merchImage">Product picture</label><div id="merchPreview" class="photo-preview'+(preview?' has-image':'')+'"'+(preview?' style="background-image:url(\''+esc(preview).replace(/'/g,'%27')+'\')"':'')+'>No picture selected</div><input id="merchImage" type="url" maxlength="1000" value="'+esc(old.image)+'" placeholder="Paste an image URL, or upload one below"><div class="media-actions"><button id="merchImageUpload" type="button" class="btn btn-line sm">Upload picture</button><button id="merchImageRemove" type="button" class="btn btn-ghost sm danger"'+(old.image?'':' hidden')+'>Remove picture</button></div><p id="merchUploadStatus" class="upload-status"></p></div>'+
+      '<div class="field"><label class="switch"><input id="merchActive" type="checkbox"'+(old.active?' checked':'')+'><span>Put this product on sale now</span></label></div>'+
+      '<div class="row"><button class="btn btn-red" id="merchSave" type="submit">'+(editing?'Save product':'Add product')+'</button><button class="btn btn-line" type="button" data-act="mclose">Cancel</button></div><p id="merchFormError" class="msg err" role="alert"></p></form>','wide');
+  var form=$('#merchEditorForm'),image=$('#merchImage'),previewEl=$('#merchPreview'),remove=$('#merchImageRemove'),uploadStatus=$('#merchUploadStatus');
+  function showMerchPreview(value){var url=srcUrl(value);previewEl.style.backgroundImage=url?"url('"+url.replace(/'/g,'%27')+"')":'';previewEl.classList.toggle('has-image',Boolean(url));previewEl.textContent=url?'':'No picture selected';remove.hidden=!url;}
+  image.addEventListener('input',function(){showMerchPreview(image.value);});
+  remove.addEventListener('click',function(){image.value='';showMerchPreview('');uploadStatus.textContent='Picture removed. Save the product to apply this change.';});
+  $('#merchImageUpload').addEventListener('click',function(){
+    var picker=document.createElement('input');picker.type='file';picker.accept='image/jpeg,image/png,image/webp,image/gif';
+    picker.onchange=function(){var file=picker.files&&picker.files[0];if(!file)return;uploadStatus.style.color='var(--muted)';uploadStatus.textContent='Uploading picture…';
+      uploadFile(file,'images',function(progress){uploadStatus.textContent='Uploading picture… '+Math.round(progress*100)+'%';}).then(function(url){image.value=url;showMerchPreview(url);uploadStatus.style.color='var(--ok)';uploadStatus.textContent='Picture uploaded. Save product to publish it.';}).catch(function(error){uploadStatus.style.color='var(--red)';uploadStatus.textContent=error.message||'Could not upload picture.';});};picker.click();
+  });
+  form.addEventListener('submit',function(event){
+    event.preventDefault();
+    var button=$('#merchSave'),error=$('#merchFormError'),next={id:$('#merchId').value.trim().toLowerCase(),name:$('#merchName').value.trim(),description:$('#merchDescription').value.trim(),category:$('#merchCategory').value.trim(),image:image.value.trim(),price:Number($('#merchPrice').value),stock:Number($('#merchStock').value),active:$('#merchActive').checked};
+    if(!/^[a-z0-9][a-z0-9_-]{1,59}$/.test(next.id)){error.textContent='Use a valid product ID with lowercase letters, numbers, hyphens or underscores.';return;}
+    if(!next.name){error.textContent='Enter a product name.';return;}
+    if(!Number.isInteger(next.price)||next.price<100||!Number.isInteger(next.stock)||next.stock<0){error.textContent='Use a price of at least ₦100 and stock of 0 or more.';return;}
+    button.disabled=true;button.textContent='Saving…';error.textContent='';
+    api('merch-product-save',{body:{product:next}}).then(function(){closeModal();toast('Product saved ✓');loadMerch();}).catch(function(e){if(e.status===401)return showLogin();error.textContent=e.message;button.disabled=false;button.textContent=editing?'Save product':'Add product';});
+  });
 }
 function reloadTeamList(){return api('team-list').then(function(d){state.team=d;render();});}
 function teamFail(b,label){return function(e){if(e.status===401)return showLogin();toast(e.message,true);if(b){b.disabled=false;b.textContent=label;}};}
