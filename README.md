@@ -117,7 +117,7 @@ The Supabase Storage bucket called `site-media` must be public for uploaded prod
 
 ### Scheduled work
 
-`vercel.json` runs `/api/health` every 15 minutes with Vercel’s protected cron header. Add a strong `CRON_SECRET` in Vercel before production. This job starts due email campaigns, alerts the waiting list when limited tickets reopen, and checks merch stock alerts; it is not publicly callable. A Vercel plan with minute-level cron scheduling is required for the stated timing.
+`vercel.json` runs `/api/health` once daily at 8:00 AM Nigeria time (07:00 UTC) with Vercel’s protected cron header, which is compatible with the Vercel Hobby plan. Add a strong `CRON_SECRET` in Vercel before production. This job starts due email campaigns, alerts the waiting list when limited tickets reopen, and checks merch stock alerts; it is not publicly callable. Upgrade to Vercel Pro if campaigns must start close to their scheduled time.
 
 ### Paystack webhook
 
