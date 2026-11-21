@@ -488,6 +488,36 @@ export default async function handler(req, res) {
       await sec.audit(req, who.name, role, 'merch_order_' + status, reference);
       return res.status(200).json({ ok: true });
     }
+    if (action === 'coupon-list' && req.method === 'GET') {
+      const coupons = (await sb('/rest/v1/ticket_coupons?select=*&order=created_at.desc&limit=1000')) || [];
+      let sales = [];
+      try { sales = (await sb('/rest/v1/ticket_sales?select=coupon_code&coupon_code=not.is.null&limit=5000')) || []; } catch (error) { console.error('COUPON USAGE LOOKUP ERROR:', error.message); }
+      const usage = sales.reduce((out, sale) => { const code = String(sale.coupon_code || '').toUpperCase(); if (code) out[code] = (out[code] || 0) + 1; return out; }, {});
+      return res.status(200).json({ coupons: coupons.map((coupon) => ({ ...coupon, uses: usage[String(coupon.code || '').toUpperCase()] || 0 })) });
+    }
+    if (action === 'coupon-save' && req.method === 'POST') {
+      const body = await readBody(req);
+      const code = String(body.code || '').trim().toUpperCase();
+      const name = String(body.name || '').trim().slice(0, 120);
+      const finalPrice = Number(body.finalPrice);
+      const ticketTypes = Array.isArray(body.ticketTypes) ? [...new Set(body.ticketTypes.map((value) => String(value).trim()).filter(Boolean))].slice(0, 40) : [];
+      const allTickets = (await getContent()).tickets || [];
+      const known = new Set(allTickets.map((ticket) => ticket.id));
+      if (!/^[A-Z0-9_-]{2,32}$/.test(code) || name.length < 2 || !Number.isInteger(finalPrice) || finalPrice < 0) return res.status(400).json({ message: 'Enter a code, display name and a whole-naira final price of ₦0 or more.' });
+      if (ticketTypes.some((type) => !known.has(type))) return res.status(400).json({ message: 'One of the selected ticket types no longer exists.' });
+      const applicable = allTickets.filter((ticket) => !ticketTypes.length || ticketTypes.includes(ticket.id));
+      if (!applicable.length || applicable.some((ticket) => finalPrice > Number(ticket.price))) return res.status(400).json({ message: 'The final price cannot be higher than any ticket this coupon applies to. Choose specific ticket types or lower the price.' });
+      const rows = await sb('/rest/v1/ticket_coupons?on_conflict=code', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: { code, name, final_price: finalPrice, ticket_types: ticketTypes, active: Boolean(body.active), updated_at: new Date().toISOString() } });
+      await sec.audit(req, who.name, role, 'coupon_saved', code + ' · ₦' + finalPrice);
+      return res.status(200).json({ coupon: rows && rows[0] });
+    }
+    if (action === 'coupon-delete' && req.method === 'POST') {
+      const body = await readBody(req), code = String(body.code || '').trim().toUpperCase();
+      if (!/^[A-Z0-9_-]{2,32}$/.test(code)) return res.status(400).json({ message: 'Invalid coupon code.' });
+      await sb('/rest/v1/ticket_coupons?code=eq.' + encodeURIComponent(code), { method: 'DELETE' });
+      await sec.audit(req, who.name, role, 'coupon_deleted', code);
+      return res.status(200).json({ ok: true });
+    }
     if (action === 'advertising-leads' && req.method === 'GET') {
       const leads = (await sb('/rest/v1/advertising_leads?select=*&order=created_at.desc&limit=1000')) || [];
       return res.status(200).json({ leads });
@@ -613,7 +643,7 @@ export default async function handler(req, res) {
           ticketType: tx.metadata.ticket_type || '',
           quantity: Number(tx.metadata.quantity) || 1
         };
-        const purchase = checkPurchase(tx, tickets);
+        const purchase = await checkPurchase(tx, tickets);
         if (purchase.ok && item.email) {
           missing.push({ ...item, state: 'ready', ticketLabel: purchase.ticket.label, quantity: purchase.quantity, admitsTotal: purchase.admitsTotal });
         } else {
@@ -662,7 +692,7 @@ export default async function handler(req, res) {
         const per = ticket.admits || 1;
         purchase = { ok: true, ticketType: body.ticketType, ticket, quantity: qty, totalNaira: Number(tx.amount) / 100, admitsPerUnit: per, admitsTotal: per * qty };
       } else {
-        purchase = checkPurchase(tx, tickets);
+        purchase = await checkPurchase(tx, tickets);
         if (!purchase.ok) return res.status(400).json({ message: purchase.message + ' Choose the ticket type to import it by hand.' });
       }
       const c = tx.customer || {};
