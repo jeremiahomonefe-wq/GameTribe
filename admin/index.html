@@ -340,7 +340,21 @@ var SECTIONS=[
  {id:'tickets',icon:'ticket',title:'Tickets & prices',custom:'tickets'},
  {id:'coupons',icon:'ticket',title:'Coupons & discounts',custom:'coupons'},
  {id:'sales',icon:'money',title:'Sales & attendees',custom:'sales'},
- {id:'merch',icon:'bag',title:'Merch & pickup',custom:'merch'},
+ {id:'p_merch',icon:'bag',title:'Merch page',blocks:[
+  {title:'Merch page heading',fields:[
+   {path:'pages.merch.pill',label:'Small tag',type:T},{path:'pages.merch.title',label:'Main heading',type:T},{path:'pages.merch.highlight',label:'Highlighted heading',type:T},
+   {path:'pages.merch.intro',label:'Intro sentence',type:TA,full:true}]},
+  {title:'Sticker and collection',fields:[
+   {path:'pages.merch.stickerTitle',label:'Round sticker text (use a new line for each word)',type:TA},{path:'pages.merch.stickerSubtitle',label:'Sticker subtitle',type:T},
+   {path:'pages.merch.collectionKicker',label:'Collection small tag',type:T},{path:'pages.merch.collectionTitle',label:'Collection heading',type:T},{path:'pages.merch.collectionIntro',label:'Collection sentence',type:TA,full:true}]}]},
+ {id:'merch',icon:'bag',title:'Merch products & orders',custom:'merch'},
+ {id:'p_advertise',icon:'megaphone',title:'Advertise page',blocks:[
+  {title:'Advertise page heading',fields:[
+   {path:'pages.advertise.pill',label:'Small tag',type:T},{path:'pages.advertise.title',label:'Main heading',type:T},{path:'pages.advertise.highlight',label:'Highlighted heading',type:T},
+   {path:'pages.advertise.intro',label:'Intro sentence',type:TA,full:true}]},
+  {title:'Enquiry form section',fields:[
+   {path:'pages.advertise.formPill',label:'Small tag',type:T},{path:'pages.advertise.formTitle',label:'Heading',type:T},{path:'pages.advertise.formIntro',label:'Intro sentence',type:TA,full:true},
+   {path:'pages.advertise.formNote',label:'Form note',type:TA,full:true},{path:'pages.advertise.formButton',label:'Button text',type:T}]}]},
  {id:'leads',icon:'megaphone',title:'Advertising leads',custom:'leads'},
  {id:'announce',icon:'megaphone',title:'Announcements',custom:'announce'},
  {id:'team',icon:'users',title:'Team & access',custom:'team'},
@@ -1298,7 +1312,7 @@ function merchHtml(){
     '<div class="kpis"><div class="kpi"><b>'+products.filter(function(p){return p.active;}).length+'</b><span>Products on sale</span></div><div class="kpi"><b>'+stock+'</b><span>Items in stock</span></div><div class="kpi"><b>'+paid.length+'</b><span>Paid orders</span></div><div class="kpi"><b>'+naira(revenue)+'</b><span>Merch revenue</span></div></div>'+
     '<section class="card"><div class="item-head"><h3>Products</h3><span><button class="btn btn-line sm" type="button" data-act="merch-refresh">Refresh</button> <button class="btn btn-red sm" type="button" data-act="merch-add">+ Add product</button></span></div>';
   if(!products.length)h+='<div class="empty">No products yet. Add your first product to start selling.</div>';
-  else h+='<div class="table-wrap"><table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Store</th><th></th></tr></thead><tbody>'+products.map(function(p){return '<tr><td><b>'+esc(p.name)+'</b><div class="small">'+esc(p.id)+'</div></td><td>'+esc(p.category)+'</td><td>'+naira(p.price)+'</td><td>'+esc(p.stock)+'</td><td>'+(p.active?'<span class="badge ok">On sale</span>':'<span class="badge warn">Hidden</span>')+'</td><td><button class="btn btn-line sm" type="button" data-act="merch-edit" data-id="'+esc(p.id)+'">Edit</button> '+(p.active?'<button class="btn btn-ghost sm danger" type="button" data-act="merch-disable" data-id="'+esc(p.id)+'">Hide</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>Product</th><th>Colours</th><th>Batch ID</th><th>Price</th><th>Stock</th><th>Store</th><th></th></tr></thead><tbody>'+products.map(function(p){return '<tr><td><b>'+esc(p.name)+'</b><div class="small">'+esc(p.id)+'</div></td><td>'+esc((p.colours||[]).join(', ')||'—')+'</td><td><code>'+esc(p.batch_id||'—')+'</code></td><td>'+naira(p.price)+'</td><td>'+esc(p.stock)+'</td><td>'+(p.active?'<span class="badge ok">On sale</span>':'<span class="badge warn">Hidden</span>')+'</td><td><button class="btn btn-line sm" type="button" data-act="merch-edit" data-id="'+esc(p.id)+'">Edit</button> '+(p.active?'<button class="btn btn-ghost sm danger" type="button" data-act="merch-disable" data-id="'+esc(p.id)+'">Hide</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>';
   h+='</section><section class="card"><div class="item-head"><h3>Festival pickup orders</h3><button class="btn btn-line sm" type="button" data-act="merch-refresh">Refresh</button></div>';
   if(!orders.length)h+='<div class="empty">No merch orders yet.</div>';
   else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Buyer</th><th>Items</th><th>Paid</th><th>Status</th><th></th></tr></thead><tbody>'+orders.map(function(o){var itemText=(o.items||[]).map(function(i){return (i.quantity||1)+' × '+i.name;}).join(', ');return '<tr><td>'+esc(timeShort(o.paid_at||o.created_at))+'</td><td><b>'+esc(o.name)+'</b><div class="small">'+esc(o.phone)+' · '+esc(o.email)+'</div></td><td>'+esc(itemText)+'</td><td>'+naira(o.amount)+'</td><td><span class="badge '+(o.status==='collected'?'used':o.status==='ready'?'ok':o.status==='paid'?'part':'warn')+'">'+esc(o.status)+'</span><div class="small"><code>'+esc(o.reference)+'</code></div></td><td>'+((o.status==='paid')?'<button class="btn btn-line sm" type="button" data-act="merch-ready" data-ref="'+esc(o.reference)+'">Mark ready</button>':(o.status==='ready'?'<button class="btn btn-red sm" type="button" data-act="merch-collected" data-ref="'+esc(o.reference)+'">Mark collected</button>':''))+'</td></tr>';}).join('')+'</tbody></table></div>';
@@ -1347,7 +1361,7 @@ function leadsHtml(){
 function loadMerch(){state.merch=null;render();Promise.all([api('merch-products'),api('merch-orders')]).then(function(r){state.merch={products:r[0].products||[],orders:r[1].orders||[]};render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function loadLeads(){state.leads=null;render();api('advertising-leads').then(function(r){state.leads=r;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function productEditor(id){
-  var old=(state.merch.products||[]).filter(function(p){return p.id===id;})[0]||{id:'',name:'',description:'',category:'Wearables',price:0,stock:0,image:'',active:true};
+  var old=(state.merch.products||[]).filter(function(p){return p.id===id;})[0]||{id:'',name:'',description:'',category:'Wearables',price:0,stock:0,image:'',colours:[],batch_id:'',active:true};
   var editing=Boolean(id),preview=srcUrl(old.image);
   openModal('<div class="item-head"><h3>'+ (editing?'Edit merch product':'Add merch product') +'</h3><button type="button" class="btn btn-ghost sm" data-act="mclose">Close</button></div>'+
     '<p class="help">Add the product information buyers see in the store. Festival pickup is shown after payment.</p>'+
@@ -1357,6 +1371,7 @@ function productEditor(id){
       '<div class="field"><label for="merchName">Product name</label><input id="merchName" maxlength="100" value="'+esc(old.name)+'" placeholder="e.g. Game Tribe Fest T-shirt" required></div>'+
       '<div class="field"><label for="merchDescription">Product details</label><textarea id="merchDescription" maxlength="500" placeholder="Describe the colour, size, material or anything buyers should know.">'+esc(old.description)+'</textarea></div>'+
       '<div class="grid two"><div class="field"><label for="merchPrice">Price (₦)</label><input id="merchPrice" type="number" min="100" step="1" value="'+esc(old.price)+'" required></div><div class="field"><label for="merchStock">Stock available</label><input id="merchStock" type="number" min="0" step="1" value="'+esc(old.stock)+'" required></div></div>'+
+      '<div class="grid two"><div class="field"><label for="merchColours">Available colours</label><input id="merchColours" maxlength="500" value="'+esc((old.colours||[]).join(', '))+'" placeholder="e.g. Black, Red, Cream"><p class="help">Separate choices with commas. Buyers choose one before adding to cart.</p></div><div class="field"><label for="merchBatch">Batch ID</label><input id="merchBatch" value="'+esc(old.batch_id||'Auto-generated when saved')+'" readonly><p class="help">Generated automatically for every new product.</p></div></div>'+
       '<div class="field"><label for="merchImage">Product picture</label><div id="merchPreview" class="photo-preview'+(preview?' has-image':'')+'"'+(preview?' style="background-image:url(\''+esc(preview).replace(/'/g,'%27')+'\')"':'')+'>No picture selected</div><input id="merchImage" type="url" maxlength="1000" value="'+esc(old.image)+'" placeholder="Paste an image URL, or upload one below"><div class="media-actions"><button id="merchImageUpload" type="button" class="btn btn-line sm">Upload picture</button><button id="merchImageRemove" type="button" class="btn btn-ghost sm danger"'+(old.image?'':' hidden')+'>Remove picture</button></div><p id="merchUploadStatus" class="upload-status"></p></div>'+
       '<div class="field"><label class="switch"><input id="merchActive" type="checkbox"'+(old.active?' checked':'')+'><span>Put this product on sale now</span></label></div>'+
       '<div class="row"><button class="btn btn-red" id="merchSave" type="submit">'+(editing?'Save product':'Add product')+'</button><button class="btn btn-line" type="button" data-act="mclose">Cancel</button></div><p id="merchFormError" class="msg err" role="alert"></p></form>','wide');
@@ -1371,7 +1386,7 @@ function productEditor(id){
   });
   form.addEventListener('submit',function(event){
     event.preventDefault();
-    var button=$('#merchSave'),error=$('#merchFormError'),next={id:$('#merchId').value.trim().toLowerCase(),name:$('#merchName').value.trim(),description:$('#merchDescription').value.trim(),category:$('#merchCategory').value.trim(),image:image.value.trim(),price:Number($('#merchPrice').value),stock:Number($('#merchStock').value),active:$('#merchActive').checked};
+    var button=$('#merchSave'),error=$('#merchFormError'),next={id:$('#merchId').value.trim().toLowerCase(),name:$('#merchName').value.trim(),description:$('#merchDescription').value.trim(),category:$('#merchCategory').value.trim(),image:image.value.trim(),price:Number($('#merchPrice').value),stock:Number($('#merchStock').value),colours:$('#merchColours').value.split(',').map(function(value){return value.trim();}).filter(Boolean),batchId:old.batch_id||'',active:$('#merchActive').checked};
     if(!/^[a-z0-9][a-z0-9_-]{1,59}$/.test(next.id)){error.textContent='Use a valid product ID with lowercase letters, numbers, hyphens or underscores.';return;}
     if(!next.name){error.textContent='Enter a product name.';return;}
     if(!Number.isInteger(next.price)||next.price<100||!Number.isInteger(next.stock)||next.stock<0){error.textContent='Use a price of at least ₦100 and stock of 0 or more.';return;}
