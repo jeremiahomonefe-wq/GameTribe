@@ -88,7 +88,7 @@ async function validateCoupon(req, res) {
     const allowedTypes = Array.isArray(coupon.ticket_types) ? coupon.ticket_types : [];
     if (allowedTypes.length && !allowedTypes.includes(ticketType)) return res.status(400).json({ message: 'Coupon does not apply to the selected ticket.' });
     const finalPrice = Number(coupon.final_price);
-    if (!Number.isInteger(finalPrice) || finalPrice < 100 || finalPrice > Number(ticket.price)) return res.status(400).json({ message: 'Coupon price must be at least ₦100 and cannot exceed the ticket price.' });
+    if (!Number.isInteger(finalPrice) || finalPrice < 0 || finalPrice > Number(ticket.price)) return res.status(400).json({ message: 'Coupon price must be from ₦0 up to the ticket price.' });
     return res.status(200).json({ valid: true, code, name: coupon.name || code, originalUnitPrice: Number(ticket.price), finalUnitPrice: finalPrice, quantity, originalTotal: Number(ticket.price) * quantity, finalTotal: finalPrice * quantity, savings: (Number(ticket.price) - finalPrice) * quantity });
   } catch (error) {
     console.error('COUPON VALIDATION ERROR:', error);
