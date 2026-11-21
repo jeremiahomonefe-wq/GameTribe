@@ -337,6 +337,7 @@ var SECTIONS=[
   {title:'Photos',help:'The first photo is shown large. The page looks best with 16 photos.',grid:true,list:{path:'gallery.items',itemLabel:'Photo',bulk:'image',blank:{image:''},fields:[{key:'image',label:'Photo',type:IMG}]}}]},
 
  {id:'tickets',icon:'ticket',title:'Tickets & prices',custom:'tickets'},
+ {id:'coupons',icon:'ticket',title:'Coupons & discounts',custom:'coupons'},
  {id:'sales',icon:'money',title:'Sales & attendees',custom:'sales'},
  {id:'merch',icon:'bag',title:'Merch & pickup',custom:'merch'},
  {id:'leads',icon:'megaphone',title:'Advertising leads',custom:'leads'},
@@ -457,7 +458,7 @@ var SECTIONS=[
 ];
 
 /* ============================================================ */
-var state={content:null,saved:'',dirty:false,section:'event',sales:null,merch:null,leads:null,team:null,teamResult:null,salesFilter:'all',role:'owner',me:null,ann:null,annDraft:{audience:'tickets_all',subject:'',body:'',to:'',preview:null},qr:{mode:'pending',preview:null},health:null,scanMode:false,compReq:''};
+var state={content:null,saved:'',dirty:false,section:'event',sales:null,coupons:null,merch:null,leads:null,team:null,teamResult:null,salesFilter:'all',role:'owner',me:null,ann:null,annDraft:{audience:'tickets_all',subject:'',body:'',to:'',preview:null},qr:{mode:'pending',preview:null},health:null,scanMode:false,compReq:''};
 var $=function(s,r){return (r||document).querySelector(s);};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function getP(o,p){return p.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
@@ -1302,6 +1303,24 @@ function merchHtml(){
   else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Buyer</th><th>Items</th><th>Paid</th><th>Status</th><th></th></tr></thead><tbody>'+orders.map(function(o){var itemText=(o.items||[]).map(function(i){return (i.quantity||1)+' × '+i.name;}).join(', ');return '<tr><td>'+esc(timeShort(o.paid_at||o.created_at))+'</td><td><b>'+esc(o.name)+'</b><div class="small">'+esc(o.phone)+' · '+esc(o.email)+'</div></td><td>'+esc(itemText)+'</td><td>'+naira(o.amount)+'</td><td><span class="badge '+(o.status==='collected'?'used':o.status==='ready'?'ok':o.status==='paid'?'part':'warn')+'">'+esc(o.status)+'</span><div class="small"><code>'+esc(o.reference)+'</code></div></td><td>'+((o.status==='paid')?'<button class="btn btn-line sm" type="button" data-act="merch-ready" data-ref="'+esc(o.reference)+'">Mark ready</button>':(o.status==='ready'?'<button class="btn btn-red sm" type="button" data-act="merch-collected" data-ref="'+esc(o.reference)+'">Mark collected</button>':''))+'</td></tr>';}).join('')+'</tbody></table></div>';
   return h+'</section>';
 }
+function couponsHtml(){
+  if(!state.coupons)return '<div class="empty">Loading coupons…</div>';
+  var coupons=state.coupons.coupons||[],tickets=state.content.tickets||[];
+  var h='<div class="notice">Coupons set an exact final price per ticket. They are checked again on the server before payment, so a buyer cannot alter the discount in their browser.</div><section class="card"><div class="item-head"><h3>Coupons & discounts</h3><span><button class="btn btn-line sm" type="button" data-act="coupons-refresh">Refresh</button> <button class="btn btn-red sm" type="button" data-act="coupon-add">+ Add coupon</button></span></div>';
+  if(!coupons.length)return h+'<div class="empty">No coupons yet. Add one for a partner, campaign or special guest.</div></section>';
+  return h+'<div class="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Final price</th><th>Tickets</th><th>Status</th><th>Uses</th><th></th></tr></thead><tbody>'+coupons.map(function(c){var types=(c.ticket_types||[]).map(function(id){var t=tickets.filter(function(x){return x.id===id;})[0];return t?t.label:id;}).join(', ')||'All tickets';return '<tr><td><code>'+esc(c.code)+'</code></td><td>'+esc(c.name)+'</td><td>'+naira(c.final_price)+'</td><td style="min-width:160px">'+esc(types)+'</td><td>'+(c.active?'<span class="badge ok">Active</span>':'<span class="badge warn">Inactive</span>')+'</td><td>'+esc(c.uses||0)+'</td><td><button class="btn btn-line sm" type="button" data-act="coupon-edit" data-code="'+esc(c.code)+'">Edit</button> <button class="btn btn-ghost sm danger" type="button" data-act="coupon-delete" data-code="'+esc(c.code)+'">Delete</button></td></tr>';}).join('')+'</tbody></table></div></section>';
+}
+function loadCoupons(){state.coupons=null;render();api('coupon-list').then(function(data){state.coupons=data;render();}).catch(function(error){if(error.status===401)return showLogin();toast(error.message,true);});}
+function couponEditor(code){
+  var old=(state.coupons.coupons||[]).filter(function(c){return c.code===code;})[0]||{code:'',name:'',final_price:0,ticket_types:[],active:true};
+  var next={};next.code=prompt('Coupon code (letters, numbers, hyphens and underscores)',old.code);if(next.code===null)return;
+  next.name=prompt('Display name',old.name);if(next.name===null)return;
+  next.finalPrice=parseInt(prompt('Exact final price in naira. Use 0 for a complimentary ticket.',old.final_price),10);
+  var choices=(state.content.tickets||[]).map(function(ticket){return ticket.id+' ('+ticket.label+')';}).join(', ');
+  next.ticketTypes=String(prompt('Ticket IDs, separated by commas. Leave blank for all tickets. Available: '+choices,(old.ticket_types||[]).join(','))||'').split(',').map(function(value){return value.trim();}).filter(Boolean);
+  next.active=confirm('Activate this coupon now? Click Cancel to save it inactive.');
+  api('coupon-save',{body:next}).then(function(){toast('Coupon saved ✓');loadCoupons();}).catch(function(error){if(error.status===401)return showLogin();toast(error.message,true);});
+}
 function leadsHtml(){
   if(!state.leads)return '<div class="empty">Loading advertising leads…</div>';
   var leads=state.leads.leads||[],open=leads.filter(function(l){return l.status!=='closed';}).length;
@@ -1368,6 +1387,7 @@ function render(){
   var v=$('#view'),h='';
   if(sec.custom==='tickets')h=ticketsHtml();
   else if(sec.custom==='sales')h=salesHtml();
+  else if(sec.custom==='coupons')h=couponsHtml();
   else if(sec.custom==='merch')h=merchHtml();
   else if(sec.custom==='leads')h=leadsHtml();
   else if(sec.custom==='team')h=teamHtml();
@@ -1386,6 +1406,10 @@ function handleAct(t){
   var a=t.dataset.act,ref=t.dataset.ref;
   if(a==='gate'){gateModal(ref);return;}
   if(a==='merch-refresh'){loadMerch();return;}
+  if(a==='coupons-refresh'){loadCoupons();return;}
+  if(a==='coupon-add'){couponEditor('');return;}
+  if(a==='coupon-edit'){couponEditor(t.dataset.code);return;}
+  if(a==='coupon-delete'){if(!confirm('Delete coupon '+t.dataset.code+'? Existing sales will keep their recorded discount.'))return;api('coupon-delete',{body:{code:t.dataset.code}}).then(function(){toast('Coupon deleted');loadCoupons();}).catch(function(error){if(error.status===401)return showLogin();toast(error.message,true);});return;}
   if(a==='merch-add'){productEditor('');return;}
   if(a==='merch-edit'){productEditor(t.dataset.id);return;}
   if(a==='merch-disable'){if(!confirm('Hide this product from the store?'))return;api('merch-product-disable',{body:{id:t.dataset.id}}).then(function(){toast('Product hidden');loadMerch();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});return;}
@@ -1450,7 +1474,7 @@ document.addEventListener('click',function(e){
   if(t.id==='menuBtn'){openNavDrawer();return;}
   if(t.id==='closeNavBtn'||t.id==='navBackdrop'){closeNavDrawer();return;}
   if(t.dataset.act){handleAct(t);return;}
-  if(t.dataset.sec){closeNavDrawer();state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='merch')loadMerch();else if(t.dataset.sec==='leads')loadLeads();else if(t.dataset.sec==='team')loadTeam();else if(t.dataset.sec==='announce')loadAnnounce();else if(t.dataset.sec==='security')loadSecurity();else render();window.scrollTo(0,0);return;}
+  if(t.dataset.sec){closeNavDrawer();state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='coupons')loadCoupons();else if(t.dataset.sec==='merch')loadMerch();else if(t.dataset.sec==='leads')loadLeads();else if(t.dataset.sec==='team')loadTeam();else if(t.dataset.sec==='announce')loadAnnounce();else if(t.dataset.sec==='security')loadSecurity();else render();window.scrollTo(0,0);return;}
   if(t.dataset.add){
     var L=listSpec(t.dataset.add),arr=getP(state.content,t.dataset.add),item=L.strings?'':clone(L.blank);
     if(item&&typeof item==='object'&&'id' in item)item.id=newId();
