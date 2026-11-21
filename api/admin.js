@@ -363,6 +363,9 @@ export default async function handler(req, res) {
           ['Table reservations is reachable (ticket holds)', '/rest/v1/reservations?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table waitlist is reachable', '/rest/v1/waitlist?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table announcements is reachable', '/rest/v1/announcements?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
+          ['Table merch_products is reachable', '/rest/v1/merch_products?select=id&limit=1', 'Run supabase/commerce.sql in the SQL Editor.'],
+          ['Table merch_orders is reachable', '/rest/v1/merch_orders?select=reference&limit=1', 'Run supabase/commerce.sql in the SQL Editor.'],
+          ['Table advertising_leads is reachable', '/rest/v1/advertising_leads?select=id&limit=1', 'Run supabase/commerce.sql in the SQL Editor.'],
           ['Storage bucket "' + MEDIA_BUCKET + '" exists and is public', '/storage/v1/bucket/' + MEDIA_BUCKET, 'Run supabase/setup.sql, or create a public bucket with this name.']
         ];
         for (const [name, path, hint] of tests) {
@@ -448,6 +451,53 @@ export default async function handler(req, res) {
       /* role is included so an open dashboard notices a role change without a reload */
       const capacityTotal = Number(((await getContent()).ticketing || {}).capacityTotal) || 0;
       return res.status(200).json({ sales, configured: true, role, capacityTotal });
+    }
+
+    if (action === 'merch-products' && req.method === 'GET') {
+      const products = (await sb('/rest/v1/merch_products?select=*&order=created_at.asc')) || [];
+      return res.status(200).json({ products });
+    }
+    if (action === 'merch-orders' && req.method === 'GET') {
+      const orders = (await sb('/rest/v1/merch_orders?select=*&order=created_at.desc&limit=1000')) || [];
+      return res.status(200).json({ orders });
+    }
+    if (action === 'merch-product-save' && req.method === 'POST') {
+      const body = await readBody(req), product = body.product || {};
+      const id = String(product.id || '').trim().toLowerCase();
+      const name = String(product.name || '').trim().slice(0, 100);
+      const description = String(product.description || '').trim().slice(0, 500);
+      const category = String(product.category || '').trim().slice(0, 60) || 'Other';
+      const image = String(product.image || '').trim().slice(0, 1000);
+      const price = Number(product.price), stock = Number(product.stock);
+      if (!/^[a-z0-9][a-z0-9_-]{1,59}$/.test(id) || !name || !Number.isInteger(price) || price < 100 || !Number.isInteger(stock) || stock < 0) return res.status(400).json({ message: 'Every product needs a valid ID, name, whole-naira price of at least ₦100 and non-negative stock.' });
+      const rows = await sb('/rest/v1/merch_products?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: { id, name, description, category, image, price, stock, active: Boolean(product.active), updated_at: new Date().toISOString() } });
+      await sec.audit(req, who.name, role, 'merch_product_saved', id + ' · ' + name);
+      return res.status(200).json({ product: rows && rows[0] });
+    }
+    if (action === 'merch-product-disable' && req.method === 'POST') {
+      const body = await readBody(req), id = String(body.id || '').trim();
+      await sb('/rest/v1/merch_products?id=eq.' + encodeURIComponent(id), { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: { active: false, updated_at: new Date().toISOString() } });
+      await sec.audit(req, who.name, role, 'merch_product_disabled', id);
+      return res.status(200).json({ ok: true });
+    }
+    if (action === 'merch-order-status' && req.method === 'POST') {
+      const body = await readBody(req), reference = String(body.reference || '').trim(), status = String(body.status || '');
+      if (!['ready', 'collected'].includes(status)) return res.status(400).json({ message: 'Orders can only be marked ready or collected here. Paid status is set by Paystack.' });
+      const patch = status === 'collected' ? { status, collected_at: new Date().toISOString() } : { status };
+      await sb('/rest/v1/merch_orders?reference=eq.' + encodeURIComponent(reference) + '&status=in.(paid,ready)', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: patch });
+      await sec.audit(req, who.name, role, 'merch_order_' + status, reference);
+      return res.status(200).json({ ok: true });
+    }
+    if (action === 'advertising-leads' && req.method === 'GET') {
+      const leads = (await sb('/rest/v1/advertising_leads?select=*&order=created_at.desc&limit=1000')) || [];
+      return res.status(200).json({ leads });
+    }
+    if (action === 'advertising-lead-status' && req.method === 'POST') {
+      const body = await readBody(req), id = Number(body.id), status = String(body.status || '');
+      if (!Number.isInteger(id) || !['new', 'contacted', 'closed'].includes(status)) return res.status(400).json({ message: 'Choose a valid lead status.' });
+      await sb('/rest/v1/advertising_leads?id=eq.' + id, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: { status } });
+      await sec.audit(req, who.name, role, 'advertising_lead_' + status, String(id));
+      return res.status(200).json({ ok: true });
     }
 
     /* ---- security page (main admin only) ---- */
