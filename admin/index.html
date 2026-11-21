@@ -1279,25 +1279,26 @@ function secCall(btn,label,action,body,done){
 
 /* ---------- team (main admin only) ---------- */
 function teamHtml(){
+  var fallbackRoles={sales:{label:'Customer support',blurb:'Ticket support without payment amounts.'},tickets:{label:'Ticket in charge',blurb:'Ticket support and check-in without payment amounts.'},gate:{label:'Gate team',blurb:'Scan and admit attendees only.'},content:{label:'Content editor',blurb:'Edit public pages and media.'},merch:{label:'Merch & pickup',blurb:'Products, stock and pickup orders.'},communications:{label:'Communications',blurb:'Announcements, waitlist and feedback.'},insights:{label:'Insights',blurb:'Non-financial statistics only.'}},d=state.team||{roles:fallbackRoles,members:[]},roles=d.roles||fallbackRoles;
+  var roleOptions=function(selected){return Object.keys(roles).map(function(key){var role=roles[key];return '<option value="'+esc(key)+'"'+(key===selected?' selected':'')+'>'+esc(role.label)+(role.blurb?' — '+esc(role.blurb):'')+'</option>';}).join('');};
   var h='<div class="notice">You are the only main admin. Team members can only do what their role allows, and you can remove them at any time. Removing someone, or changing their role, takes effect immediately.</div>';
   h+='<section class="card"><h3>Invite a team member</h3><p class="help">They receive an email with a link to choose their own password.</p>'+
     '<div class="grid two"><div class="field"><label for="tmName">Name</label><input type="text" id="tmName" maxlength="80" placeholder="e.g. Ada Obi"></div>'+
     '<div class="field"><label for="tmEmail">Email</label><input type="email" id="tmEmail" placeholder="name@example.com"></div>'+
-    '<div class="field full"><label for="tmRole">Role</label><select id="tmRole"><option value="tickets">Ticket in charge — sees every buyer and checks people in at the gate</option><option value="sales">Sales — sees every buyer, view only</option></select>'+
-    '<p class="help">Neither role can edit tickets, prices or the website, upload files, or invite anyone.</p></div></div>'+
+    '<div class="field full"><label for="tmRole">Role</label><select id="tmRole">'+roleOptions('tickets')+'</select>'+
+    '<p class="help">Only the main admin can see payment amounts, revenue or finance exports. Every team role is restricted to the work described above.</p></div></div>'+
     '<p style="margin:14px 0 0"><button class="btn btn-red" type="button" id="tmInvite" data-act="invite">Send invite</button></p>';
   var r=state.teamResult;
   if(r)h+='<div class="notice" style="margin:14px 0 0">'+(r.emailSent?'✅ Invite emailed.':'⚠ The email could not be sent ('+esc(r.emailError||'unknown error')+'). Copy the link below and send it to them yourself.')+
     '<div class="linkbox"><input type="text" id="tmLink" readonly value="'+esc(r.link)+'"><button class="btn btn-line sm" type="button" data-act="copylink">Copy</button></div>'+
     '<div class="small">This link works once and expires in 72 hours. It cannot be shown again, but you can send a fresh one any time.</div></div>';
   h+='</section><section class="card"><h3>Your team</h3>';
-  var d=state.team;
-  if(!d)h+='<div class="empty">Loading…</div>';
+  if(!state.team)h+='<div class="empty">Loading…</div>';
   else if(!d.members.length)h+='<div class="empty">Nobody yet. Invite your first team member above.</div>';
   else h+='<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last login</th><th></th></tr></thead><tbody>'+d.members.map(function(m){
     var act=m.status==='active';
     return '<tr><td>'+esc(m.name||'—')+'</td><td>'+esc(m.email)+'</td>'+
-      '<td><select data-teamrole="'+esc(m.id)+'" aria-label="Role for '+esc(m.email)+'" style="min-width:150px"><option value="tickets"'+(m.role==='tickets'?' selected':'')+'>Ticket in charge</option><option value="sales"'+(m.role==='sales'?' selected':'')+'>Sales</option></select></td>'+
+      '<td><select data-teamrole="'+esc(m.id)+'" aria-label="Role for '+esc(m.email)+'" style="min-width:220px">'+roleOptions(m.role)+'</select></td>'+
       '<td>'+(act?'<span class="badge ok">Active</span>':'<span class="badge warn">Invite pending</span>'+(m.invite_expires_at?'<div class="small">expires '+esc(timeShort(m.invite_expires_at))+'</div>':''))+'</td>'+
       '<td>'+esc(m.last_login_at?timeShort(m.last_login_at):'—')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn btn-line sm" type="button" data-act="resend" data-id="'+esc(m.id)+'">'+(act?'Send reset link':'Resend invite')+'</button> <button class="btn btn-ghost sm danger" type="button" data-act="remove" data-id="'+esc(m.id)+'" data-name="'+esc(m.name||m.email)+'">Remove</button></td></tr>';
