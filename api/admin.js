@@ -27,7 +27,12 @@ import {
 const PERMS = {
   owner: null, /* null = everything */
   tickets: new Set(['me', 'sales', 'checkin', 'checkin-log', 'ticket-scan', 'ticket-resend']),
-  sales: new Set(['me', 'sales', 'checkin-log'])
+  sales: new Set(['me', 'sales', 'checkin-log', 'ticket-resend']),
+  gate: new Set(['me', 'sales', 'checkin', 'checkin-log', 'ticket-scan']),
+  content: new Set(['me', 'content', 'save', 'sign-upload']),
+  merch: new Set(['me', 'merch-products', 'merch-orders', 'merch-product-save', 'merch-product-disable', 'merch-order-status', 'merch-pickup-scan']),
+  communications: new Set(['me', 'announce-list', 'announce-preview', 'announce-test', 'announce-create', 'announce-send', 'waitlist-list', 'waitlist-remove', 'feedback-list', 'feedback-send']),
+  insights: new Set(['me', 'reports', 'feedback-list'])
 };
 function allowed(role, action) {
   const p = PERMS[role];
@@ -36,6 +41,13 @@ function allowed(role, action) {
 
 
 const naira = (n) => '₦' + Number(n || 0).toLocaleString('en-NG');
+const hideMoney = (row) => {
+  const safe = { ...row };
+  delete safe.amount;
+  delete safe.unit_price;
+  delete safe.original_total;
+  return safe;
+};
 
 /* The buyer's name as Paystack knows it. */
 function buyerName(tx) {
@@ -452,7 +464,7 @@ export default async function handler(req, res) {
       const sales = await listSales();
       /* role is included so an open dashboard notices a role change without a reload */
       const capacityTotal = Number(((await getContent()).ticketing || {}).capacityTotal) || 0;
-      return res.status(200).json({ sales, configured: true, role, capacityTotal });
+      return res.status(200).json({ sales: role === 'owner' ? sales : sales.map(hideMoney), configured: true, role, capacityTotal, financial: role === 'owner' });
     }
 
     if (action === 'reports' && req.method === 'GET') {
@@ -463,7 +475,7 @@ export default async function handler(req, res) {
       const couponUse = sales.reduce((out, sale) => { const key = sale.coupon_code || 'No coupon'; out[key] = (out[key] || 0) + 1; return out; }, {});
       const products = {};
       orders.forEach((order) => (order.items || []).forEach((item) => { const key = item.name || item.id || 'Product'; products[key] = (products[key] || 0) + Number(item.quantity || 0); }));
-      return res.status(200).json({ ticketRevenue, merchRevenue, ticketOrders: sales.length, merchOrders: orders.length, coupons: Object.entries(couponUse).map(([name, uses]) => ({ name, uses })).sort((a, b) => b.uses - a.uses), products: Object.entries(products).map(([name, quantity]) => ({ name, quantity })).sort((a, b) => b.quantity - a.quantity) });
+      return res.status(200).json({ financial: role === 'owner', ...(role === 'owner' ? { ticketRevenue, merchRevenue } : {}), ticketOrders: sales.length, merchOrders: orders.length, coupons: Object.entries(couponUse).map(([name, uses]) => ({ name, uses })).sort((a, b) => b.uses - a.uses), products: Object.entries(products).map(([name, quantity]) => ({ name, quantity })).sort((a, b) => b.quantity - a.quantity) });
     }
     if (action === 'feedback-list' && req.method === 'GET') {
       const feedback = (await sb('/rest/v1/attendee_feedback?select=reference,rating,favourite,improvements,recommend,submitted_at,created_at&order=submitted_at.desc&limit=1000')) || [];
@@ -501,7 +513,7 @@ export default async function handler(req, res) {
     }
     if (action === 'merch-orders' && req.method === 'GET') {
       const orders = (await sb('/rest/v1/merch_orders?select=*&order=created_at.desc&limit=1000')) || [];
-      return res.status(200).json({ orders });
+      return res.status(200).json({ orders: role === 'owner' ? orders : orders.map(hideMoney), financial: role === 'owner' });
     }
     if (action === 'merch-product-save' && req.method === 'POST') {
       const body = await readBody(req), product = body.product || {};
@@ -551,7 +563,8 @@ export default async function handler(req, res) {
       if (!['paid', 'ready'].includes(order.status)) return res.status(409).json({ message: 'This order is not paid yet.', order });
       const updated = await sb('/rest/v1/merch_orders?reference=eq.' + encodeURIComponent(order.reference) + '&status=in.(paid,ready)', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: { status: 'collected', collected_at: new Date().toISOString(), picked_up_by: who.name } });
       await sec.audit(req, who.name, role, 'merch_order_collected', order.reference + ' · QR pickup');
-      return res.status(200).json({ ok: true, order: (updated && updated[0]) || order });
+      const collected = (updated && updated[0]) || order;
+      return res.status(200).json({ ok: true, order: role === 'owner' ? collected : hideMoney(collected) });
     }
     if (action === 'coupon-list' && req.method === 'GET') {
       const coupons = (await sb('/rest/v1/ticket_coupons?select=*&order=created_at.desc&limit=1000')) || [];
@@ -1070,7 +1083,7 @@ export default async function handler(req, res) {
       if (!scanned) return res.status(400).json({ message: 'That QR code is not a Game Tribe ticket.' });
       const found = await gate.getSale(scanned);
       if (!found) return res.status(404).json({ message: 'That ticket is not in the system.' });
-      return res.status(200).json({ sale: found });
+      return res.status(200).json({ sale: role === 'owner' ? found : hideMoney(found) });
     }
 
     /* ---- gate check-in ---- */
@@ -1086,7 +1099,7 @@ export default async function handler(req, res) {
         : await gate.undo(reference, n, who.name, role);
       if (result.ok) {
         if (action === 'checkin-undo') await sec.audit(req, who.name, role, 'checkin_undone', reference + ' · removed ' + n);
-        return res.status(200).json({ ok: true, sale: result.sale });
+        return res.status(200).json({ ok: true, sale: role === 'owner' ? result.sale : hideMoney(result.sale) });
       }
 
       const sale = result.sale;
@@ -1099,15 +1112,15 @@ export default async function handler(req, res) {
           message: done >= total
             ? 'ALREADY USED. All ' + total + ' ' + (total === 1 ? 'person has' : 'people have') + ' already been let in.' + last
             : 'Only ' + (total - done) + ' of ' + total + ' can still be let in (' + done + ' already in).' + last,
-          sale
+          sale: role === 'owner' ? sale : hideMoney(sale)
         });
       }
       if (result.error === 'nothing_to_undo') {
-        return res.status(409).json({ message: 'Only ' + (Number(sale.admitted_count) || 0) + ' have been let in, so that many cannot be removed.', sale });
+        return res.status(409).json({ message: 'Only ' + (Number(sale.admitted_count) || 0) + ' have been let in, so that many cannot be removed.', sale: role === 'owner' ? sale : hideMoney(sale) });
       }
       return res.status(409).json({
         message: 'Another gate device updated this ticket at the same moment. Check the new count and try again.',
-        sale
+        sale: role === 'owner' ? sale : hideMoney(sale)
       });
     }
 

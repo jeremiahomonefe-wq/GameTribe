@@ -17,12 +17,32 @@ export const INVITE_HOURS = 72;
 
 export const ROLES = {
   sales: {
-    label: 'Sales',
-    blurb: 'Can see everyone who bought tickets. Cannot change anything.'
+    label: 'Customer support',
+    blurb: 'Can find ticket holders and resend tickets. Payment amounts are hidden.'
   },
   tickets: {
     label: 'Ticket in charge',
-    blurb: 'Can see everyone who bought tickets and check people in at the gate. Cannot edit tickets, prices or the website.'
+    blurb: 'Can find ticket holders and check people in at the gate. Payment amounts are hidden.'
+  },
+  gate: {
+    label: 'Gate team',
+    blurb: 'Can scan and check in ticket holders at the entrance. Payment amounts are hidden.'
+  },
+  content: {
+    label: 'Content editor',
+    blurb: 'Can update public website wording, images and media. Cannot access sales or money.'
+  },
+  merch: {
+    label: 'Merch & pickup',
+    blurb: 'Can manage products, stock and festival pickup. Order payment amounts are hidden.'
+  },
+  communications: {
+    label: 'Communications',
+    blurb: 'Can manage announcements, waitlist updates and feedback requests. Cannot access money.'
+  },
+  insights: {
+    label: 'Insights',
+    blurb: 'Can view attendee and product statistics, without payment amounts or revenue.'
   }
 };
 

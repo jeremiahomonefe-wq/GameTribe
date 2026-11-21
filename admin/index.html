@@ -683,14 +683,18 @@ function ticketsHtml(){
 }
 
 /* ---------- roles ---------- */
-var ROLE_SECTIONS={sales:['sales'],tickets:['sales']};
+var ROLE_SECTIONS={
+  sales:['sales'],tickets:['sales'],gate:['sales'],
+  content:SECTIONS.filter(function(s){return !s.custom;}).map(function(s){return s.id;}),
+  merch:['merch'],communications:['announce','feedback','leads'],insights:['reports','feedback']
+};
 function visibleSections(){
   if(state.role==='owner')return SECTIONS;
   var ids=ROLE_SECTIONS[state.role]||['sales'];
   return SECTIONS.filter(function(x){return ids.indexOf(x.id)>-1;});
 }
-function roleLabel(r){return r==='tickets'?'Ticket in charge':(r==='sales'?'Sales':(r==='owner'?'Main admin':String(r||'')));}
-function canCheckin(){return state.role==='owner'||state.role==='tickets';}
+function roleLabel(r){var labels={sales:'Customer support',tickets:'Ticket in charge',gate:'Gate team',content:'Content editor',merch:'Merch & pickup',communications:'Communications',insights:'Insights',owner:'Main admin'};return labels[r]||String(r||'');}
+function canCheckin(){return state.role==='owner'||state.role==='tickets'||state.role==='gate';}
 
 /* ---------- modal ---------- */
 function openModal(html,cls){$('#modalHost').innerHTML='<div class="modal-back"><div class="modal'+(cls?' '+cls:'')+'" role="dialog" aria-modal="true">'+html+'</div></div>';}
@@ -721,7 +725,7 @@ function admitBadge(r){
   return '<span class="badge none">Not yet · 0/'+t+'</span>';
 }
 function salesTopHtml(){
-  var rows=state.sales.sales||[],total=0,qty=0,orders=0,free=0,people=0,inside=0,notSent=0,by={};
+  var rows=state.sales.sales||[],total=0,qty=0,orders=0,free=0,people=0,inside=0,notSent=0,by={},financial=Boolean(state.sales.financial);
   rows.forEach(function(r){
     var isFree=r.source==='complimentary';
     total+=Number(r.amount||0);people+=saleTotal(r);inside+=saleAdmitted(r);
@@ -734,7 +738,7 @@ function salesTopHtml(){
     '<div class="kpi"><b>'+free+'</b><span>Free passes (people)</span></div>'+
     '<div class="kpi"><b'+(cap&&people>cap?' style="color:var(--red)"':'')+'>'+people+(cap?' / '+cap:'')+'</b><span>People covered'+(cap?' (capacity)':'')+'</span></div>'+
     '<div class="kpi"><b style="color:var(--ok)">'+inside+' / '+people+'</b><span>Checked in at the gate</span></div><div class="kpi"><b>'+orders+'</b><span>Paid orders</span></div>'+
-    '<div class="kpi"><b>'+naira(total)+'</b><span>Total paid</span></div>'+
+    (financial?'<div class="kpi"><b>'+naira(total)+'</b><span>Total paid</span></div>':'')+
     '<div class="kpi"><b style="'+(notSent?'':'color:var(--ok)')+'">'+notSent+'</b><span>Emails not sent</span></div></div>';
   var bk=Object.keys(by);
   if(bk.length)h+='<section class="card"><h3>By ticket type</h3><div class="grid two">'+bk.map(function(k){return '<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0"><span>'+esc(k)+'</span><b>'+by[k]+'</b></div>';}).join('')+'</div></section>';
@@ -745,24 +749,24 @@ function salesHtml(){
   if(!d)return '<div class="empty">Loading sales…</div>';
   if(d.configured===false)return '<div class="notice">Supabase is not connected yet, so sales cannot be listed. Follow step 2 in the README, then reload.</div>';
   var h='';
-  if(state.role!=='owner')h+='<div class="notice">'+(canCheckin()?'You can see everyone who bought a ticket and check people in at the gate. You cannot change tickets or prices.':'You can see everyone who bought a ticket. This view is read-only.')+'</div>';
+  if(state.role!=='owner')h+='<div class="notice">Payment amounts and revenue are hidden from team accounts. '+(canCheckin()?'You can check ticket holders in at the gate.':'You can use this view for attendee support only.')+'</div>';
   h+='<div id="salesTop">'+salesTopHtml()+'</div>';
   h+='<div class="toolbar"><input type="search" id="salesSearch" placeholder="Search name, phone, reference or ticket no."'+(canCheckin()?' autocomplete="off"':'')+'>'+
     '<select id="salesFilter" style="max-width:210px" aria-label="Filter by check-in"><option value="all">Everyone</option><option value="none">Not yet checked in</option><option value="part">Partly checked in</option><option value="full">Fully used</option></select>'+
     '<button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button>'+(canCheckin()?'<button class="btn btn-red sm" type="button" data-act="scan-open"><span data-gt-icon="camera"></span> Scan ticket</button>':'')+(state.role==='owner'?'<button class="btn btn-ink sm" type="button" data-act="comp-open">+ Free ticket</button><button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button><button class="btn btn-red sm" type="button" data-act="rc-open">Check against Paystack</button>':'')+'</div>';
   if(canCheckin())h+='<p class="help" style="margin:-4px 0 12px;font-size:13px;color:var(--muted)">At the gate: type or paste the buyer’s reference or ticket number, press Enter, then admit them. A ticket that is already used cannot be admitted again.</p>';
-  h+='<div class="table-wrap"><table><thead><tr><th>Gate</th><th>Date</th><th>Name</th><th>Phone</th><th>Ticket</th><th>Qty</th><th>People</th><th>Ticket no.</th><th>Paid</th><th>Email</th><th>Contact</th></tr></thead><tbody id="salesBody"></tbody></table></div>';
+  h+='<div class="table-wrap"><table><thead><tr><th>Gate</th><th>Date</th><th>Name</th><th>Phone</th><th>Ticket</th><th>Qty</th><th>People</th><th>Ticket no.</th>'+(d.financial?'<th>Paid</th>':'')+'<th>Email</th><th>Contact</th></tr></thead><tbody id="salesBody"></tbody></table></div>';
   return h;
 }
 function salesRows(q){
-  var f=state.salesFilter||'all',can=canCheckin();
+  var f=state.salesFilter||'all',can=canCheckin(),financial=Boolean(state.sales.financial);
   var rows=(state.sales.sales||[]).filter(function(r){return saleMatches(r,q)&&(f==='all'||saleStatus(r)===f);});
-  if(!rows.length)return '<tr><td colspan="11"><div class="empty">'+((q||f!=='all')?'Nobody matches that.':'No tickets yet.')+'</div></td></tr>';
+  if(!rows.length)return '<tr><td colspan="'+(financial?11:10)+'"><div class="empty">'+((q||f!=='all')?'Nobody matches that.':'No tickets yet.')+'</div></td></tr>';
   return rows.map(function(r){
     var dt=new Date(r.paid_at||r.created_at),st=saleStatus(r);
     var gate='<div style="white-space:nowrap">'+admitBadge(r)+(can?' <button type="button" class="btn sm '+(st==='full'?'btn-line':'btn-red')+'" data-act="gate" data-ref="'+esc(r.reference)+'">'+(st==='full'?'View':'Check in')+'</button>':'')+'</div>'+
       (r.checked_in_at?'<div class="small">'+esc(timeShort(r.checked_in_at))+(r.checked_in_by?' · '+esc(r.checked_in_by):'')+'</div>':'');
-    return '<tr'+(st==='full'?' class="row-used"':'')+'><td>'+gate+'</td><td>'+esc(isNaN(dt)?'':dt.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.phone)+'</td><td>'+esc(r.ticket_label||r.ticket_type)+(r.source==='complimentary'?' <span class="badge part">Free</span>':'')+'</td><td>'+esc(r.quantity||1)+'</td><td>'+saleTotal(r)+'</td><td><code>'+esc(r.ticket_number)+'</code></td><td>'+(r.source==='complimentary'?'Free':naira(r.amount))+'</td><td>'+(!r.email?'—':(r.email_sent?'<span class="badge ok">Sent</span>':'<span class="badge warn">Not sent</span>'))+'</td><td>'+esc(r.email)+'</td></tr>';
+    return '<tr'+(st==='full'?' class="row-used"':'')+'><td>'+gate+'</td><td>'+esc(isNaN(dt)?'':dt.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.phone)+'</td><td>'+esc(r.ticket_label||r.ticket_type)+(r.source==='complimentary'?' <span class="badge part">Free</span>':'')+'</td><td>'+esc(r.quantity||1)+'</td><td>'+saleTotal(r)+'</td><td><code>'+esc(r.ticket_number)+'</code></td>'+(financial?'<td>'+(r.source==='complimentary'?'Free':naira(r.amount))+'</td>':'')+'<td>'+(!r.email?'—':(r.email_sent?'<span class="badge ok">Sent</span>':'<span class="badge warn">Not sent</span>'))+'</td><td>'+esc(r.email)+'</td></tr>';
   }).join('');
 }
 function refreshSalesView(){
@@ -1309,15 +1313,15 @@ function loadTeam(keepResult){
 /* ---------- merch and advertising leads ---------- */
 function merchHtml(){
   if(!state.merch)return '<div class="empty">Loading merch…</div>';
-  var products=state.merch.products||[],orders=state.merch.orders||[],stock=products.reduce(function(n,p){var v=p.variants||[];return n+(v.length?v.reduce(function(x,a){return x+Number(a.stock||0);},0):Number(p.stock||0));},0),paid=orders.filter(function(o){return ['paid','ready','collected'].indexOf(o.status)>-1;}),revenue=paid.reduce(function(n,o){return n+Number(o.amount||0);},0);
+  var products=state.merch.products||[],orders=state.merch.orders||[],financial=Boolean(state.merch.financial),stock=products.reduce(function(n,p){var v=p.variants||[];return n+(v.length?v.reduce(function(x,a){return x+Number(a.stock||0);},0):Number(p.stock||0));},0),paid=orders.filter(function(o){return ['paid','ready','collected'].indexOf(o.status)>-1;}),revenue=paid.reduce(function(n,o){return n+Number(o.amount||0);},0);
   var h='<div class="notice">Products that are <b>on sale</b> appear on the public Merch page. Buyers pay with Paystack, then collect at the festival. Changing stock live controls what can be bought.</div>'+
-    '<div class="kpis"><div class="kpi"><b>'+products.filter(function(p){return p.active;}).length+'</b><span>Products on sale</span></div><div class="kpi"><b>'+stock+'</b><span>Items in stock</span></div><div class="kpi"><b>'+paid.length+'</b><span>Paid orders</span></div><div class="kpi"><b>'+naira(revenue)+'</b><span>Merch revenue</span></div></div>'+
+    '<div class="kpis"><div class="kpi"><b>'+products.filter(function(p){return p.active;}).length+'</b><span>Products on sale</span></div><div class="kpi"><b>'+stock+'</b><span>Items in stock</span></div><div class="kpi"><b>'+paid.length+'</b><span>Paid orders</span></div>'+(financial?'<div class="kpi"><b>'+naira(revenue)+'</b><span>Merch revenue</span></div>':'')+'</div>'+
     '<section class="card"><div class="item-head"><h3>Products</h3><span><button class="btn btn-line sm" type="button" data-act="merch-refresh">Refresh</button> <button class="btn btn-red sm" type="button" data-act="merch-add">+ Add product</button></span></div>';
   if(!products.length)h+='<div class="empty">No products yet. Add your first product to start selling.</div>';
   else h+='<div class="table-wrap"><table><thead><tr><th>Product</th><th>Colours / sizes</th><th>Batch ID</th><th>Price</th><th>Stock</th><th>Store</th><th></th></tr></thead><tbody>'+products.map(function(p){var v=p.variants||[],desc=v.length?v.map(function(x){return x.colour+' '+x.size+' ('+x.stock+')';}).join(', '):(p.colours||[]).join(', ')||'—',qty=v.length?v.reduce(function(n,x){return n+Number(x.stock||0);},0):p.stock;return '<tr><td><b>'+esc(p.name)+'</b><div class="small">'+esc(p.id)+'</div></td><td>'+esc(desc)+'</td><td><code>'+esc(p.batch_id||'—')+'</code></td><td>'+naira(p.price)+'</td><td>'+esc(qty)+'</td><td>'+(p.active?'<span class="badge ok">On sale</span>':'<span class="badge warn">Hidden</span>')+'</td><td><button class="btn btn-line sm" type="button" data-act="merch-edit" data-id="'+esc(p.id)+'">Edit</button> '+(p.active?'<button class="btn btn-ghost sm danger" type="button" data-act="merch-disable" data-id="'+esc(p.id)+'">Hide</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>';
   h+='</section><section class="card"><div class="item-head"><h3>Festival pickup orders</h3><span><button class="btn btn-line sm" type="button" data-act="merch-pickup">Scan pickup</button> <button class="btn btn-line sm" type="button" data-act="merch-refresh">Refresh</button></span></div>';
   if(!orders.length)h+='<div class="empty">No merch orders yet.</div>';
-  else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Buyer</th><th>Items</th><th>Paid</th><th>Status</th><th></th></tr></thead><tbody>'+orders.map(function(o){var itemText=(o.items||[]).map(function(i){return (i.quantity||1)+' × '+i.name+(i.colour?' · '+i.colour:'')+(i.size?' · '+i.size:'');}).join(', ');return '<tr><td>'+esc(timeShort(o.paid_at||o.created_at))+'</td><td><b>'+esc(o.name)+'</b><div class="small">'+esc(o.phone)+' · '+esc(o.email)+'</div></td><td>'+esc(itemText)+'</td><td>'+naira(o.amount)+'</td><td><span class="badge '+(o.status==='collected'?'used':o.status==='ready'?'ok':o.status==='paid'?'part':'warn')+'">'+esc(o.status)+'</span><div class="small"><code>'+esc(o.pickup_code||o.reference)+'</code></div></td><td>'+((o.status==='paid')?'<button class="btn btn-line sm" type="button" data-act="merch-ready" data-ref="'+esc(o.reference)+'">Mark ready</button>':(o.status==='ready'?'<button class="btn btn-red sm" type="button" data-act="merch-collected" data-ref="'+esc(o.reference)+'">Mark collected</button>':''))+'</td></tr>';}).join('')+'</tbody></table></div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Buyer</th><th>Items</th>'+(financial?'<th>Paid</th>':'')+'<th>Status</th><th></th></tr></thead><tbody>'+orders.map(function(o){var itemText=(o.items||[]).map(function(i){return (i.quantity||1)+' × '+i.name+(i.colour?' · '+i.colour:'')+(i.size?' · '+i.size:'');}).join(', ');return '<tr><td>'+esc(timeShort(o.paid_at||o.created_at))+'</td><td><b>'+esc(o.name)+'</b><div class="small">'+esc(o.phone)+' · '+esc(o.email)+'</div></td><td>'+esc(itemText)+'</td>'+(financial?'<td>'+naira(o.amount)+'</td>':'')+'<td><span class="badge '+(o.status==='collected'?'used':o.status==='ready'?'ok':o.status==='paid'?'part':'warn')+'">'+esc(o.status)+'</span><div class="small"><code>'+esc(o.pickup_code||o.reference)+'</code></div></td><td>'+((o.status==='paid')?'<button class="btn btn-line sm" type="button" data-act="merch-ready" data-ref="'+esc(o.reference)+'">Mark ready</button>':(o.status==='ready'?'<button class="btn btn-red sm" type="button" data-act="merch-collected" data-ref="'+esc(o.reference)+'">Mark collected</button>':''))+'</td></tr>';}).join('')+'</tbody></table></div>';
   return h+'</section>';
 }
 function couponsHtml(){
@@ -1330,13 +1334,13 @@ function couponsHtml(){
 function loadCoupons(){state.coupons=null;render();api('coupon-list').then(function(data){state.coupons=data;render();}).catch(function(error){if(error.status===401)return showLogin();toast(error.message,true);});}
 function reportsHtml(){
   if(!state.reports)return '<div class="empty">Loading reports…</div>';
-  var d=state.reports,all=Number(d.ticketRevenue||0)+Number(d.merchRevenue||0),list=function(rows,key,label){return rows&&rows.length?'<div class="table-wrap"><table><thead><tr><th>'+label+'</th><th>Total</th></tr></thead><tbody>'+rows.slice(0,10).map(function(row){return '<tr><td>'+esc(row.name)+'</td><td>'+esc(row[key])+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No data yet.</div>';};
-  return '<div class="notice">Live totals from paid ticket and merch orders. Export or accounting reconciliation can continue to use the Sales and Merch lists.</div><div class="kpis"><div class="kpi"><b>'+naira(all)+'</b><span>Total sales</span></div><div class="kpi"><b>'+naira(d.ticketRevenue)+'</b><span>Ticket revenue</span></div><div class="kpi"><b>'+naira(d.merchRevenue)+'</b><span>Merch revenue</span></div><div class="kpi"><b>'+esc(d.ticketOrders)+'</b><span>Ticket orders</span></div><div class="kpi"><b>'+esc(d.merchOrders)+'</b><span>Merch orders</span></div></div><section class="card"><div class="item-head"><h3>Coupon performance</h3><button class="btn btn-line sm" type="button" data-act="reports-refresh">Refresh</button></div>'+list(d.coupons,'uses','Coupon')+'</section><section class="card"><h3>Best-selling merch</h3>'+list(d.products,'quantity','Product')+'</section>';
+  var d=state.reports,financial=Boolean(d.financial),all=Number(d.ticketRevenue||0)+Number(d.merchRevenue||0),list=function(rows,key,label){return rows&&rows.length?'<div class="table-wrap"><table><thead><tr><th>'+label+'</th><th>Total</th></tr></thead><tbody>'+rows.slice(0,10).map(function(row){return '<tr><td>'+esc(row.name)+'</td><td>'+esc(row[key])+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No data yet.</div>';};
+  return '<div class="notice">'+(financial?'Live ticket and merch totals.':'Operational statistics only. Payment amounts and revenue are hidden from your role.')+'</div><div class="kpis">'+(financial?'<div class="kpi"><b>'+naira(all)+'</b><span>Total sales</span></div><div class="kpi"><b>'+naira(d.ticketRevenue)+'</b><span>Ticket revenue</span></div><div class="kpi"><b>'+naira(d.merchRevenue)+'</b><span>Merch revenue</span></div>':'')+'<div class="kpi"><b>'+esc(d.ticketOrders)+'</b><span>Ticket orders</span></div><div class="kpi"><b>'+esc(d.merchOrders)+'</b><span>Merch orders</span></div></div><section class="card"><div class="item-head"><h3>Coupon performance</h3><button class="btn btn-line sm" type="button" data-act="reports-refresh">Refresh</button></div>'+list(d.coupons,'uses','Coupon')+'</section><section class="card"><h3>Best-selling merch</h3>'+list(d.products,'quantity','Product')+'</section>';
 }
 function feedbackHtml(){
   if(!state.feedback)return '<div class="empty">Loading feedback…</div>';
   var rows=state.feedback.feedback||[],rated=rows.filter(function(x){return x.rating;}),avg=rated.length?(rated.reduce(function(n,x){return n+Number(x.rating);},0)/rated.length).toFixed(1):'—';
-  var h='<div class="notice">Send a one-time feedback link to every ticket holder after the event. Completed responses appear here.</div><div class="kpis"><div class="kpi"><b>'+rated.length+'</b><span>Responses</span></div><div class="kpi"><b>'+avg+'</b><span>Average rating</span></div><div class="kpi"><b>'+rated.filter(function(x){return x.recommend;}).length+'</b><span>Would recommend</span></div></div><section class="card"><div class="item-head"><h3>Attendee feedback</h3><span><button class="btn btn-line sm" type="button" data-act="feedback-refresh">Refresh</button> <button class="btn btn-red sm" type="button" data-act="feedback-send">Send feedback request</button></span></div>';
+  var h='<div class="notice">Send a one-time feedback link to every ticket holder after the event. Completed responses appear here.</div><div class="kpis"><div class="kpi"><b>'+rated.length+'</b><span>Responses</span></div><div class="kpi"><b>'+avg+'</b><span>Average rating</span></div><div class="kpi"><b>'+rated.filter(function(x){return x.recommend;}).length+'</b><span>Would recommend</span></div></div><section class="card"><div class="item-head"><h3>Attendee feedback</h3><span><button class="btn btn-line sm" type="button" data-act="feedback-refresh">Refresh</button>'+((state.role==='owner'||state.role==='communications')?' <button class="btn btn-red sm" type="button" data-act="feedback-send">Send feedback request</button>':'')+'</span></div>';
   if(!rated.length)return h+'<div class="empty">No completed feedback yet.</div></section>';
   return h+'<div class="table-wrap"><table><thead><tr><th>When</th><th>Rating</th><th>Favourite part</th><th>Could improve</th><th>Recommend</th></tr></thead><tbody>'+rated.map(function(row){return '<tr><td>'+esc(timeShort(row.submitted_at))+'</td><td>'+esc(row.rating)+'/5</td><td>'+esc(row.favourite||'—')+'</td><td>'+esc(row.improvements||'—')+'</td><td>'+esc(row.recommend?'Yes':'No')+'</td></tr>';}).join('')+'</tbody></table></div></section>';
 }
@@ -1375,11 +1379,11 @@ function leadsHtml(){
   else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Brand</th><th>Contact</th><th>Interest</th><th>Brief</th><th>Status</th></tr></thead><tbody>'+leads.map(function(l){return '<tr><td>'+esc(timeShort(l.created_at))+'</td><td><b>'+esc(l.brand)+'</b></td><td>'+esc(l.contact_name)+'<div class="small">'+esc(l.email)+(l.phone?' · '+esc(l.phone):'')+'</div></td><td>'+esc(l.package_interest||'Custom')+'</td><td style="min-width:210px">'+esc(l.brief)+'</td><td><select data-lead="'+esc(l.id)+'"><option value="new"'+(l.status==='new'?' selected':'')+'>New</option><option value="contacted"'+(l.status==='contacted'?' selected':'')+'>Contacted</option><option value="closed"'+(l.status==='closed'?' selected':'')+'>Closed</option></select></td></tr>';}).join('')+'</tbody></table></div>';
   return h+'</section>';
 }
-function loadMerch(){state.merch=null;render();Promise.all([api('merch-products'),api('merch-orders')]).then(function(r){state.merch={products:r[0].products||[],orders:r[1].orders||[]};render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
+function loadMerch(){state.merch=null;render();Promise.all([api('merch-products'),api('merch-orders')]).then(function(r){state.merch={products:r[0].products||[],orders:r[1].orders||[],financial:Boolean(r[1].financial)};render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function merchPickupModal(){
   openModal('<div class="item-head"><h3>Merch pickup</h3><button type="button" class="btn btn-ghost sm" data-act="mclose">Close</button></div><p class="help">Scan the QR code from the buyer’s email, or type their pickup code/order reference. A USB or phone scanner can type into this box.</p><form id="merchPickupForm"><div class="field"><label for="merchPickupCode">QR, pickup code or order reference</label><input id="merchPickupCode" autocomplete="off" autofocus placeholder="Scan or paste code" required></div><button class="btn btn-red" type="submit" id="merchPickupGo">Confirm collection</button><p class="msg" id="merchPickupResult"></p></form>');
   var input=$('#merchPickupCode'),form=$('#merchPickupForm'),result=$('#merchPickupResult');setTimeout(function(){input.focus();},0);
-  form.addEventListener('submit',function(event){event.preventDefault();var button=$('#merchPickupGo');button.disabled=true;button.textContent='Checking…';result.textContent='';api('merch-pickup-scan',{body:{code:input.value}}).then(function(data){result.className='msg ok';result.textContent='Collected: '+data.order.name+' — '+naira(data.order.amount);button.textContent='Collected ✓';loadMerch();}).catch(function(error){result.className='msg err';result.textContent=error.message;button.disabled=false;button.textContent='Confirm collection';});});
+  form.addEventListener('submit',function(event){event.preventDefault();var button=$('#merchPickupGo');button.disabled=true;button.textContent='Checking…';result.textContent='';api('merch-pickup-scan',{body:{code:input.value}}).then(function(data){result.className='msg ok';result.textContent='Collected: '+data.order.name+(state.role==='owner'?' — '+naira(data.order.amount):'');button.textContent='Collected ✓';loadMerch();}).catch(function(error){result.className='msg err';result.textContent=error.message;button.disabled=false;button.textContent='Confirm collection';});});
 }
 function loadLeads(){state.leads=null;render();api('advertising-leads').then(function(r){state.leads=r;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function productEditor(id){

@@ -139,6 +139,18 @@ https://YOUR-DOMAIN/admin
 
 Sign in as the main admin with `ADMIN_PASSWORD`. Use **Team & access** to invite limited-access staff.
 
+### Team roles and financial privacy
+
+The main admin is the only role that can view payment amounts, ticket revenue, merch revenue, and finance CSV exports. The restriction is enforced by the server, including ticket scans and pickup actions.
+
+- **Customer support**: find ticket holders and resend tickets.
+- **Ticket in charge**: customer support access plus ticket check-in.
+- **Gate team**: scan and admit attendees only.
+- **Content editor**: edit public pages and upload media.
+- **Merch & pickup**: manage merch products, stock, and collections.
+- **Communications**: announcements, waitlist messages, and feedback invitations.
+- **Insights**: non-financial ticket, coupon, feedback, and product statistics.
+
 ### Editing public pages
 
 Content changes are saved to Supabase. Click **Publish changes** after editing website content.
