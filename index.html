@@ -65,8 +65,9 @@ a{color:inherit}
 .brand{display:flex;flex-shrink:0}
 .brand img{height:50px;width:auto}
 .nav-links,.nav-cta{display:none;align-items:center}
+.gt-icon{display:inline-flex;width:1em;height:1em;flex:0 0 1em;vertical-align:-.14em;line-height:1}.gt-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .nav-links{gap:4px}
-.nav-links a{padding:8px 12px;font-size:14px;font-weight:700;text-decoration:none;transition:transform .2s}
+.nav-links a{padding:8px 8px;font-size:13px;font-weight:700;text-decoration:none;transition:transform .2s;white-space:nowrap}
 .nav-links a:hover{transform:scale(1.05)}
 .nav-cta{gap:12px}
 .burger{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:1.5px solid var(--ink);border-radius:50%;background:none;cursor:pointer}
@@ -365,6 +366,7 @@ a{color:inherit}
 </style>
 </head>
 <body>
+<script defer src="/assets/icons.js"></script>
 <script>if(location.hash){document.documentElement.style.scrollBehavior='auto';window.addEventListener('load',function(){setTimeout(function(){document.documentElement.style.scrollBehavior='';},1500);});}</script>
 
 <nav class="nav" aria-label="Main">
@@ -377,6 +379,8 @@ a{color:inherit}
       <a href="/play" class="nav-play">Play</a>
       <a href="/memories">Memories</a>
       <a href="/partner">Partners</a>
+      <a href="/advertise">Advertise</a>
+      <a href="/merch">Merch</a>
       <a href="/faq">FAQs</a>
       <a href="/contact">Contact</a>
     </div>
@@ -393,6 +397,8 @@ a{color:inherit}
     <a href="/play" class="nav-play">Play</a>
     <a href="/memories">Memories</a>
     <a href="/partner">Partners</a>
+    <a href="/advertise">Advertise</a>
+    <a href="/merch">Merch</a>
     <a href="/faq">FAQs</a>
     <a href="/contact">Contact</a>
     <div class="btn-row">
@@ -460,7 +466,7 @@ a{color:inherit}
     <div class="wrap">
       <div class="split">
         <div class="intro-copy">
-          <span class="pill pill-yellow" data-c="intro.pill">🎮 The big play date</span>
+        <span class="pill pill-yellow" data-c="intro.pill">🎮 The big play date</span>
           <h2 class="display"><span data-c="intro.headingA">Pull up. Pick your game.</span> <span class="y" data-c="intro.headingB">Enjoy the tribe.</span></h2>
           <p data-c="intro.body">A full-day playground for gamers, creators, students, music lovers and every friend who came to make a memory. Pull up, pick your game, meet your people and enjoy the tribe.</p>
           <p class="gold" data-c="intro.goldLine">Games • Banters • Hangout • Connect</p>
@@ -736,6 +742,8 @@ a{color:inherit}
           <li><a href="/play">Play</a></li>
           <li><a href="/memories">Memories</a></li>
           <li><a href="/partner">Partners</a></li>
+          <li><a href="/advertise">Advertise</a></li>
+          <li><a href="/merch">Merch</a></li>
           <li><a href="/faq">FAQs</a></li>
           <li><a href="/contact">Contact</a></li>
         </ul>
@@ -1353,7 +1361,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
     updateTicketSummary();
   }
   function loadAvailability(){
-    return fetch('/api/availability').then(function(r){return r.json();}).then(function(d){
+    return fetch('/api/ticket?availability=1').then(function(r){return r.json();}).then(function(d){
       TICKET_AVAIL=d.tickets||{};SHOW_LEFT_BELOW=parseInt(d.showLeftBelow,10)||0;refreshAvailabilityUI();
     }).catch(function(){});
   }
@@ -1742,7 +1750,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
     /* games */
     if(c.games&&c.games.items){
       setHtml('gamesRows',c.games.items.map(function(g,i){
-        return '<div class="row'+(i%2?' flip':'')+'"><div class="shot"><img src="'+esc(url(g.image))+'" alt="'+esc(g.name)+'" loading="lazy">'+(g.emoji?'<div class="tile">'+esc(g.emoji)+'</div>':'')+'</div><div>'+(g.kicker?'<span class="row-kicker">'+esc(g.kicker)+'</span>':'')+'<h3>'+esc(g.name)+'</h3><p>'+esc(g.description)+'</p></div></div>';
+        return '<div class="row'+(i%2?' flip':'')+'"><div class="shot"><img src="'+esc(url(g.image))+'" alt="'+esc(g.name)+'" loading="lazy">'+(g.emoji?'<div class="tile">'+esc(g.emoji)+'</div>':(g.icon?'<div class="tile"><span data-gt-icon="'+esc(g.icon)+'"></span></div>':''))+'</div><div>'+(g.kicker?'<span class="row-kicker">'+esc(g.kicker)+'</span>':'')+'<h3>'+esc(g.name)+'</h3><p>'+esc(g.description)+'</p></div></div>';
       }).join(''));
     }
 
