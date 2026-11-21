@@ -834,6 +834,7 @@ a{color:inherit}
       <label style="display:block;margin:10px 0;font-size:12px;font-weight:700;">Email address<input id="ticketEmail" type="email" autocomplete="email" required style="width:100%;margin-top:6px;padding:12px;"></label>
       <label style="display:block;margin:10px 0;font-size:12px;font-weight:700;">Phone number<input id="ticketPhone" type="tel" autocomplete="tel" required style="width:100%;margin-top:6px;padding:12px;"></label>
       <label style="display:block;margin:10px 0;font-size:12px;font-weight:700;">Ticket type<select id="ticketType" style="width:100%;margin-top:6px;padding:12px;"><option value="sponsored_single">Sponsored Tickets — Single · ₦3,000</option><option value="wave_single">First Wave — Single · ₦7,000</option><option value="wave_group">First Wave — Group of 4 · ₦26,000</option></select></label>
+      <div style="margin:10px 0;"><label for="ticketCoupon" style="display:block;font-size:12px;font-weight:700;">Have a promo code?</label><div style="display:flex;gap:8px;margin-top:6px;"><input id="ticketCoupon" type="text" maxlength="32" autocomplete="off" placeholder="Enter coupon code" style="min-width:0;flex:1;padding:12px;text-transform:uppercase;"><button id="ticketCouponApply" type="button" class="btn btn-outline sm" style="white-space:nowrap;">Apply</button></div><div id="ticketCouponStatus" aria-live="polite" style="margin-top:6px;font-size:12px;font-weight:700;"></div></div>
       <div style="margin:10px 0;"><div style="font-size:12px;font-weight:700;">How many tickets?</div>
 <div class="qty-quick" id="ticketQtyQuick"></div>
 <input id="ticketQty" type="number" min="1" max="50" step="1" value="1" inputmode="numeric" aria-label="Number of tickets" style="width:100%;margin-top:8px;padding:12px;">
@@ -1333,7 +1334,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
   var TICKET_MAX_QTY=50;
 
   /* ----- how many are left / sold out / hold while paying ----- */
-  var TICKET_AVAIL={},SHOW_LEFT_BELOW=30,LAST_HOLD='';
+  var TICKET_AVAIL={},SHOW_LEFT_BELOW=30,LAST_HOLD='',ACTIVE_COUPON=null;
   function availFor(id){return TICKET_AVAIL[id]||{left:null,soldOut:false};}
   function setWaitMode(on){
     var box=document.getElementById('ticketWaitBox'),pay=document.getElementById('ticketPayButton');
@@ -1366,8 +1367,8 @@ document.querySelectorAll('.video-card').forEach(function(card){
     }).catch(function(){});
   }
   /* Asks the server to hold the tickets. Only an explicit "sold out" stops the buyer; any other problem on our side lets them carry on. */
-  function reserveTickets(type,qty){
-    return fetch('/api/reserve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticketType:type,quantity:qty,release:LAST_HOLD})})
+  function reserveTickets(type,qty,couponCode,buyer){
+    return fetch('/api/reserve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticketType:type,quantity:qty,couponCode:couponCode||'',buyer:buyer||{},release:LAST_HOLD})})
       .then(function(r){
         return r.json().catch(function(){return {};}).then(function(d){
           if(r.status===409){var e=new Error(d.message||'Sorry, those tickets are no longer available.');e.soldOut=true;throw e;}
@@ -1387,7 +1388,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
   }
   function setTicketQty(n){
     document.getElementById('ticketQty').value=n;
-    updateTicketSummary();
+    if(ACTIVE_COUPON)clearCoupon('Coupon cleared because the quantity changed.');else updateTicketSummary();
   }
   function buildTicketQtyButtons(){
     var box=document.getElementById('ticketQtyQuick'),input=document.getElementById('ticketQty');
@@ -1414,16 +1415,39 @@ document.querySelectorAll('.video-card').forEach(function(card){
       box.innerHTML='<span style="color:#8d251d">Enter a number of tickets from 1 to '+TICKET_MAX_QTY+'.</span>';
       return;
     }
-    var people=qty*(ticket.admits||1),
+    var coupon=ACTIVE_COUPON&&ACTIVE_COUPON.ticketType===sel.value&&ACTIVE_COUPON.quantity===qty?ACTIVE_COUPON:null,
+        unit=coupon?coupon.finalUnitPrice:ticket.price,
+        people=qty*(ticket.admits||1),
         label=sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text.split(' \u00B7 ')[0]:'';
-    box.innerHTML='Total: <b>'+ticketMoney(ticket.price*qty)+'</b><br><span style="font-weight:600">'+
+    box.innerHTML=(coupon?'Ticket price: <span style="text-decoration:line-through">'+ticketMoney(ticket.price*qty)+'</span><br>Discounted price: <b>'+ticketMoney(unit*qty)+'</b><br>':'Total: <b>'+ticketMoney(unit*qty)+'</b><br>')+'<span style="font-weight:600">'+
       qty+' \u00D7 '+label.replace(/</g,'&lt;')+(people>1?' \u2014 admits '+people+' people':'')+'</span>'+
       (av.left!==null&&qty>av.left?'<br><span style="color:#8d251d;font-weight:800">Only '+av.left+' left. Please choose '+av.left+' or fewer.</span>':'');
   }
+  function couponStatus(message,isError){
+    var status=document.getElementById('ticketCouponStatus');if(!status)return;
+    status.textContent=message||'';status.style.color=isError?'#8d251d':'#155d2d';
+  }
+  function clearCoupon(message){
+    ACTIVE_COUPON=null;couponStatus(message||'',Boolean(message));updateTicketSummary();
+  }
+  function applyCoupon(){
+    var input=document.getElementById('ticketCoupon'),sel=document.getElementById('ticketType'),qty=getTicketQty();
+    var code=(input.value||'').trim().toUpperCase();input.value=code;
+    if(!code){clearCoupon('Enter a coupon code first.');return;}
+    if(!qty){clearCoupon('Choose a valid number of tickets first.');return;}
+    var button=document.getElementById('ticketCouponApply');button.disabled=true;button.textContent='Checking…';couponStatus('');
+    fetch('/api/ticket?action=coupon',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,ticketType:sel.value,quantity:qty})})
+      .then(function(r){return r.json().catch(function(){return {};}).then(function(data){if(!r.ok)throw new Error(data.message||'Coupon could not be applied.');return data;});})
+      .then(function(coupon){ACTIVE_COUPON={code:coupon.code,name:coupon.name,finalUnitPrice:Number(coupon.finalUnitPrice),ticketType:sel.value,quantity:qty};couponStatus(coupon.name+' applied — you save '+ticketMoney(coupon.savings)+'.');updateTicketSummary();})
+      .catch(function(error){ACTIVE_COUPON=null;couponStatus(error.message||'Coupon could not be applied.',true);updateTicketSummary();})
+      .then(function(){button.disabled=false;button.textContent='Apply';});
+  }
   (function(){
-    var qi=document.getElementById('ticketQty'),qb=document.getElementById('ticketQtyQuick'),ts=document.getElementById('ticketType');
-    if(qi) qi.addEventListener('input',updateTicketSummary);
-    if(ts) ts.addEventListener('change',updateTicketSummary);
+    var qi=document.getElementById('ticketQty'),qb=document.getElementById('ticketQtyQuick'),ts=document.getElementById('ticketType'),ci=document.getElementById('ticketCoupon'),cb=document.getElementById('ticketCouponApply');
+    if(qi) qi.addEventListener('input',function(){if(ACTIVE_COUPON)clearCoupon('Coupon cleared because the quantity changed.');else updateTicketSummary();});
+    if(ts) ts.addEventListener('change',function(){if(ACTIVE_COUPON)clearCoupon('Coupon cleared because the ticket type changed.');else updateTicketSummary();});
+    if(ci)ci.addEventListener('input',function(){if(ACTIVE_COUPON&&String(ci.value||'').trim().toUpperCase()!==ACTIVE_COUPON.code)clearCoupon('');});
+    if(cb)cb.addEventListener('click',applyCoupon);
     if(qb) qb.addEventListener('click',function(e){
       var b=e.target.closest?e.target.closest('button'):null;
       if(b&&b.getAttribute('data-q')) setTicketQty(parseInt(b.getAttribute('data-q'),10));
@@ -1479,9 +1503,10 @@ document.querySelectorAll('.video-card').forEach(function(card){
     document.getElementById('successTicketEmail').textContent=email||'your email address';
     var txt=document.getElementById('successTicketText');
     if(txt){
+      var complimentary=order.free||Number(order.total)===0||Number(order.unitPrice)===0;
       txt.textContent=(order.quantity>1)
-        ? 'Your payment has been confirmed and your '+order.quantity+' tickets have been created'+(order.admitsTotal>1?' (admits '+order.admitsTotal+' people).':'.')
-        : 'Your payment has been confirmed and your Game Tribe Fest ticket has been created.';
+        ? (complimentary?'Your complimentary ': 'Your payment has been confirmed and your ')+order.quantity+' tickets have been created'+(order.admitsTotal>1?' (admits '+order.admitsTotal+' people).':'.')
+        : (complimentary?'Your complimentary Game Tribe Fest ticket has been created.':'Your payment has been confirmed and your Game Tribe Fest ticket has been created.');
     }
     modal.classList.add('active');
     modal.setAttribute('aria-hidden','false');
@@ -1538,11 +1563,6 @@ document.querySelectorAll('.video-card').forEach(function(card){
       return;
     }
 
-    if(typeof PaystackPop==='undefined'){
-      showTicketStatus('Paystack could not load. Check your internet connection and try again.',true);
-      return;
-    }
-
     var av=availFor(type);
     if(av.soldOut){showTicketStatus('Sorry, this ticket is sold out. You can join the waitlist above.',true);return;}
     if(av.left!==null&&qty>av.left){showTicketStatus('Only '+av.left+' of these tickets are left. Please choose '+av.left+' or fewer.',true);return;}
@@ -1551,12 +1571,32 @@ document.querySelectorAll('.video-card').forEach(function(card){
     button.textContent='Checking availability…';
     showTicketStatus('');
 
-    function startPayment(reference){
+    function startPayment(hold){
+    if(hold&&hold.free){
+      button.disabled=false;
+      button.textContent='Proceed to Payment';
+      showTicketStatus('Your complimentary ticket has been created.',false);
+      LAST_HOLD='';
+      setTicketQty(1);
+      closeTicketModal();
+      showTicketSuccess(hold,email);
+      if(typeof fireConfetti==='function') fireConfetti(80);
+      return;
+    }
+    if(typeof PaystackPop==='undefined'){
+      button.disabled=false;
+      button.textContent='Proceed to Payment';
+      showTicketStatus('Paystack could not load. Check your internet connection and try again.',true);
+      return;
+    }
+    var reference=(hold&&hold.reference)||('GT-'+Date.now()+'-'+Math.random().toString(36).slice(2,8).toUpperCase()),
+        unitPrice=(hold&&Number.isInteger(Number(hold.unitPrice)))?Number(hold.unitPrice):ticket.price,
+        couponCode=hold&&hold.coupon&&hold.coupon.code?hold.coupon.code:'';
     button.textContent='Opening secure checkout…';
     new PaystackPop().newTransaction({
       key:TICKET_SETTINGS.paystackPublicKey,
       email:email,
-      amount:ticket.price*qty*100,
+      amount:unitPrice*qty*100,
       currency:'NGN',
       firstName:name.split(' ')[0],
       lastName:name.split(' ').slice(1).join(' '),
@@ -1565,7 +1605,8 @@ document.querySelectorAll('.video-card').forEach(function(card){
       metadata:{
         ticket_type:type,
         quantity:qty,
-        customer_name:name
+        customer_name:name,
+        coupon_code:couponCode
       },
 
       onSuccess:function(transaction){
@@ -1611,8 +1652,8 @@ document.querySelectorAll('.video-card').forEach(function(card){
     });
     }
 
-    reserveTickets(type,qty).then(function(hold){
-      startPayment((hold&&hold.reference)||('GT-'+Date.now()+'-'+Math.random().toString(36).slice(2,8).toUpperCase()));
+    reserveTickets(type,qty,ACTIVE_COUPON&&ACTIVE_COUPON.code,{name:name,email:email,phone:phone}).then(function(hold){
+      startPayment(hold);
     },function(err){
       button.disabled=false;
       button.textContent='Proceed to Payment';
