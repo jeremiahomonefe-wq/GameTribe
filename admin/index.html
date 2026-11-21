@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script defer src="/assets/icons.js"></script>
 <style>
 :root{--red:#E8342A;--red-dark:#B8231B;--gold:#FBB614;--cream:#FFF6E5;--ink:#1C1410;--bg:#F6F2EA;--card:#fff;--line:#E7DFCF;--muted:#6B6258;--ok:#1E8E4E;
 --display:'Bowlby One',Impact,sans-serif;--body:'Nunito',system-ui,sans-serif}
@@ -50,6 +51,8 @@ textarea{min-height:92px;resize:vertical}
 .nav .sep{height:1px;background:rgba(255,255,255,.12);margin:10px 6px}
 .nav .sep-label{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);padding:4px 12px 6px}
 .nav .ico{width:22px;text-align:center}
+.nav .ico .gt-icon{width:18px;height:18px;vertical-align:middle}
+.gt-icon{display:inline-flex;width:1em;height:1em;flex:0 0 1em;vertical-align:-.14em}.gt-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .main{min-width:0}
 .top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 28px;background:rgba(246,242,234,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .top h2{font-family:var(--display);text-transform:uppercase;font-size:20px;margin:0;flex:1;min-width:160px}
@@ -210,12 +213,12 @@ tr.row-used td{background:#FBF4F3}
   <button class="nav-backdrop" id="navBackdrop" type="button" aria-label="Close navigation menu" tabindex="-1"></button>
   <aside class="side" id="adminSidebar" aria-label="Admin navigation">
     <div class="brand">Game Tribe<small>ADMIN</small></div>
-    <button class="side-close" id="closeNavBtn" type="button" aria-label="Close navigation menu">×</button>
+    <button class="side-close" id="closeNavBtn" type="button" aria-label="Close navigation menu"><span data-gt-icon="x"></span></button>
     <nav class="nav" id="nav" aria-label="Sections"></nav>
   </aside>
   <div class="main">
     <header class="top">
-      <button class="mobile-menu-btn" id="menuBtn" type="button" aria-label="Open navigation menu" aria-controls="adminSidebar" aria-expanded="false">☰</button>
+      <button class="mobile-menu-btn" id="menuBtn" type="button" aria-label="Open navigation menu" aria-controls="adminSidebar" aria-expanded="false"><span data-gt-icon="menu"></span></button>
       <h2 id="pageTitle"></h2>
       <span class="who" id="who" hidden></span>
       <span class="status" id="status" aria-live="polite"></span>
@@ -235,8 +238,9 @@ tr.row-used td{background:#FBF4F3}
    Field definitions. This drives everything you see on screen.
    ============================================================ */
 var T='text',TA='textarea',IMG='image',VID='video',DT='datetime',NUM='number';
+var ICON_OPTIONS=[['gamepad','Game controller'],['target','Target'],['layers','Stack'],['play','Play'],['users','Team'],['message','Message'],['store','Store'],['handshake','Handshake'],['help','Quiz'],['images','Images'],['trophy','Trophy']];
 var SECTIONS=[
- {id:'event',icon:'📅',title:'Event & countdown',blocks:[
+ {id:'event',icon:'calendar',title:'Event & countdown',blocks:[
   {title:'Date and venue',help:'The countdown on the website counts down to the start time below (Nigeria time).',fields:[
    {path:'event.date',label:'Event start (Nigeria time)',type:DT,full:true},
    {path:'event.guestCount',label:'“People going” number',type:T,help:'Shown as “200+ people going”.'},
@@ -248,10 +252,10 @@ var SECTIONS=[
    {path:'countdown.kicker',label:'Small text above',type:T},
    {path:'countdown.title',label:'Heading',type:T}]}]},
 
- {id:'hero',icon:'🏠',title:'Top of page',blocks:[
+ {id:'hero',icon:'home',title:'Top of page',blocks:[
   {title:'Headline',fields:[
    {path:'hero.pillBrand',label:'Yellow tag',type:T},
-   {path:'hero.pillDate',label:'Date tag',type:T,help:'Written by hand (e.g. “📅 27 Nov 2026”). Change it when you change the date.'},
+   {path:'hero.pillDate',label:'Date tag',type:T,help:'Written by hand (for example “27 Nov 2026”). Change it when you change the date.'},
    {path:'hero.pillPlace',label:'Place tag',type:T},
    {path:'hero.titleA',label:'Big title, first word (yellow)',type:T},
    {path:'hero.titleB',label:'Big title, second word (red)',type:T},
@@ -265,7 +269,7 @@ var SECTIONS=[
    {path:'hero.photos.3',label:'Photo 4',type:IMG},{path:'hero.photos.4',label:'Photo 5',type:IMG},{path:'hero.photos.5',label:'Photo 6',type:IMG}]},
   {title:'Scrolling yellow strip',help:'Short messages that scroll across the page.',list:{path:'marquee',strings:true,itemLabel:'Message',blank:''}}]},
 
- {id:'intro',icon:'🎬',title:'Intro & highlight video',blocks:[
+ {id:'intro',icon:'video',title:'Intro & highlight video',blocks:[
   {title:'Intro text',fields:[
    {path:'intro.pill',label:'Yellow tag',type:T},
    {path:'intro.headingA',label:'Heading (white)',type:T},
@@ -277,7 +281,7 @@ var SECTIONS=[
    {path:'intro.video',label:'Video',type:VID,full:true},
    {path:'intro.caption',label:'Caption under the video',type:T,full:true}]}]},
 
- {id:'expecting',icon:'📈',title:'Expected numbers',blocks:[
+ {id:'expecting',icon:'chart',title:'Expected numbers',blocks:[
   {title:'Heading',fields:[
    {path:'expecting.kicker',label:'Small text above',type:T},
    {path:'expecting.title',label:'Heading',type:T},
@@ -285,7 +289,7 @@ var SECTIONS=[
   {title:'Numbers',list:{path:'expecting.stats',itemLabel:'Number',max:4,blank:{value:'',label:''},fields:[
    {key:'value',label:'Number (e.g. 500+)',type:T},{key:'label',label:'What it counts',type:T}]}}]},
 
- {id:'videos',icon:'🎥',title:'Moments videos',blocks:[
+ {id:'videos',icon:'video',title:'Moments videos',blocks:[
   {title:'Heading',fields:[
    {path:'videos.kicker',label:'Small text above',type:T},
    {path:'videos.title',label:'Heading',type:T},
@@ -293,7 +297,7 @@ var SECTIONS=[
   {title:'Videos',help:'Upload phone videos (MP4 works best, up to 50 MB each).',grid:true,list:{path:'videos.items',itemLabel:'Video',bulk:'video',blank:{src:''},fields:[
    {key:'src',label:'Video',type:VID}]}}]},
 
- {id:'sponsors',icon:'🤝',title:'Partners & sponsors',blocks:[
+ {id:'sponsors',icon:'handshake',title:'Partners & sponsors',blocks:[
   {title:'Heading',fields:[
    {path:'sponsors.kicker',label:'Small text above',type:T},
    {path:'sponsors.title',label:'Heading',type:T},
@@ -307,7 +311,7 @@ var SECTIONS=[
       fields:[{key:'image',label:'Logo',type:IMG,contain:true},{key:'name',label:'Name',type:T},
               {key:'link',label:'Website link (optional)',type:T,help:'Clicking the logo opens this site inside a Game Tribe page, e.g. yoursite.com/get.falconlite.com'}]}]}}]},
 
- {id:'vendorBand',icon:'🛍️',title:'Vendor invitation',blocks:[
+ {id:'vendorBand',icon:'store',title:'Vendor invitation',blocks:[
   {title:'Red vendor section',fields:[
    {path:'vendorBand.pill',label:'Tag',type:T},
    {path:'vendorBand.headingA',label:'Heading (white)',type:T},
@@ -317,28 +321,30 @@ var SECTIONS=[
    {path:'vendorBand.button',label:'Button text',type:T},
    {path:'vendorBand.image',label:'Photo',type:IMG,full:true}]}]},
 
- {id:'games',icon:'🎲',title:'Games',blocks:[
+ {id:'games',icon:'gamepad',title:'Games',blocks:[
   {title:'Heading',fields:[
    {path:'games.kicker',label:'Small text above',type:T},
    {path:'games.title',label:'Heading',type:T},
    {path:'games.subtitle',label:'Sentence below',type:TA,full:true}]},
-  {title:'Games on the day',help:'They appear in this order, alternating left and right.',list:{path:'games.items',itemLabel:'Game',blank:{emoji:'🎮',kicker:'',name:'',description:'',image:''},fields:[
-   {key:'name',label:'Game name',type:T},{key:'emoji',label:'Emoji',type:T},{key:'kicker',label:'Small label above name',type:T},
+  {title:'Games on the day',help:'They appear in this order, alternating left and right.',list:{path:'games.items',itemLabel:'Game',blank:{icon:'gamepad',kicker:'',name:'',description:'',image:''},fields:[
+   {key:'name',label:'Game name',type:T},{key:'icon',label:'Card icon',type:'select',options:ICON_OPTIONS},{key:'kicker',label:'Small label above name',type:T},
    {key:'description',label:'Description',type:TA,full:true},{key:'image',label:'Photo',type:IMG,full:true}]}}]},
 
- {id:'gallery',icon:'📸',title:'Gallery',blocks:[
+ {id:'gallery',icon:'camera',title:'Gallery',blocks:[
   {title:'Heading',fields:[
    {path:'gallery.kicker',label:'Small text above',type:T},
    {path:'gallery.title',label:'Heading',type:T}]},
   {title:'Photos',help:'The first photo is shown large. The page looks best with 16 photos.',grid:true,list:{path:'gallery.items',itemLabel:'Photo',bulk:'image',blank:{image:''},fields:[{key:'image',label:'Photo',type:IMG}]}}]},
 
- {id:'tickets',icon:'🎟️',title:'Tickets & prices',custom:'tickets'},
- {id:'sales',icon:'💰',title:'Sales & attendees',custom:'sales'},
- {id:'announce',icon:'📣',title:'Announcements',custom:'announce'},
- {id:'team',icon:'👥',title:'Team & access',custom:'team'},
- {id:'security',icon:'🔒',title:'Security',custom:'security'},
+ {id:'tickets',icon:'ticket',title:'Tickets & prices',custom:'tickets'},
+ {id:'sales',icon:'money',title:'Sales & attendees',custom:'sales'},
+ {id:'merch',icon:'bag',title:'Merch & pickup',custom:'merch'},
+ {id:'leads',icon:'megaphone',title:'Advertising leads',custom:'leads'},
+ {id:'announce',icon:'megaphone',title:'Announcements',custom:'announce'},
+ {id:'team',icon:'users',title:'Team & access',custom:'team'},
+ {id:'security',icon:'lock',title:'Security',custom:'security'},
 
- {id:'links',icon:'🔗',title:'Links, contact & footer',blocks:[
+ {id:'links',icon:'link',title:'Links, contact & footer',blocks:[
   {title:'Contact and links',fields:[
    {path:'links.email',label:'Contact email',type:T},
    {path:'links.whatsapp',label:'WhatsApp group link',type:T,full:true},
@@ -354,7 +360,7 @@ var SECTIONS=[
   {title:'Google & social sharing',help:'What people see in Google results and when the link is shared.',fields:[
    {path:'meta.title',label:'Page title',type:T,full:true},{path:'meta.description',label:'Description',type:TA,full:true}]}]},
 
- {id:'files',icon:'📄',title:'Flyers & documents',blocks:[
+ {id:'files',icon:'file',title:'Flyers & documents',blocks:[
   {title:'Replace built-in files',help:'Leave these empty to keep the files that come with the website.',fields:[
    {path:'files.vendorFlyer',label:'Vendor package flyer (shown in the vendor window)',type:IMG,full:true,contain:true},
    {path:'files.proposalPdf',label:'Proposal PDF (opened by “View our proposal”)',type:'pdf',full:true}]},
@@ -362,18 +368,18 @@ var SECTIONS=[
 
  {sep:'Other pages'},
 
- {id:'p_about',icon:'ℹ️',title:'About page',blocks:[
+ {id:'p_about',icon:'info',title:'About page',blocks:[
   {title:'Heading',fields:[
    {path:'pages.about.pill',label:'Small tag',type:T},{path:'pages.about.title',label:'Page title',type:T},
    {path:'pages.about.intro',label:'Intro sentence',type:TA,full:true}]},
   {title:'Our story',help:'Each box is one paragraph. The last paragraph is shown in bold.',list:{path:'pages.about.story',strings:true,textarea:true,itemLabel:'Paragraph',blank:''}},
   {title:'What we’re about',fields:[{path:'pages.about.pillarsTitle',label:'Heading',type:T,full:true}]},
-  {title:'Cards',list:{path:'pages.about.pillars',itemLabel:'Card',max:8,blank:{emoji:'⭐',title:'',text:''},fields:[
-   {key:'emoji',label:'Emoji',type:T},{key:'title',label:'Title',type:T},{key:'text',label:'Text',type:TA,full:true}]}},
+  {title:'Cards',list:{path:'pages.about.pillars',itemLabel:'Card',max:8,blank:{icon:'trophy',title:'',text:''},fields:[
+   {key:'icon',label:'Card icon',type:'select',options:ICON_OPTIONS},{key:'title',label:'Title',type:T},{key:'text',label:'Text',type:TA,full:true}]}},
   {title:'Bottom call to action',help:'The “expected numbers” on this page come from “Expected numbers” in the left menu.',fields:[
    {path:'pages.about.ctaTitle',label:'Heading',type:T},{path:'pages.about.ctaText',label:'Sentence',type:TA,full:true}]}]},
 
- {id:'p_memories',icon:'🖼️',title:'Memories page',blocks:[
+ {id:'p_memories',icon:'images',title:'Memories page',blocks:[
   {title:'Heading',fields:[
    {path:'pages.memories.pill',label:'Small tag',type:T},{path:'pages.memories.title',label:'Page title',type:T},
    {path:'pages.memories.intro',label:'Intro sentence',type:TA,full:true}]},
@@ -385,7 +391,7 @@ var SECTIONS=[
     nested:[{key:'photos',title:'Photos',itemLabel:'Photo',grid:true,bulk:'image',blank:{image:'',caption:''},fields:[{key:'image',label:'Photo',type:IMG},{key:'caption',label:'Caption (optional)',type:T}]},
             {key:'videos',title:'Videos',itemLabel:'Video',grid:true,bulk:'video',blank:{src:'',caption:''},fields:[{key:'src',label:'Video',type:VID},{key:'caption',label:'Caption (optional)',type:T}]}]}}]},
 
- {id:'p_faq',icon:'❓',title:'FAQs page',blocks:[
+ {id:'p_faq',icon:'help',title:'FAQs page',blocks:[
   {title:'Heading',fields:[
    {path:'pages.faq.pill',label:'Small tag',type:T},{path:'pages.faq.title',label:'Page title',type:T},
    {path:'pages.faq.intro',label:'Intro sentence',type:T,full:true}]},
@@ -396,7 +402,7 @@ var SECTIONS=[
   {title:'“Still have a question?” box',fields:[
    {path:'pages.faq.stillTitle',label:'Heading',type:T},{path:'pages.faq.stillText',label:'Sentence',type:T}]}]},
 
- {id:'p_contact',icon:'✉️',title:'Contact page',blocks:[
+ {id:'p_contact',icon:'message',title:'Contact page',blocks:[
   {title:'Heading',fields:[
    {path:'pages.contact.pill',label:'Small tag',type:T},{path:'pages.contact.title',label:'Page title',type:T},
    {path:'pages.contact.intro',label:'Intro sentence',type:TA,full:true}]},
@@ -407,7 +413,7 @@ var SECTIONS=[
    {key:'kind',label:'Shows',type:'select',options:[['email','Contact email'],['whatsapp','WhatsApp group link'],['instagram','Instagram link'],['tiktok','TikTok link'],['venue','Venue address + map link']]},
    {key:'text',label:'Text (optional)',type:T,full:true}]}}]},
 
- {id:'p_play',icon:'🎮',title:'Play page',blocks:[
+ {id:'p_play',icon:'play',title:'Play page',blocks:[
   {title:'Game address',help:'Where the game is hosted. The “Join the game” box and the “Host a game” button on the Play page send people here.',fields:[
    {path:'links.game',label:'Game address (for example https://play.gametribeng.com)',type:T,full:true}]},
   {title:'Heading',fields:[
@@ -418,8 +424,8 @@ var SECTIONS=[
    {path:'pages.play.joinText',label:'Text above the PIN box',type:TA,full:true},
    {path:'pages.play.noPin',label:'Text for people without a PIN (links to your WhatsApp group)',type:TA,full:true}]},
   {title:'Game modes',fields:[{path:'pages.play.modesTitle',label:'Heading',type:T,full:true}]},
-  {title:'Game cards',list:{path:'pages.play.modes',itemLabel:'Game',max:6,blank:{emoji:'🎮',title:'',text:''},fields:[
-   {key:'title',label:'Name',type:T},{key:'emoji',label:'Emoji',type:T},{key:'text',label:'Description',type:TA,full:true}]}},
+  {title:'Game cards',list:{path:'pages.play.modes',itemLabel:'Game',max:6,blank:{icon:'gamepad',title:'',text:''},fields:[
+   {key:'title',label:'Name',type:T},{key:'icon',label:'Card icon',type:'select',options:ICON_OPTIONS},{key:'text',label:'Description',type:TA,full:true}]}},
   {title:'How it works',fields:[{path:'pages.play.stepsTitle',label:'Heading',type:T,full:true}]},
   {title:'Steps',list:{path:'pages.play.steps',itemLabel:'Step',max:6,blank:{title:'',text:''},fields:[
    {key:'title',label:'Title',type:T},{key:'text',label:'Text',type:T,full:true}]}},
@@ -434,7 +440,7 @@ var SECTIONS=[
    {path:'pages.play.teaserPill',label:'Small tag',type:T},{path:'pages.play.teaserButton',label:'Button text',type:T},
    {path:'pages.play.teaserTitle',label:'Heading',type:T,full:true},{path:'pages.play.teaserText',label:'Text',type:TA,full:true}]}]},
 
- {id:'p_partner',icon:'📣',title:'Partner page',blocks:[
+ {id:'p_partner',icon:'megaphone',title:'Partner page',blocks:[
   {title:'Heading',fields:[
    {path:'pages.partner.pill',label:'Yellow tag',type:T},
    {path:'pages.partner.titleTop',label:'Big title, first line (yellow)',type:T},{path:'pages.partner.titleMid',label:'Small middle word',type:T},{path:'pages.partner.titleBig',label:'Big title, last line (white)',type:T},
@@ -451,12 +457,18 @@ var SECTIONS=[
 ];
 
 /* ============================================================ */
-var state={content:null,saved:'',dirty:false,section:'event',sales:null,team:null,teamResult:null,salesFilter:'all',role:'owner',me:null,ann:null,annDraft:{audience:'tickets_all',subject:'',body:'',to:'',preview:null},qr:{mode:'pending',preview:null},health:null,scanMode:false,compReq:''};
+var state={content:null,saved:'',dirty:false,section:'event',sales:null,merch:null,leads:null,team:null,teamResult:null,salesFilter:'all',role:'owner',me:null,ann:null,annDraft:{audience:'tickets_all',subject:'',body:'',to:'',preview:null},qr:{mode:'pending',preview:null},health:null,scanMode:false,compReq:''};
 var $=function(s,r){return (r||document).querySelector(s);};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function getP(o,p){return p.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
 function setP(o,p,v){var k=p.split('.'),last=k.pop(),t=k.reduce(function(a,x){if(a[x]==null)a[x]=isNaN(x)?{}:[];return a[x];},o);t[last]=v;}
 function clone(x){return JSON.parse(JSON.stringify(x));}
+function migrateLegacyIcons(value){
+  var map={'🏹':'target','🧱':'layers','🦶':'play','🪢':'users','🎲':'gamepad','💬':'message','🛋️':'store','🤝':'handshake','🧠':'help','🖼️':'images','⭐':'trophy'};
+  if(Array.isArray(value)){value.forEach(migrateLegacyIcons);return value;}
+  if(value&&typeof value==='object'){if(value.emoji){value.icon=value.icon||map[value.emoji]||'info';delete value.emoji;}Object.keys(value).forEach(function(k){migrateLegacyIcons(value[k]);});}
+  return value;
+}
 function api(action,opt){
   opt=opt||{};
   return fetch('/api/admin?action='+action,{method:opt.body?'POST':'GET',credentials:'same-origin',headers:opt.body?{'Content-Type':'application/json'}:{},body:opt.body?JSON.stringify(opt.body):undefined})
@@ -719,7 +731,7 @@ function salesHtml(){
   h+='<div id="salesTop">'+salesTopHtml()+'</div>';
   h+='<div class="toolbar"><input type="search" id="salesSearch" placeholder="Search name, phone, reference or ticket no."'+(canCheckin()?' autocomplete="off"':'')+'>'+
     '<select id="salesFilter" style="max-width:210px" aria-label="Filter by check-in"><option value="all">Everyone</option><option value="none">Not yet checked in</option><option value="part">Partly checked in</option><option value="full">Fully used</option></select>'+
-    '<button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button>'+(canCheckin()?'<button class="btn btn-red sm" type="button" data-act="scan-open">📷 Scan ticket</button>':'')+(state.role==='owner'?'<button class="btn btn-ink sm" type="button" data-act="comp-open">+ Free ticket</button><button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button><button class="btn btn-red sm" type="button" data-act="rc-open">Check against Paystack</button>':'')+'</div>';
+    '<button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button>'+(canCheckin()?'<button class="btn btn-red sm" type="button" data-act="scan-open"><span data-gt-icon="camera"></span> Scan ticket</button>':'')+(state.role==='owner'?'<button class="btn btn-ink sm" type="button" data-act="comp-open">+ Free ticket</button><button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button><button class="btn btn-red sm" type="button" data-act="rc-open">Check against Paystack</button>':'')+'</div>';
   if(canCheckin())h+='<p class="help" style="margin:-4px 0 12px;font-size:13px;color:var(--muted)">At the gate: type or paste the buyer’s reference or ticket number, press Enter, then admit them. A ticket that is already used cannot be admitted again.</p>';
   h+='<div class="table-wrap"><table><thead><tr><th>Gate</th><th>Date</th><th>Name</th><th>Phone</th><th>Ticket</th><th>Qty</th><th>People</th><th>Ticket no.</th><th>Paid</th><th>Email</th><th>Contact</th></tr></thead><tbody id="salesBody"></tbody></table></div>';
   return h;
@@ -784,7 +796,7 @@ function gateModal(ref,problem){
   }else h+='<div class="row"><button class="btn btn-line" type="button" data-act="mclose">Close</button></div>';
   if(state.role==='owner'&&a>0)h+='<div class="row" style="border-top:1px solid var(--line);padding-top:12px"><span style="font-size:13px;font-weight:700">Admitted by mistake?</span><input type="number" id="undoCount" min="1" max="'+a+'" value="1" aria-label="How many to remove"><button class="btn btn-ghost sm danger" type="button" data-act="undo" data-ref="'+er+'">Remove from admitted</button></div>';
   if(state.role==='owner'&&r.source==='complimentary'&&a===0)h+='<div class="row" style="border-top:1px solid var(--line);padding-top:12px"><span style="font-size:13px;font-weight:700">Issued by mistake?</span><button class="btn btn-ghost sm danger" type="button" data-act="comp-delete" data-ref="'+er+'">Delete this free pass</button></div>';
-  if(can)h+='<div class="row"><button class="btn btn-line sm" type="button" data-act="scan-open">📷 Scan next ticket</button>'+(r.email?'<button class="btn btn-line sm" type="button" data-act="ticket-resend" data-ref="'+er+'">✉ Resend ticket to '+esc(r.email)+'</button>':'')+'</div>';
+  if(can)h+='<div class="row"><button class="btn btn-line sm" type="button" data-act="scan-open"><span data-gt-icon="camera"></span> Scan next ticket</button>'+(r.email?'<button class="btn btn-line sm" type="button" data-act="ticket-resend" data-ref="'+er+'"><span data-gt-icon="message"></span> Resend ticket to '+esc(r.email)+'</button>':'')+'</div>';
   h+='<div class="row"><button class="btn btn-ghost sm" type="button" data-act="history" data-ref="'+er+'">Show history</button></div><ul class="hist" id="gateHistory"></ul>';
   openModal(h);
   var c=$('#gateCount');if(c){c.focus();c.select();}else{var b=$('#gateAdmit');if(b)b.focus();}
@@ -1275,6 +1287,43 @@ function loadTeam(keepResult){
   state.team=null;render();
   api('team-list').then(function(d){state.team=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
 }
+
+/* ---------- merch and advertising leads ---------- */
+function merchHtml(){
+  if(!state.merch)return '<div class="empty">Loading merch…</div>';
+  var products=state.merch.products||[],orders=state.merch.orders||[],stock=products.reduce(function(n,p){return n+Number(p.stock||0);},0),paid=orders.filter(function(o){return ['paid','ready','collected'].indexOf(o.status)>-1;}),revenue=paid.reduce(function(n,o){return n+Number(o.amount||0);},0);
+  var h='<div class="notice">Products that are <b>on sale</b> appear on the public Merch page. Buyers pay with Paystack, then collect at the festival. Changing stock live controls what can be bought.</div>'+
+    '<div class="kpis"><div class="kpi"><b>'+products.filter(function(p){return p.active;}).length+'</b><span>Products on sale</span></div><div class="kpi"><b>'+stock+'</b><span>Items in stock</span></div><div class="kpi"><b>'+paid.length+'</b><span>Paid orders</span></div><div class="kpi"><b>'+naira(revenue)+'</b><span>Merch revenue</span></div></div>'+
+    '<section class="card"><div class="item-head"><h3>Products</h3><span><button class="btn btn-line sm" type="button" data-act="merch-refresh">Refresh</button> <button class="btn btn-red sm" type="button" data-act="merch-add">+ Add product</button></span></div>';
+  if(!products.length)h+='<div class="empty">No products yet. Add your first product to start selling.</div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Store</th><th></th></tr></thead><tbody>'+products.map(function(p){return '<tr><td><b>'+esc(p.name)+'</b><div class="small">'+esc(p.id)+'</div></td><td>'+esc(p.category)+'</td><td>'+naira(p.price)+'</td><td>'+esc(p.stock)+'</td><td>'+(p.active?'<span class="badge ok">On sale</span>':'<span class="badge warn">Hidden</span>')+'</td><td><button class="btn btn-line sm" type="button" data-act="merch-edit" data-id="'+esc(p.id)+'">Edit</button> '+(p.active?'<button class="btn btn-ghost sm danger" type="button" data-act="merch-disable" data-id="'+esc(p.id)+'">Hide</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>';
+  h+='</section><section class="card"><div class="item-head"><h3>Festival pickup orders</h3><button class="btn btn-line sm" type="button" data-act="merch-refresh">Refresh</button></div>';
+  if(!orders.length)h+='<div class="empty">No merch orders yet.</div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Buyer</th><th>Items</th><th>Paid</th><th>Status</th><th></th></tr></thead><tbody>'+orders.map(function(o){var itemText=(o.items||[]).map(function(i){return (i.quantity||1)+' × '+i.name;}).join(', ');return '<tr><td>'+esc(timeShort(o.paid_at||o.created_at))+'</td><td><b>'+esc(o.name)+'</b><div class="small">'+esc(o.phone)+' · '+esc(o.email)+'</div></td><td>'+esc(itemText)+'</td><td>'+naira(o.amount)+'</td><td><span class="badge '+(o.status==='collected'?'used':o.status==='ready'?'ok':o.status==='paid'?'part':'warn')+'">'+esc(o.status)+'</span><div class="small"><code>'+esc(o.reference)+'</code></div></td><td>'+((o.status==='paid')?'<button class="btn btn-line sm" type="button" data-act="merch-ready" data-ref="'+esc(o.reference)+'">Mark ready</button>':(o.status==='ready'?'<button class="btn btn-red sm" type="button" data-act="merch-collected" data-ref="'+esc(o.reference)+'">Mark collected</button>':''))+'</td></tr>';}).join('')+'</tbody></table></div>';
+  return h+'</section>';
+}
+function leadsHtml(){
+  if(!state.leads)return '<div class="empty">Loading advertising leads…</div>';
+  var leads=state.leads.leads||[],open=leads.filter(function(l){return l.status!=='closed';}).length;
+  var h='<div class="notice">These are the enquiries submitted from the public Advertise page. They are visible only to the main admin.</div><div class="kpis"><div class="kpi"><b>'+leads.length+'</b><span>Total leads</span></div><div class="kpi"><b>'+open+'</b><span>Needs follow-up</span></div><div class="kpi"><b>'+leads.filter(function(l){return l.status==='new';}).length+'</b><span>New</span></div></div><section class="card"><div class="item-head"><h3>Brand enquiries</h3><button class="btn btn-line sm" type="button" data-act="leads-refresh">Refresh</button></div>';
+  if(!leads.length)h+='<div class="empty">No advertising enquiries yet.</div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Brand</th><th>Contact</th><th>Interest</th><th>Brief</th><th>Status</th></tr></thead><tbody>'+leads.map(function(l){return '<tr><td>'+esc(timeShort(l.created_at))+'</td><td><b>'+esc(l.brand)+'</b></td><td>'+esc(l.contact_name)+'<div class="small">'+esc(l.email)+(l.phone?' · '+esc(l.phone):'')+'</div></td><td>'+esc(l.package_interest||'Custom')+'</td><td style="min-width:210px">'+esc(l.brief)+'</td><td><select data-lead="'+esc(l.id)+'"><option value="new"'+(l.status==='new'?' selected':'')+'>New</option><option value="contacted"'+(l.status==='contacted'?' selected':'')+'>Contacted</option><option value="closed"'+(l.status==='closed'?' selected':'')+'>Closed</option></select></td></tr>';}).join('')+'</tbody></table></div>';
+  return h+'</section>';
+}
+function loadMerch(){state.merch=null;render();Promise.all([api('merch-products'),api('merch-orders')]).then(function(r){state.merch={products:r[0].products||[],orders:r[1].orders||[]};render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
+function loadLeads(){state.leads=null;render();api('advertising-leads').then(function(r){state.leads=r;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
+function productEditor(id){
+  var old=(state.merch.products||[]).filter(function(p){return p.id===id;})[0]||{id:'',name:'',description:'',category:'Wearables',price:0,stock:0,image:'',active:true};
+  var next={};
+  next.id=prompt('Product ID (lowercase letters, numbers, hyphens or underscores)',old.id);if(next.id===null)return;
+  next.name=prompt('Product name',old.name);if(next.name===null)return;
+  next.price=parseInt(prompt('Price in naira',old.price||''),10);next.stock=parseInt(prompt('Stock available',old.stock||0),10);
+  next.category=prompt('Category',old.category||'Other');if(next.category===null)return;
+  next.description=prompt('Short description',old.description||'');if(next.description===null)return;
+  next.image=prompt('Image URL (optional)',old.image||'');if(next.image===null)return;
+  next.active=confirm('Put this product on sale now? Click Cancel to save it hidden.');
+  api('merch-product-save',{body:{product:next}}).then(function(){toast('Product saved ✓');loadMerch();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
+}
 function reloadTeamList(){return api('team-list').then(function(d){state.team=d;render();});}
 function teamFail(b,label){return function(e){if(e.status===401)return showLogin();toast(e.message,true);if(b){b.disabled=false;b.textContent=label;}};}
 function doInvite(){
@@ -1315,10 +1364,12 @@ function closeNavDrawer(){
 function render(){
   var vis=visibleSections(),sec=vis.filter(function(s){return s.id===state.section;})[0]||vis[0];
   $('#pageTitle').textContent=sec.title;
-  $('#nav').innerHTML=vis.map(function(s){if(s.sep)return '<div class="sep"></div><div class="sep-label">'+esc(s.sep)+'</div>';return (s.id==='tickets'?'<div class="sep"></div>':'')+'<button type="button" data-sec="'+s.id+'" '+(s.id===sec.id?'aria-current="true"':'')+'><span class="ico">'+s.icon+'</span>'+esc(s.title)+'</button>';}).join('');
+  $('#nav').innerHTML=vis.map(function(s){if(s.sep)return '<div class="sep"></div><div class="sep-label">'+esc(s.sep)+'</div>';return (s.id==='tickets'?'<div class="sep"></div>':'')+'<button type="button" data-sec="'+s.id+'" '+(s.id===sec.id?'aria-current="true"':'')+'><span class="ico" data-gt-icon="'+esc(s.icon)+'"></span>'+esc(s.title)+'</button>';}).join('');
   var v=$('#view'),h='';
   if(sec.custom==='tickets')h=ticketsHtml();
   else if(sec.custom==='sales')h=salesHtml();
+  else if(sec.custom==='merch')h=merchHtml();
+  else if(sec.custom==='leads')h=leadsHtml();
   else if(sec.custom==='team')h=teamHtml();
   else if(sec.custom==='announce')h=announceHtml();
   else if(sec.custom==='security')h=securityHtml();
@@ -1334,6 +1385,12 @@ function render(){
 function handleAct(t){
   var a=t.dataset.act,ref=t.dataset.ref;
   if(a==='gate'){gateModal(ref);return;}
+  if(a==='merch-refresh'){loadMerch();return;}
+  if(a==='merch-add'){productEditor('');return;}
+  if(a==='merch-edit'){productEditor(t.dataset.id);return;}
+  if(a==='merch-disable'){if(!confirm('Hide this product from the store?'))return;api('merch-product-disable',{body:{id:t.dataset.id}}).then(function(){toast('Product hidden');loadMerch();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});return;}
+  if(a==='merch-ready'||a==='merch-collected'){var status=a==='merch-ready'?'ready':'collected';api('merch-order-status',{body:{reference:t.dataset.ref,status:status}}).then(function(){toast(status==='ready'?'Order marked ready ✓':'Order collected ✓');loadMerch();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});return;}
+  if(a==='leads-refresh'){loadLeads();return;}
   if(a==='mclose'){state.scanMode=false;closeModal();return;}
   if(a==='admit'){doAdmit(ref);return;}
   if(a==='undo'){doUndo(ref);return;}
@@ -1393,7 +1450,7 @@ document.addEventListener('click',function(e){
   if(t.id==='menuBtn'){openNavDrawer();return;}
   if(t.id==='closeNavBtn'||t.id==='navBackdrop'){closeNavDrawer();return;}
   if(t.dataset.act){handleAct(t);return;}
-  if(t.dataset.sec){closeNavDrawer();state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='team')loadTeam();else if(t.dataset.sec==='announce')loadAnnounce();else if(t.dataset.sec==='security')loadSecurity();else render();window.scrollTo(0,0);return;}
+  if(t.dataset.sec){closeNavDrawer();state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='merch')loadMerch();else if(t.dataset.sec==='leads')loadLeads();else if(t.dataset.sec==='team')loadTeam();else if(t.dataset.sec==='announce')loadAnnounce();else if(t.dataset.sec==='security')loadSecurity();else render();window.scrollTo(0,0);return;}
   if(t.dataset.add){
     var L=listSpec(t.dataset.add),arr=getP(state.content,t.dataset.add),item=L.strings?'':clone(L.blank);
     if(item&&typeof item==='object'&&'id' in item)item.id=newId();
@@ -1463,6 +1520,11 @@ document.addEventListener('change',function(e){
   if(el.dataset.teamrole){
     el.disabled=true;
     api('team-role',{body:{id:el.dataset.teamrole,role:el.value}}).then(function(){toast('Role updated ✓');return reloadTeamList();}).catch(function(err){if(err.status===401)return showLogin();toast(err.message,true);reloadTeamList();});
+    return;
+  }
+  if(el.dataset.lead){
+    el.disabled=true;
+    api('advertising-lead-status',{body:{id:parseInt(el.dataset.lead,10),status:el.value}}).then(function(){toast('Lead updated ✓');loadLeads();}).catch(function(err){if(err.status===401)return showLogin();toast(err.message,true);loadLeads();});
     return;
   }
   if(el.dataset.bind){ /* keep a card's heading in step with its title/name/year, without redrawing the page */
@@ -1537,6 +1599,7 @@ function boot(){
       $('#login').hidden=true;$('#invite').hidden=true;$('#app').hidden=false;loadSales();return;
     }
     return api('content').then(function(c){
+      migrateLegacyIcons(c);
       state.content=c;state.saved=JSON.stringify(c);
       $('#login').hidden=true;$('#invite').hidden=true;$('#app').hidden=false;render();markDirty();
       if(!me.supabase)$('#view').insertAdjacentHTML('afterbegin','<div class="notice">Supabase is not connected yet. You can look around, but publishing and uploads will not work until you finish step 2 of the README.</div>');
