@@ -11,6 +11,8 @@
   function get(o,p){return p.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
   function url(u){u=String(u||'').trim();return /^(https?:\/\/|mailto:|tel:|\/|#|data:image\/|[\w\-. %()\/]+$)/i.test(u)?u:'';}
   function setHtml(id,h){var e=$(id);if(e)e.innerHTML=h;}
+  var legacyIcons={'🏹':'target','🧱':'layers','🦶':'play','🪢':'users','🎲':'gamepad','💬':'message','🛋️':'store','🤝':'handshake','🧠':'help','🖼️':'images','⭐':'trophy'};
+  function iconFor(item){return item&&(item.icon||legacyIcons[item.emoji])||'info';}
   function show(id,on){var e=$(id);if(e)e.hidden=!on;}
   function fill(c,f){ /* copy any missing keys from the built-in defaults */
     if(f&&typeof f==='object'&&!Array.isArray(f)){
@@ -81,7 +83,7 @@
   R.about=function(c){
     var a=c.pages.about;
     setHtml('story',(a.story||[]).map(function(p){return '<p>'+esc(p)+'</p>';}).join(''));
-    setHtml('pillars',(a.pillars||[]).map(function(x){return '<div class="pillar"><span class="e">'+esc(x.emoji)+'</span><h3>'+esc(x.title)+'</h3><p>'+esc(x.text)+'</p></div>';}).join(''));
+    setHtml('pillars',(a.pillars||[]).map(function(x){return '<div class="pillar"><span class="e">'+(x.emoji?esc(x.emoji):'<span data-gt-icon="'+esc(iconFor(x))+'"></span>')+'</span><h3>'+esc(x.title)+'</h3><p>'+esc(x.text)+'</p></div>';}).join(''));
     stats(c);
   };
 
@@ -221,7 +223,7 @@
 
   R.play=function(c){
     var P=c.pages.play,L=c.links||{};
-    setHtml('modes',(P.modes||[]).map(function(m){return '<div class="mode"><span class="e">'+esc(m.emoji)+'</span><div><h3>'+esc(m.title)+'</h3><p>'+esc(m.text)+'</p></div></div>';}).join(''));
+    setHtml('modes',(P.modes||[]).map(function(m){return '<div class="mode"><span class="e">'+(m.emoji?esc(m.emoji):'<span data-gt-icon="'+esc(iconFor(m))+'"></span>')+'</span><div><h3>'+esc(m.title)+'</h3><p>'+esc(m.text)+'</p></div></div>';}).join(''));
     setHtml('steps',(P.steps||[]).map(function(s){return '<div class="step"><h3>'+esc(s.title)+'</h3><p>'+esc(s.text)+'</p></div>';}).join(''));
     var form=$('pinForm'),input=$('pinInput'),msg=$('pinMsg');
     if(!form||form._wired)return;form._wired=true;
