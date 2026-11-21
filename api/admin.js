@@ -364,8 +364,10 @@ export default async function handler(req, res) {
           ['Table waitlist is reachable', '/rest/v1/waitlist?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table announcements is reachable', '/rest/v1/announcements?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table merch_products is reachable', '/rest/v1/merch_products?select=id&limit=1', 'Run supabase/commerce.sql in the SQL Editor.'],
+          ['Merch colour and batch fields are ready', '/rest/v1/merch_products?select=colours,batch_id&limit=1', 'Run the latest supabase/commerce.sql in the SQL Editor.'],
           ['Table merch_orders is reachable', '/rest/v1/merch_orders?select=reference&limit=1', 'Run supabase/commerce.sql in the SQL Editor.'],
           ['Table advertising_leads is reachable', '/rest/v1/advertising_leads?select=id&limit=1', 'Run supabase/commerce.sql in the SQL Editor.'],
+          ['Table ticket_coupons is reachable', '/rest/v1/ticket_coupons?select=code&limit=1', 'Run supabase/commerce.sql in the SQL Editor.'],
           ['Storage bucket "' + MEDIA_BUCKET + '" exists and is public', '/storage/v1/bucket/' + MEDIA_BUCKET, 'Run supabase/setup.sql, or create a public bucket with this name.']
         ];
         for (const [name, path, hint] of tests) {
@@ -469,8 +471,10 @@ export default async function handler(req, res) {
       const category = String(product.category || '').trim().slice(0, 60) || 'Other';
       const image = String(product.image || '').trim().slice(0, 1000);
       const price = Number(product.price), stock = Number(product.stock);
+      const colours = Array.isArray(product.colours) ? [...new Set(product.colours.map((colour) => String(colour).trim().slice(0, 40)).filter(Boolean))].slice(0, 20) : [];
+      const batchId = String(product.batchId || '').trim().slice(0, 60) || ('GTM-' + Date.now().toString(36).toUpperCase() + '-' + crypto.randomBytes(3).toString('hex').toUpperCase());
       if (!/^[a-z0-9][a-z0-9_-]{1,59}$/.test(id) || !name || !Number.isInteger(price) || price < 100 || !Number.isInteger(stock) || stock < 0) return res.status(400).json({ message: 'Every product needs a valid ID, name, whole-naira price of at least ₦100 and non-negative stock.' });
-      const rows = await sb('/rest/v1/merch_products?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: { id, name, description, category, image, price, stock, active: Boolean(product.active), updated_at: new Date().toISOString() } });
+      const rows = await sb('/rest/v1/merch_products?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: { id, name, description, category, image, price, stock, colours, batch_id: batchId, active: Boolean(product.active), updated_at: new Date().toISOString() } });
       await sec.audit(req, who.name, role, 'merch_product_saved', id + ' · ' + name);
       return res.status(200).json({ product: rows && rows[0] });
     }
