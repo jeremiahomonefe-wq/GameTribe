@@ -45,7 +45,7 @@ export default async function handler(req, res) {
     /* Ticket type and quantity come from Paystack metadata (never trust the
        browser), and the amount paid must equal price x quantity. */
     const TICKETS = await getTicketMap();
-    const purchase = checkPurchase(transaction, TICKETS);
+    const purchase = await checkPurchase(transaction, TICKETS);
     if (!purchase.ok) {
       return res.status(purchase.status).json({ message: purchase.message });
     }
