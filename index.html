@@ -363,6 +363,31 @@ a{color:inherit}
 .play-card .chips span{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px 14px;font-weight:800;font-size:13px}
 .play-card .bar{display:flex;justify-content:space-between;margin:0 -26px;padding:14px 24px;background:var(--red);font-weight:800;font-size:13px}
 
+
+/* ---- nav + footer polish (shared) ---- */
+.nav-cta .btn,.nav-links a{white-space:nowrap}
+.nav{padding-top:env(safe-area-inset-top,0px)}
+.mobile-menu.open{max-height:calc(100vh - 68px);max-height:calc(100dvh - 68px);overflow-y:auto;overscroll-behavior:contain;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.mobile-menu a:not(.btn){min-height:48px;display:flex;align-items:center}
+.mobile-menu a[aria-current="page"]{color:var(--red)}
+.nav-links a[aria-current="page"]{color:var(--red)}
+.mobile-menu .btn-row{display:grid;gap:10px}
+.mobile-menu .btn-row .btn{width:100%}
+@media(min-width:1024px) and (max-width:1199px){.nav-cta .btn-outline{display:none}.nav-links a{padding:8px 6px;font-size:12.5px}}
+@media(min-width:1200px){.nav-links a{padding:8px 9px}}
+.foot a:focus-visible,.foot button:focus-visible{outline-color:var(--gold)}
+.foot-grid{padding:48px 0 36px;gap:32px}
+@media(max-width:767px){
+  .foot-grid{grid-template-columns:1fr 1fr;gap:32px 20px}
+  .foot-grid>div:first-child{grid-column:1/-1}
+  .foot-grid>div:last-child{grid-column:1/-1}
+  .foot li{margin-bottom:0}
+  .foot li a{display:inline-block;padding:8px 0}
+  .foot-bar{padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
+}
+@media(min-width:768px){.foot-grid{padding:72px 0 64px}.foot li{margin-bottom:6px}.foot li a{display:inline-block;padding:5px 0}}
+.social{width:42px;height:42px}
+.foot li a[href^="mailto:"]{overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -931,6 +956,8 @@ a{color:inherit}
     function set(open){ m.classList.toggle('open',open); b.setAttribute('aria-expanded',open?'true':'false'); b.setAttribute('aria-label',open?'Close menu':'Open menu'); }
     b.addEventListener('click',function(){ set(!m.classList.contains('open')); });
     m.addEventListener('click',function(e){ if(e.target.closest('a')) set(false); });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&m.classList.contains('open')){ set(false); b.focus(); } });
+    document.addEventListener('click',function(e){ if(m.classList.contains('open')&&!e.target.closest('.nav')) set(false); });
   })();
 </script>
 

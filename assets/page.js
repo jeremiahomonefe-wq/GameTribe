@@ -75,6 +75,8 @@
     function set(o){m.classList.toggle('open',o);b.setAttribute('aria-expanded',o?'true':'false');b.setAttribute('aria-label',o?'Close menu':'Open menu');}
     b.addEventListener('click',function(){set(!m.classList.contains('open'));});
     m.addEventListener('click',function(e){if(e.target.closest('a'))set(false);});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&m.classList.contains('open')){set(false);b.focus();}});
+    document.addEventListener('click',function(e){if(m.classList.contains('open')&&!e.target.closest('.nav'))set(false);});
   })();
 
   /* ---------- pages ---------- */

@@ -521,3 +521,28 @@ details.faq .ans{padding:0 22px 20px;color:rgba(28,20,16,.75);font-size:15.5px;l
 .mode h3{font-family:var(--display);text-transform:uppercase;font-size:20px;margin-bottom:6px}
 .mode p{color:rgba(28,20,16,.72);font-size:15px}
 .goodnote{max-width:720px;margin:34px auto 0;background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 22px;text-align:center}
+
+/* ---- nav + footer polish (shared) ---- */
+.nav-cta .btn,.nav-links a{white-space:nowrap}
+.nav{padding-top:env(safe-area-inset-top,0px)}
+.mobile-menu.open{max-height:calc(100vh - 68px);max-height:calc(100dvh - 68px);overflow-y:auto;overscroll-behavior:contain;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.mobile-menu a:not(.btn){min-height:48px;display:flex;align-items:center}
+.mobile-menu a[aria-current="page"]{color:var(--red)}
+.nav-links a[aria-current="page"]{color:var(--red)}
+.mobile-menu .btn-row{display:grid;gap:10px}
+.mobile-menu .btn-row .btn{width:100%}
+@media(min-width:1024px) and (max-width:1199px){.nav-cta .btn-outline{display:none}.nav-links a{padding:8px 6px;font-size:12.5px}}
+@media(min-width:1200px){.nav-links a{padding:8px 9px}}
+.foot a:focus-visible,.foot button:focus-visible{outline-color:var(--gold)}
+.foot-grid{padding:48px 0 36px;gap:32px}
+@media(max-width:767px){
+  .foot-grid{grid-template-columns:1fr 1fr;gap:32px 20px}
+  .foot-grid>div:first-child{grid-column:1/-1}
+  .foot-grid>div:last-child{grid-column:1/-1}
+  .foot li{margin-bottom:0}
+  .foot li a{display:inline-block;padding:8px 0}
+  .foot-bar{padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
+}
+@media(min-width:768px){.foot-grid{padding:72px 0 64px}.foot li{margin-bottom:6px}.foot li a{display:inline-block;padding:5px 0}}
+.social{width:42px;height:42px}
+.foot li a[href^="mailto:"]{overflow-wrap:anywhere}
