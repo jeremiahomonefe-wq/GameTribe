@@ -48,8 +48,8 @@ a{color:inherit}
 .brand{display:flex;flex-shrink:0}
 .brand img{height:50px;width:auto}
 .nav-links,.nav-cta{display:none;align-items:center}
-.nav-links{gap:4px}
-.nav-links a{padding:8px 12px;font-size:14px;font-weight:700;text-decoration:none;transition:transform .2s}
+.nav-links{gap:0}
+.nav-links a{padding:8px 8px;font-size:13px;font-weight:700;text-decoration:none;transition:transform .2s;white-space:nowrap}
 .nav-links a:hover{transform:scale(1.05)}
 .nav-cta{gap:12px}
 .burger{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:1.5px solid var(--ink);border-radius:50%;background:none;cursor:pointer}
@@ -67,6 +67,7 @@ a{color:inherit}
 .mobile-menu .btn-row .btn-outline{border-color:var(--ink)}
 .mobile-menu .btn-row .btn{flex:1 1 100%}
 @media(min-width:1024px){.nav-links,.nav-cta{display:flex}.burger{display:none}.mobile-menu,.mobile-menu.open{display:none}}
+.gt-icon{display:inline-flex;width:1em;height:1em;flex:0 0 1em;vertical-align:-.14em;line-height:1}.gt-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 
 /* hero */
 .hero{position:relative;background:#000;overflow:hidden;min-height:clamp(500px,72vh,660px);display:flex;align-items:flex-end}
