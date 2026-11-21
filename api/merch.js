@@ -42,7 +42,7 @@ export default async function handler(req, res) {
   if (!supabaseConfigured()) return res.status(503).json({ message: 'The merch store is not connected yet.' });
   try {
     if (req.method === 'GET' && action === 'catalog') {
-      const products = await sb('/rest/v1/merch_products?active=eq.true&select=id,name,description,category,price,stock,image&stock=gt.0&order=created_at.asc');
+      const products = await sb('/rest/v1/merch_products?active=eq.true&select=id,name,description,category,price,stock,image,colours,batch_id&stock=gt.0&order=created_at.asc');
       return res.status(200).json({ products: products || [], paystackPublicKey: PUBLIC_KEY });
     }
     const body = await readBody(req);
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
       const ip = clientIp(req);
       if (!(await allow('merch-checkout', ip, 8, 15 * 60 * 1000))) return res.status(429).json({ message: 'Please wait a few minutes before starting another checkout.' });
       const name = clean(body.name, 80), email = clean(body.email, 120), phone = clean(body.phone, 40);
-      const items = Array.isArray(body.items) ? body.items.slice(0, 20).map((item) => ({ id: clean(item.id, 80), quantity: Number(item.quantity) })) : [];
+      const items = Array.isArray(body.items) ? body.items.slice(0, 20).map((item) => ({ id: clean(item.id, 80), colour: clean(item.colour, 40), quantity: Number(item.quantity) })) : [];
       if (name.length < 2 || !emailOk(email) || phone.length < 7) return res.status(400).json({ message: 'Enter your name, a valid email address and phone number.' });
       const order = await sb('/rest/v1/rpc/reserve_merch_order', { method: 'POST', body: { p_reference: reference(), p_name: name, p_email: email, p_phone: phone, p_items: items } });
       return res.status(200).json({ ...order, paystackPublicKey: PUBLIC_KEY });
