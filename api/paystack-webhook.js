@@ -5,6 +5,7 @@ import { checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName,
 import { alreadyEmailed } from './_lib/checkin.js';
 import { reportError, checkOvercapacity } from './_lib/monitor.js';
 import { sb } from './_lib/supabase.js';
+import { sendMerchOrderEmail } from './_lib/merch-email.js';
 
 /*
  * Vercel needs the raw request body
@@ -152,10 +153,12 @@ export default async function handler(req, res) {
 
     const metadata = typeof transaction.metadata === 'string' ? JSON.parse(transaction.metadata || '{}') : (transaction.metadata || {});
     if (metadata.order_kind === 'merch' && metadata.merch_reference === transaction.reference) {
-      const rows = await sb('/rest/v1/merch_orders?reference=eq.' + encodeURIComponent(transaction.reference) + '&select=reference,amount,status&limit=1');
+      const rows = await sb('/rest/v1/merch_orders?reference=eq.' + encodeURIComponent(transaction.reference) + '&select=*&limit=1');
       const order = rows && rows[0];
       if (!order || transaction.currency !== 'NGN' || Number(transaction.amount) !== Number(order.amount) * 100) return res.status(200).json({ received: true, processed: false, reason: 'Merch order does not match payment.' });
       const paid = await sb('/rest/v1/rpc/pay_merch_order', { method: 'POST', body: { p_reference: transaction.reference } });
+      const confirmedRows = await sb('/rest/v1/merch_orders?reference=eq.' + encodeURIComponent(transaction.reference) + '&select=*&limit=1');
+      await sendMerchOrderEmail((confirmedRows && confirmedRows[0]) || order);
       return res.status(200).json({ received: true, processed: true, order: paid && paid.reference });
     }
 
@@ -166,7 +169,7 @@ export default async function handler(req, res) {
      * cannot issue tickets for it, and a retry would not change that.
      */
     const TICKETS = await getTicketMap();
-    const purchase = checkPurchase(transaction, TICKETS);
+    const purchase = await checkPurchase(transaction, TICKETS);
 
     if (!purchase.ok) {
       console.error('Game Tribe webhook rejected:', purchase.reason, transaction.reference);
