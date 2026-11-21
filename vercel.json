@@ -1,7 +1,7 @@
 {
   "cleanUrls": true,
   "crons": [
-    { "path": "/api/health", "schedule": "*/15 * * * *" }
+    { "path": "/api/health", "schedule": "0 7 * * *" }
   ],
   "rewrites": [
     {
