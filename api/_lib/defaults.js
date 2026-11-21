@@ -369,6 +369,30 @@ export const DEFAULT_CONTENT = {
       ],
       logosTitle: 'Brands already on board',
       note: 'Limited vendor spaces available. Secure your spot early!'
+    },
+
+    advertise: {
+      pill: '📣 Advertise with Game Tribe',
+      title: 'Put your brand',
+      highlight: 'in the game.',
+      intro: 'Show up where gamers, creators, students and culture lovers come to play, connect and make memories in Abraka.',
+      formPill: 'Let’s make a play',
+      formTitle: 'Tell us about your brand.',
+      formIntro: 'Send a quick brief and the Game Tribe partnerships team will get back to you.',
+      formNote: 'Your brief goes straight to the Game Tribe partnerships dashboard. No files or payments are required at this stage.',
+      formButton: 'Send your brief'
+    },
+
+    merch: {
+      pill: '🧢 Game Tribe Drop 01',
+      title: 'Wear the vibe.',
+      highlight: 'Own the moment.',
+      intro: 'Shop the Game Tribe collection online, pay securely, then pick your order up at Game Tribe Fest.',
+      stickerTitle: 'Game\nTribe\nDrop 01',
+      stickerSubtitle: 'Festival pickup',
+      collectionKicker: 'Pick your piece',
+      collectionTitle: 'The collection',
+      collectionIntro: 'Pay online with Paystack. Bring your confirmation email and collect at the festival.'
     }
   },
 
