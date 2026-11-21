@@ -4,6 +4,7 @@ import { getTicketMap, recordSale } from './_lib/store.js';
 import { checkPurchase, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, siteOrigin } from './_lib/tickets.js';
 import { alreadyEmailed } from './_lib/checkin.js';
 import { reportError, checkOvercapacity } from './_lib/monitor.js';
+import { sb } from './_lib/supabase.js';
 
 /*
  * Vercel needs the raw request body
@@ -147,6 +148,15 @@ export default async function handler(req, res) {
         received: true,
         ignored: true
       });
+    }
+
+    const metadata = typeof transaction.metadata === 'string' ? JSON.parse(transaction.metadata || '{}') : (transaction.metadata || {});
+    if (metadata.order_kind === 'merch' && metadata.merch_reference === transaction.reference) {
+      const rows = await sb('/rest/v1/merch_orders?reference=eq.' + encodeURIComponent(transaction.reference) + '&select=reference,amount,status&limit=1');
+      const order = rows && rows[0];
+      if (!order || transaction.currency !== 'NGN' || Number(transaction.amount) !== Number(order.amount) * 100) return res.status(200).json({ received: true, processed: false, reason: 'Merch order does not match payment.' });
+      const paid = await sb('/rest/v1/rpc/pay_merch_order', { method: 'POST', body: { p_reference: transaction.reference } });
+      return res.status(200).json({ received: true, processed: true, order: paid && paid.reference });
     }
 
     /*
