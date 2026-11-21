@@ -1,54 +1,82 @@
-/*
- * Public: a buyer's own ticket page data + QR image.
- *   GET /api/ticket?t=<token>           -> JSON about the ticket
- *   GET /api/ticket?t=<token>&qr=1      -> the QR code as a PNG
- * The token is only ever sent to the buyer's email, and it is signed, so it
- * cannot  be guessed or edited.
- */
-import { supabaseConfigured } from './_lib/supabase.js';
-import { getSale } from './_lib/checkin.js';
-import { allow, clientIp } from './_lib/security.js';
-import { referenceFromToken, ticketToken, ticketQrPng } from './_lib/qr.js';
-import { ticketNumberFor } from './_lib/tickets.js';
+import { sb } from './_lib/supabase.js';
+import { reportBrowserError, runHealthChecks, tokenMatches, checkOvercapacity, checkInventoryAlerts } from './_lib/monitor.js';
+import * as ann from './_lib/announce.js';
+import { getAvailability } from './_lib/store.js';
 
-/* "Ada Obi" -> "Ada O." : enough for the buyer to recognise their ticket */
-function shortName(name) {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return 'Guest';
-  return parts.length === 1 ? parts[0] : parts[0] + ' ' + parts[parts.length - 1][0] + '.';
+const readBody = async (req) => {
+  if (req.body && typeof req.body === 'object') return req.body;
+  try { return JSON.parse(req.body || '{}'); } catch { return {}; }
+};
+const cronAuthorised = (req) => Boolean(process.env.CRON_SECRET && String((req.headers || {}).authorization || '') === 'Bearer ' + process.env.CRON_SECRET);
+
+async function advanceScheduledCampaigns() {
+  const due = (await sb('/rest/v1/announcements?status=eq.scheduled&scheduled_for=lte.' + encodeURIComponent(new Date().toISOString()) + '&select=*&order=scheduled_for.asc&limit=3')) || [];
+  let progressed = 0;
+  for (const row of due) {
+    const claimed = await sb('/rest/v1/announcements?id=eq.' + row.id + '&status=eq.scheduled', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: { status: 'sending', started_at: new Date().toISOString() } });
+    if (claimed && claimed[0]) progressed++;
+  }
+  const sending = (await sb('/rest/v1/announcements?status=eq.sending&select=*&order=id.asc&limit=3')) || [];
+  for (const row of sending) {
+    const start = Number(row.next_index) || 0;
+    const chunk = (row.recipients || []).slice(start, start + ann.CHUNK);
+    if (!chunk.length) {
+      await sb('/rest/v1/announcements?id=eq.' + row.id, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: { status: 'done' } });
+      progressed++;
+      continue;
+    }
+    const claim = await sb('/rest/v1/announcements?id=eq.' + row.id + '&next_index=eq.' + start, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: { next_index: start + chunk.length } });
+    if (!claim || !claim.length) continue;
+    let result;
+    try { result = await ann.sendChunk({ recipients: chunk, subject: row.subject, body: row.body, audience: row.audience, idempotencyKey: 'ann-' + row.id + '-' + start }); }
+    catch (error) { result = { sent: 0, failed: chunk.length, errors: [error.message] }; }
+    const done = start + chunk.length >= Number(row.total || 0);
+    const errors = ((row.errors ? row.errors + '\n' : '') + result.errors.join('\n')).slice(0, 1500) || null;
+    await sb('/rest/v1/announcements?id=eq.' + row.id, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: { sent_count: (Number(row.sent_count) || 0) + result.sent, failed_count: (Number(row.failed_count) || 0) + result.failed, errors, status: done ? 'done' : 'sending' } });
+    progressed++;
+  }
+  return progressed;
+}
+
+/* When capacity is deliberately reopened, let a small waitlist batch know
+   automatically. Recipients are marked only after the whole batch succeeds. */
+async function notifyWaitlistWhenOpen() {
+  const availability = await getAvailability();
+  const open = Object.keys(availability.tickets || {}).some((id) => {
+    const ticket = availability.tickets[id];
+    return ticket && ticket.left !== null && Number(ticket.left) > 0;
+  });
+  if (!open) return 0;
+  const recipients = await ann.recipientsFor('waitlist');
+  const chunk = recipients.slice(0, ann.CHUNK);
+  if (!chunk.length) return 0;
+  const result = await ann.sendChunk({ recipients: chunk, subject: 'Tickets may be available again', body: 'Hi {name},\n\nGood news — tickets may now be available again for Game Tribe Fest. Please visit the website to check the remaining ticket options and reserve your spot.', audience: 'waitlist', idempotencyKey: 'waitlist-reopen-' + chunk.map((r) => r.email).join('|').slice(0, 180) });
+  if (result.failed) return 0;
+  const now = new Date().toISOString();
+  for (const recipient of chunk) await sb('/rest/v1/waitlist?email=eq.' + encodeURIComponent(recipient.email), { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: { notified_at: now } });
+  return chunk.length;
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
-    return res.status(405).json({ message: 'Method not allowed.' });
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method === 'POST' && req.query && (req.query.csp || req.query.report)) {
+    const payload = await readBody(req);
+    const csp = payload['csp-report'] || {};
+    await reportBrowserError({ area: 'browser', message: csp['violated-directive'] || payload.message, source: payload.source, line: payload.line, page: csp['document-uri'] || payload.page }, req);
+    return res.status(204).end();
   }
-  if (!(await allow('ticket-page', clientIp(req), 120, 10 * 60 * 1000))) {
-    return res.status(429).json({ message: 'Too many requests. Please try again in a few minutes.' });
+  if (cronAuthorised(req)) {
+    try {
+      const campaigns = await advanceScheduledCampaigns();
+      const waitlist = await notifyWaitlistWhenOpen();
+      await Promise.all([checkOvercapacity(), checkInventoryAlerts()]);
+      return res.status(200).json({ ok: true, campaigns, waitlist, at: new Date().toISOString() });
+    } catch (error) { return res.status(500).json({ ok: false, message: error.message || 'Scheduled work failed.' }); }
   }
-  const reference = referenceFromToken(req.query && req.query.t);
-  if (!reference) return res.status(404).json({ message: 'This ticket link is not valid.' });
-  if (!supabaseConfigured()) return res.status(503).json({ message: 'Tickets are not available right now.' });
-
-  let sale = null;
-  try { sale = await getSale(reference); } catch (e) { return res.status(503).json({ message: 'Tickets are not available right now. Please try again shortly.' }); }
-  if (!sale) return res.status(404).json({ message: 'We could not find this ticket.' });
-
-  if (req.query.qr) {
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'private, max-age=86400');
-    return res.status(200).send(ticketQrPng(reference, 10));
+  if (req.query && req.query.deep) {
+    if (!tokenMatches(req.query.token)) return res.status(401).json({ message: 'Unauthorised.' });
+    const result = await runHealthChecks();
+    return res.status(result.ok ? 200 : 503).json(result);
   }
-  const token = ticketToken(reference);
-  res.setHeader('Cache-Control', 'private, no-store');
-  return res.status(200).json({
-    name: shortName(sale.name),
-    ticket: sale.ticket_label || sale.ticket_type || 'Game Tribe ticket',
-    quantity: Number(sale.quantity) || 1,
-    people: Number(sale.admits_total) || 1,
-    admitted: Number(sale.admitted_count) || 0,
-    ticketNumber: ticketNumberFor(sale.reference),
-    complimentary: sale.source === 'complimentary' || Number(sale.amount) === 0,
-    qr: '/api/ticket?qr=1&t=' + encodeURIComponent(token)
-  });
+  return res.status(200).json({ ok: true, service: 'gametribe', at: new Date().toISOString() });
 }

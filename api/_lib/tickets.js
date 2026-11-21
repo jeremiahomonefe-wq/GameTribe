@@ -1,4 +1,5 @@
 import { ticketQrPng, ticketToken } from './qr.js';
+import { getCouponByCode, couponUsage } from './store.js';
 
 /*
  * Shared ticket logic used by BOTH api/verify-payment.js (browser) and
@@ -55,7 +56,28 @@ export function readQuantity(metadata) {
  * The amount must equal unit price x quantity, so editing the quantity in
  * the browser without paying for it can never produce extra tickets.
  */
-export function checkPurchase(transaction, ticketMap) {
+export async function resolveCoupon(ticket, ticketType, rawCode, email = '') {
+  const code = String(rawCode || '').trim().toUpperCase();
+  if (!code) return { code: '', name: '', unitPrice: Number(ticket.amount), originalUnitPrice: Number(ticket.amount) };
+  const coupon = await getCouponByCode(code);
+  if (!coupon || !coupon.active) throw new Error('This promo code is inactive or invalid.');
+  const now = Date.now();
+  if (coupon.starts_at && new Date(coupon.starts_at).getTime() > now) throw new Error('This promo code is not active yet.');
+  if (coupon.expires_at && new Date(coupon.expires_at).getTime() < now) throw new Error('This promo code has expired.');
+  const types = Array.isArray(coupon.ticket_types) ? coupon.ticket_types : [];
+  if (types.length && !types.includes(ticketType)) throw new Error('This promo code does not apply to the selected ticket.');
+  const finalPrice = Number(coupon.final_price);
+  if (!Number.isInteger(finalPrice) || finalPrice < 0 || finalPrice > Number(ticket.amount)) throw new Error('This promo code has an invalid price.');
+  const maxUses = Number(coupon.max_uses) || 0, perEmail = Number(coupon.per_email_limit) || 0;
+  if (maxUses || (perEmail && email)) {
+    const used = await couponUsage(coupon.code, email);
+    if (maxUses && used.total >= maxUses) throw new Error('This promo code has reached its usage limit.');
+    if (perEmail && email && used.byEmail >= perEmail) throw new Error('You have already used this promo code the maximum number of times.');
+  }
+  return { code: coupon.code, name: coupon.name || coupon.code, unitPrice: finalPrice, originalUnitPrice: Number(ticket.amount) };
+}
+
+export async function checkPurchase(transaction, ticketMap) {
   const metadata = (transaction && transaction.metadata) || {};
   const ticketType = metadata.ticket_type;
   const ticket = ticketMap[ticketType];
@@ -73,7 +95,13 @@ export function checkPurchase(transaction, ticketMap) {
     return { ok: false, status: 400, message: 'Payment amount does not match this ticket.', reason: 'Invalid currency.' };
   }
 
-  const expected = ticket.amount * quantity * 100;
+  let coupon;
+  try {
+    coupon = await resolveCoupon(ticket, ticketType, metadata.coupon_code, transaction && transaction.customer && transaction.customer.email);
+  } catch (error) {
+    return { ok: false, status: 400, message: 'Payment amount does not match this ticket.', reason: error.message };
+  }
+  const expected = coupon.unitPrice * quantity * 100;
   if (transaction.amount !== expected) {
     return { ok: false, status: 400, message: 'Payment amount does not match this ticket.', reason: 'Invalid ticket amount.', expected };
   }
@@ -84,7 +112,9 @@ export function checkPurchase(transaction, ticketMap) {
     ticketType,
     ticket,
     quantity,
-    totalNaira: ticket.amount * quantity,
+    totalNaira: coupon.unitPrice * quantity,
+    originalTotalNaira: coupon.originalUnitPrice * quantity,
+    coupon,
     admitsPerUnit,
     admitsTotal: admitsPerUnit * quantity
   };
@@ -97,7 +127,9 @@ export function saleFields(purchase) {
     ticket_label: purchase.ticket.label,
     amount: purchase.totalNaira,
     quantity: purchase.quantity,
-    unit_price: purchase.ticket.amount,
+    unit_price: purchase.coupon ? purchase.coupon.unitPrice : purchase.ticket.amount,
+    coupon_code: purchase.coupon && purchase.coupon.code ? purchase.coupon.code : null,
+    coupon_name: purchase.coupon && purchase.coupon.name ? purchase.coupon.name : null,
     admits_per_unit: purchase.admitsPerUnit,
     admits_total: purchase.admitsTotal
   };

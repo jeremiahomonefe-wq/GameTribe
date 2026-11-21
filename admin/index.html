@@ -340,6 +340,8 @@ var SECTIONS=[
  {id:'tickets',icon:'ticket',title:'Tickets & prices',custom:'tickets'},
  {id:'coupons',icon:'ticket',title:'Coupons & discounts',custom:'coupons'},
  {id:'sales',icon:'money',title:'Sales & attendees',custom:'sales'},
+ {id:'reports',icon:'chart',title:'Sales reports',custom:'reports'},
+ {id:'feedback',icon:'chat',title:'Event feedback',custom:'feedback'},
  {id:'p_merch',icon:'bag',title:'Merch page',blocks:[
   {title:'Merch page heading',fields:[
    {path:'pages.merch.pill',label:'Small tag',type:T},{path:'pages.merch.title',label:'Main heading',type:T},{path:'pages.merch.highlight',label:'Highlighted heading',type:T},
@@ -473,7 +475,7 @@ var SECTIONS=[
 ];
 
 /* ============================================================ */
-var state={content:null,saved:'',dirty:false,section:'event',sales:null,coupons:null,merch:null,leads:null,team:null,teamResult:null,salesFilter:'all',role:'owner',me:null,ann:null,annDraft:{audience:'tickets_all',subject:'',body:'',to:'',preview:null},qr:{mode:'pending',preview:null},health:null,scanMode:false,compReq:''};
+var state={content:null,saved:'',dirty:false,section:'event',sales:null,coupons:null,merch:null,leads:null,reports:null,feedback:null,team:null,teamResult:null,salesFilter:'all',role:'owner',me:null,ann:null,annDraft:{audience:'tickets_all',subject:'',body:'',to:'',preview:null},qr:{mode:'pending',preview:null},health:null,scanMode:false,compReq:''};
 var $=function(s,r){return (r||document).querySelector(s);};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function getP(o,p){return p.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
@@ -1029,8 +1031,8 @@ function annHistoryHtml(d){
   var h='';
   if(!d.list.length)h+='<div class="empty">None yet.</div>';
   else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Subject</th><th>To</th><th>Sent</th><th>Failed</th><th>Status</th></tr></thead><tbody>'+d.list.map(function(a){
-    var open=a.status==='sending'||a.status==='paused',isQr=a.audience==='qr_tickets';
-    return '<tr><td style="white-space:nowrap">'+esc(timeShort(a.created_at))+'</td><td>'+esc(a.subject)+'</td><td>'+esc(isQr?'QR tickets to ticket holders':(d.audiences[a.audience]||a.audience))+'</td><td>'+esc(a.sent_count)+' / '+esc(a.total)+'</td><td>'+(a.failed_count?'<span class="badge warn">'+esc(a.failed_count)+'</span>':'0')+'</td><td>'+(open?'<span class="badge warn">'+(a.status==='paused'?'Paused (email limit)':'Unfinished')+'</span> <button class="btn btn-line sm" type="button" data-act="'+(isQr?'qr-resume':'an-resume')+'" data-id="'+esc(a.id)+'" data-total="'+esc(a.total)+'">Resume</button>':'<span class="badge ok">Done</span>')+'</td></tr>';
+    var open=a.status==='sending'||a.status==='paused',isQr=a.audience==='qr_tickets',scheduled=a.status==='scheduled';
+    return '<tr><td style="white-space:nowrap">'+esc(scheduled?timeShort(a.scheduled_for):timeShort(a.created_at))+'</td><td>'+esc(a.subject)+'</td><td>'+esc(isQr?'QR tickets to ticket holders':(d.audiences[a.audience]||a.audience))+'</td><td>'+esc(a.sent_count)+' / '+esc(a.total)+'</td><td>'+(a.failed_count?'<span class="badge warn">'+esc(a.failed_count)+'</span>':'0')+'</td><td>'+(scheduled?'<span class="badge part">Scheduled</span>':(open?'<span class="badge warn">'+(a.status==='paused'?'Paused (email limit)':'Unfinished')+'</span> <button class="btn btn-line sm" type="button" data-act="'+(isQr?'qr-resume':'an-resume')+'" data-id="'+esc(a.id)+'" data-total="'+esc(a.total)+'">Resume</button>':'<span class="badge ok">Done</span>'))+'</td></tr>';
   }).join('')+'</tbody></table></div>';
   return h;
 }
@@ -1050,7 +1052,7 @@ function announceHtml(){
     '<div class="field"><label for="anAud">Who should get it?</label><select id="anAud">'+Object.keys(d.audiences).map(function(k){return '<option value="'+k+'"'+(dr.audience===k?' selected':'')+'>'+esc(d.audiences[k])+'</option>';}).join('')+'</select><p class="help" id="anCount">'+annCountText()+'</p></div>'+
     '<div class="field"><label for="anSub">Subject</label><input type="text" id="anSub" maxlength="150" value="'+esc(dr.subject)+'" placeholder="e.g. Doors open at 3pm, venue update"></div>'+
     '<div class="field"><label for="anBody">Message</label><textarea id="anBody" rows="8" maxlength="5000" placeholder="Hi {name},&#10;&#10;...">'+esc(dr.body)+'</textarea></div>'+
-    '<div class="field"><label for="anTo">Send a test to</label><input type="email" id="anTo" value="'+esc(dr.to)+'" placeholder="your email (empty = the security-alert address)"></div>'+
+    '<div class="field"><label for="anTo">Send a test to</label><input type="email" id="anTo" value="'+esc(dr.to)+'" placeholder="your email (empty = the security-alert address)"></div><div class="field"><label for="anSchedule">Schedule for later (optional)</label><input type="datetime-local" id="anSchedule" value="'+esc(dr.scheduledFor||'')+'"><p class="help">Leave empty to send now. Scheduled campaigns start within 15 minutes of this time.</p></div>'+
     '<p style="margin:14px 0 0"><button class="btn btn-line" type="button" data-act="an-test">Send me a test</button> <button class="btn btn-red" type="button" id="anSend" data-act="an-send">Send to everyone</button></p><div id="anProgress"></div></section>';
   h+='<section class="card"><h3>WhatsApp or SMS</h3><p class="help">Many buyers see WhatsApp before email. Download the phone numbers for the group chosen above, then paste the same message into a WhatsApp Broadcast list. (Sending WhatsApp or SMS automatically needs an account with a provider such as Termii or Twilio.)</p>'+
     '<p style="margin:0"><button class="btn btn-line sm" type="button" data-act="an-phones">Download phone numbers (CSV)</button> <button class="btn btn-line sm" type="button" data-act="an-copy">Copy the message text</button></p></section>';
@@ -1132,7 +1134,7 @@ function annPreviewRefresh(){
 }
 function annDraftRead(){
   var d=state.annDraft;
-  if($('#anSub'))d.subject=$('#anSub').value;if($('#anBody'))d.body=$('#anBody').value;if($('#anTo'))d.to=$('#anTo').value;if($('#anAud'))d.audience=$('#anAud').value;
+  if($('#anSub'))d.subject=$('#anSub').value;if($('#anBody'))d.body=$('#anBody').value;if($('#anTo'))d.to=$('#anTo').value;if($('#anAud'))d.audience=$('#anAud').value;if($('#anSchedule'))d.scheduledFor=$('#anSchedule').value;
   return d;
 }
 function annTest(btn){
@@ -1143,9 +1145,9 @@ function annTest(btn){
 function annSend(btn){
   var d=annDraftRead(),n=d.preview&&d.preview.count;
   if(!n){toast('There is nobody to send to for this choice.',true);return;}
-  if(!confirm('Send “'+d.subject+'” to '+n+(n===1?' person':' people')+' now? This cannot be undone.'))return;
+  if(!confirm((d.scheduledFor?'Schedule':'Send')+' “'+d.subject+'” to '+n+(n===1?' person':' people')+(d.scheduledFor?' for '+d.scheduledFor:' now')+'?'))return;
   btn.disabled=true;
-  api('announce-create',{body:{subject:d.subject,body:d.body,audience:d.audience}}).then(function(res){annLoop(res.id,res.total);})
+  api('announce-create',{body:{subject:d.subject,body:d.body,audience:d.audience,scheduledFor:d.scheduledFor}}).then(function(res){if(res.scheduled){toast('Campaign scheduled ✓');annHistoryRefresh();btn.disabled=false;return;}annLoop(res.id,res.total);})
     .catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);btn.disabled=false;});
 }
 function annLoop(id,total){
@@ -1307,15 +1309,15 @@ function loadTeam(keepResult){
 /* ---------- merch and advertising leads ---------- */
 function merchHtml(){
   if(!state.merch)return '<div class="empty">Loading merch…</div>';
-  var products=state.merch.products||[],orders=state.merch.orders||[],stock=products.reduce(function(n,p){return n+Number(p.stock||0);},0),paid=orders.filter(function(o){return ['paid','ready','collected'].indexOf(o.status)>-1;}),revenue=paid.reduce(function(n,o){return n+Number(o.amount||0);},0);
+  var products=state.merch.products||[],orders=state.merch.orders||[],stock=products.reduce(function(n,p){var v=p.variants||[];return n+(v.length?v.reduce(function(x,a){return x+Number(a.stock||0);},0):Number(p.stock||0));},0),paid=orders.filter(function(o){return ['paid','ready','collected'].indexOf(o.status)>-1;}),revenue=paid.reduce(function(n,o){return n+Number(o.amount||0);},0);
   var h='<div class="notice">Products that are <b>on sale</b> appear on the public Merch page. Buyers pay with Paystack, then collect at the festival. Changing stock live controls what can be bought.</div>'+
     '<div class="kpis"><div class="kpi"><b>'+products.filter(function(p){return p.active;}).length+'</b><span>Products on sale</span></div><div class="kpi"><b>'+stock+'</b><span>Items in stock</span></div><div class="kpi"><b>'+paid.length+'</b><span>Paid orders</span></div><div class="kpi"><b>'+naira(revenue)+'</b><span>Merch revenue</span></div></div>'+
     '<section class="card"><div class="item-head"><h3>Products</h3><span><button class="btn btn-line sm" type="button" data-act="merch-refresh">Refresh</button> <button class="btn btn-red sm" type="button" data-act="merch-add">+ Add product</button></span></div>';
   if(!products.length)h+='<div class="empty">No products yet. Add your first product to start selling.</div>';
-  else h+='<div class="table-wrap"><table><thead><tr><th>Product</th><th>Colours</th><th>Batch ID</th><th>Price</th><th>Stock</th><th>Store</th><th></th></tr></thead><tbody>'+products.map(function(p){return '<tr><td><b>'+esc(p.name)+'</b><div class="small">'+esc(p.id)+'</div></td><td>'+esc((p.colours||[]).join(', ')||'—')+'</td><td><code>'+esc(p.batch_id||'—')+'</code></td><td>'+naira(p.price)+'</td><td>'+esc(p.stock)+'</td><td>'+(p.active?'<span class="badge ok">On sale</span>':'<span class="badge warn">Hidden</span>')+'</td><td><button class="btn btn-line sm" type="button" data-act="merch-edit" data-id="'+esc(p.id)+'">Edit</button> '+(p.active?'<button class="btn btn-ghost sm danger" type="button" data-act="merch-disable" data-id="'+esc(p.id)+'">Hide</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>';
-  h+='</section><section class="card"><div class="item-head"><h3>Festival pickup orders</h3><button class="btn btn-line sm" type="button" data-act="merch-refresh">Refresh</button></div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>Product</th><th>Colours / sizes</th><th>Batch ID</th><th>Price</th><th>Stock</th><th>Store</th><th></th></tr></thead><tbody>'+products.map(function(p){var v=p.variants||[],desc=v.length?v.map(function(x){return x.colour+' '+x.size+' ('+x.stock+')';}).join(', '):(p.colours||[]).join(', ')||'—',qty=v.length?v.reduce(function(n,x){return n+Number(x.stock||0);},0):p.stock;return '<tr><td><b>'+esc(p.name)+'</b><div class="small">'+esc(p.id)+'</div></td><td>'+esc(desc)+'</td><td><code>'+esc(p.batch_id||'—')+'</code></td><td>'+naira(p.price)+'</td><td>'+esc(qty)+'</td><td>'+(p.active?'<span class="badge ok">On sale</span>':'<span class="badge warn">Hidden</span>')+'</td><td><button class="btn btn-line sm" type="button" data-act="merch-edit" data-id="'+esc(p.id)+'">Edit</button> '+(p.active?'<button class="btn btn-ghost sm danger" type="button" data-act="merch-disable" data-id="'+esc(p.id)+'">Hide</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>';
+  h+='</section><section class="card"><div class="item-head"><h3>Festival pickup orders</h3><span><button class="btn btn-line sm" type="button" data-act="merch-pickup">Scan pickup</button> <button class="btn btn-line sm" type="button" data-act="merch-refresh">Refresh</button></span></div>';
   if(!orders.length)h+='<div class="empty">No merch orders yet.</div>';
-  else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Buyer</th><th>Items</th><th>Paid</th><th>Status</th><th></th></tr></thead><tbody>'+orders.map(function(o){var itemText=(o.items||[]).map(function(i){return (i.quantity||1)+' × '+i.name;}).join(', ');return '<tr><td>'+esc(timeShort(o.paid_at||o.created_at))+'</td><td><b>'+esc(o.name)+'</b><div class="small">'+esc(o.phone)+' · '+esc(o.email)+'</div></td><td>'+esc(itemText)+'</td><td>'+naira(o.amount)+'</td><td><span class="badge '+(o.status==='collected'?'used':o.status==='ready'?'ok':o.status==='paid'?'part':'warn')+'">'+esc(o.status)+'</span><div class="small"><code>'+esc(o.reference)+'</code></div></td><td>'+((o.status==='paid')?'<button class="btn btn-line sm" type="button" data-act="merch-ready" data-ref="'+esc(o.reference)+'">Mark ready</button>':(o.status==='ready'?'<button class="btn btn-red sm" type="button" data-act="merch-collected" data-ref="'+esc(o.reference)+'">Mark collected</button>':''))+'</td></tr>';}).join('')+'</tbody></table></div>';
+  else h+='<div class="table-wrap"><table><thead><tr><th>When</th><th>Buyer</th><th>Items</th><th>Paid</th><th>Status</th><th></th></tr></thead><tbody>'+orders.map(function(o){var itemText=(o.items||[]).map(function(i){return (i.quantity||1)+' × '+i.name+(i.colour?' · '+i.colour:'')+(i.size?' · '+i.size:'');}).join(', ');return '<tr><td>'+esc(timeShort(o.paid_at||o.created_at))+'</td><td><b>'+esc(o.name)+'</b><div class="small">'+esc(o.phone)+' · '+esc(o.email)+'</div></td><td>'+esc(itemText)+'</td><td>'+naira(o.amount)+'</td><td><span class="badge '+(o.status==='collected'?'used':o.status==='ready'?'ok':o.status==='paid'?'part':'warn')+'">'+esc(o.status)+'</span><div class="small"><code>'+esc(o.pickup_code||o.reference)+'</code></div></td><td>'+((o.status==='paid')?'<button class="btn btn-line sm" type="button" data-act="merch-ready" data-ref="'+esc(o.reference)+'">Mark ready</button>':(o.status==='ready'?'<button class="btn btn-red sm" type="button" data-act="merch-collected" data-ref="'+esc(o.reference)+'">Mark collected</button>':''))+'</td></tr>';}).join('')+'</tbody></table></div>';
   return h+'</section>';
 }
 function couponsHtml(){
@@ -1326,6 +1328,20 @@ function couponsHtml(){
   return h+'<div class="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Final price</th><th>Tickets</th><th>Status</th><th>Uses</th><th></th></tr></thead><tbody>'+coupons.map(function(c){var types=(c.ticket_types||[]).map(function(id){var t=tickets.filter(function(x){return x.id===id;})[0];return t?t.label:id;}).join(', ')||'All tickets';return '<tr><td><code>'+esc(c.code)+'</code></td><td>'+esc(c.name)+'</td><td>'+naira(c.final_price)+'</td><td style="min-width:160px">'+esc(types)+'</td><td>'+(c.active?'<span class="badge ok">Active</span>':'<span class="badge warn">Inactive</span>')+'</td><td>'+esc(c.uses||0)+'</td><td><button class="btn btn-line sm" type="button" data-act="coupon-edit" data-code="'+esc(c.code)+'">Edit</button> <button class="btn btn-ghost sm danger" type="button" data-act="coupon-delete" data-code="'+esc(c.code)+'">Delete</button></td></tr>';}).join('')+'</tbody></table></div></section>';
 }
 function loadCoupons(){state.coupons=null;render();api('coupon-list').then(function(data){state.coupons=data;render();}).catch(function(error){if(error.status===401)return showLogin();toast(error.message,true);});}
+function reportsHtml(){
+  if(!state.reports)return '<div class="empty">Loading reports…</div>';
+  var d=state.reports,all=Number(d.ticketRevenue||0)+Number(d.merchRevenue||0),list=function(rows,key,label){return rows&&rows.length?'<div class="table-wrap"><table><thead><tr><th>'+label+'</th><th>Total</th></tr></thead><tbody>'+rows.slice(0,10).map(function(row){return '<tr><td>'+esc(row.name)+'</td><td>'+esc(row[key])+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No data yet.</div>';};
+  return '<div class="notice">Live totals from paid ticket and merch orders. Export or accounting reconciliation can continue to use the Sales and Merch lists.</div><div class="kpis"><div class="kpi"><b>'+naira(all)+'</b><span>Total sales</span></div><div class="kpi"><b>'+naira(d.ticketRevenue)+'</b><span>Ticket revenue</span></div><div class="kpi"><b>'+naira(d.merchRevenue)+'</b><span>Merch revenue</span></div><div class="kpi"><b>'+esc(d.ticketOrders)+'</b><span>Ticket orders</span></div><div class="kpi"><b>'+esc(d.merchOrders)+'</b><span>Merch orders</span></div></div><section class="card"><div class="item-head"><h3>Coupon performance</h3><button class="btn btn-line sm" type="button" data-act="reports-refresh">Refresh</button></div>'+list(d.coupons,'uses','Coupon')+'</section><section class="card"><h3>Best-selling merch</h3>'+list(d.products,'quantity','Product')+'</section>';
+}
+function feedbackHtml(){
+  if(!state.feedback)return '<div class="empty">Loading feedback…</div>';
+  var rows=state.feedback.feedback||[],rated=rows.filter(function(x){return x.rating;}),avg=rated.length?(rated.reduce(function(n,x){return n+Number(x.rating);},0)/rated.length).toFixed(1):'—';
+  var h='<div class="notice">Send a one-time feedback link to every ticket holder after the event. Completed responses appear here.</div><div class="kpis"><div class="kpi"><b>'+rated.length+'</b><span>Responses</span></div><div class="kpi"><b>'+avg+'</b><span>Average rating</span></div><div class="kpi"><b>'+rated.filter(function(x){return x.recommend;}).length+'</b><span>Would recommend</span></div></div><section class="card"><div class="item-head"><h3>Attendee feedback</h3><span><button class="btn btn-line sm" type="button" data-act="feedback-refresh">Refresh</button> <button class="btn btn-red sm" type="button" data-act="feedback-send">Send feedback request</button></span></div>';
+  if(!rated.length)return h+'<div class="empty">No completed feedback yet.</div></section>';
+  return h+'<div class="table-wrap"><table><thead><tr><th>When</th><th>Rating</th><th>Favourite part</th><th>Could improve</th><th>Recommend</th></tr></thead><tbody>'+rated.map(function(row){return '<tr><td>'+esc(timeShort(row.submitted_at))+'</td><td>'+esc(row.rating)+'/5</td><td>'+esc(row.favourite||'—')+'</td><td>'+esc(row.improvements||'—')+'</td><td>'+esc(row.recommend?'Yes':'No')+'</td></tr>';}).join('')+'</tbody></table></div></section>';
+}
+function loadReports(){state.reports=null;render();api('reports').then(function(d){state.reports=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
+function loadFeedback(){state.feedback=null;render();api('feedback-list').then(function(d){state.feedback=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function couponEditor(code){
   var old=(state.coupons.coupons||[]).filter(function(c){return c.code===code;})[0]||{code:'',name:'',final_price:0,ticket_types:[],active:true};
   var tickets=state.content.tickets||[],editing=Boolean(code);
@@ -1335,6 +1351,7 @@ function couponEditor(code){
       '<div class="field"><label for="couponCode">Coupon code</label><input id="couponCode" maxlength="32" autocomplete="off" placeholder="e.g. CHURCH50" value="'+esc(old.code)+'"'+(editing?' readonly':'')+' required><p class="help">Letters, numbers, hyphens and underscores only.</p></div>'+
       '<div class="field"><label for="couponPrice">Final ticket price (₦)</label><input id="couponPrice" type="number" min="0" step="1" value="'+esc(old.final_price)+'" required><p class="help">Original ticket price is never changed.</p></div></div>'+
       '<div class="field"><label for="couponName">Display name</label><input id="couponName" maxlength="120" value="'+esc(old.name)+'" placeholder="e.g. Church Community Discount" required></div>'+
+      '<div class="grid two"><div class="field"><label for="couponStart">Start date (optional)</label><input id="couponStart" type="datetime-local" value="'+esc(old.starts_at?String(old.starts_at).slice(0,16):'')+'"></div><div class="field"><label for="couponEnd">End date (optional)</label><input id="couponEnd" type="datetime-local" value="'+esc(old.expires_at?String(old.expires_at).slice(0,16):'')+'"></div></div><div class="grid two"><div class="field"><label for="couponMax">Maximum uses (0 = unlimited)</label><input id="couponMax" type="number" min="0" step="1" value="'+esc(old.max_uses||0)+'"></div><div class="field"><label for="couponPerEmail">Uses per email (0 = unlimited)</label><input id="couponPerEmail" type="number" min="0" step="1" value="'+esc(old.per_email_limit||0)+'"></div></div>'+
       '<div class="field"><label>Applicable ticket types</label><p class="help">Leave every box unticked to apply the code to all ticket types.</p><div class="check-list">'+tickets.map(function(ticket){var on=(old.ticket_types||[]).indexOf(ticket.id)>-1;return '<label><input type="checkbox" name="couponTicket" value="'+esc(ticket.id)+'"'+(on?' checked':'')+'><span>'+esc(ticket.label)+'<br><small>'+naira(ticket.price)+'</small></span></label>';}).join('')+'</div></div>'+
       '<div class="field"><label class="switch"><input id="couponActive" type="checkbox"'+(old.active?' checked':'')+'><span>Coupon is active and can be used at checkout</span></label></div>'+
       '<div class="row"><button class="btn btn-red" id="couponSave" type="submit">'+(editing?'Save coupon':'Create coupon')+'</button><button class="btn btn-line" type="button" data-act="mclose">Cancel</button></div><p id="couponFormError" class="msg err" role="alert"></p></form>');
@@ -1342,7 +1359,7 @@ function couponEditor(code){
   form.addEventListener('submit',function(event){
     event.preventDefault();
     var button=$('#couponSave'),error=$('#couponFormError'),price=Number($('#couponPrice').value);
-    var next={code:$('#couponCode').value.trim().toUpperCase(),name:$('#couponName').value.trim(),finalPrice:price,ticketTypes:Array.prototype.map.call(form.querySelectorAll('input[name="couponTicket"]:checked'),function(input){return input.value;}),active:$('#couponActive').checked};
+    var next={code:$('#couponCode').value.trim().toUpperCase(),name:$('#couponName').value.trim(),finalPrice:price,ticketTypes:Array.prototype.map.call(form.querySelectorAll('input[name="couponTicket"]:checked'),function(input){return input.value;}),startsAt:$('#couponStart').value,expiresAt:$('#couponEnd').value,maxUses:Number($('#couponMax').value||0),perEmailLimit:Number($('#couponPerEmail').value||0),active:$('#couponActive').checked};
     if(!/^[A-Z0-9_-]{2,32}$/.test(next.code)){error.textContent='Use 2–32 letters, numbers, hyphens or underscores for the code.';return;}
     if(next.name.length<2){error.textContent='Enter a display name.';return;}
     if(!Number.isInteger(price)||price<0){error.textContent='Enter a whole final price of ₦0 or more.';return;}
@@ -1359,9 +1376,14 @@ function leadsHtml(){
   return h+'</section>';
 }
 function loadMerch(){state.merch=null;render();Promise.all([api('merch-products'),api('merch-orders')]).then(function(r){state.merch={products:r[0].products||[],orders:r[1].orders||[]};render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
+function merchPickupModal(){
+  openModal('<div class="item-head"><h3>Merch pickup</h3><button type="button" class="btn btn-ghost sm" data-act="mclose">Close</button></div><p class="help">Scan the QR code from the buyer’s email, or type their pickup code/order reference. A USB or phone scanner can type into this box.</p><form id="merchPickupForm"><div class="field"><label for="merchPickupCode">QR, pickup code or order reference</label><input id="merchPickupCode" autocomplete="off" autofocus placeholder="Scan or paste code" required></div><button class="btn btn-red" type="submit" id="merchPickupGo">Confirm collection</button><p class="msg" id="merchPickupResult"></p></form>');
+  var input=$('#merchPickupCode'),form=$('#merchPickupForm'),result=$('#merchPickupResult');setTimeout(function(){input.focus();},0);
+  form.addEventListener('submit',function(event){event.preventDefault();var button=$('#merchPickupGo');button.disabled=true;button.textContent='Checking…';result.textContent='';api('merch-pickup-scan',{body:{code:input.value}}).then(function(data){result.className='msg ok';result.textContent='Collected: '+data.order.name+' — '+naira(data.order.amount);button.textContent='Collected ✓';loadMerch();}).catch(function(error){result.className='msg err';result.textContent=error.message;button.disabled=false;button.textContent='Confirm collection';});});
+}
 function loadLeads(){state.leads=null;render();api('advertising-leads').then(function(r){state.leads=r;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function productEditor(id){
-  var old=(state.merch.products||[]).filter(function(p){return p.id===id;})[0]||{id:'',name:'',description:'',category:'Wearables',price:0,stock:0,image:'',colours:[],batch_id:'',active:true};
+  var old=(state.merch.products||[]).filter(function(p){return p.id===id;})[0]||{id:'',name:'',description:'',category:'Wearables',price:0,stock:0,image:'',colours:[],variants:[],low_stock_threshold:5,batch_id:'',active:true};
   var editing=Boolean(id),preview=srcUrl(old.image);
   openModal('<div class="item-head"><h3>'+ (editing?'Edit merch product':'Add merch product') +'</h3><button type="button" class="btn btn-ghost sm" data-act="mclose">Close</button></div>'+
     '<p class="help">Add the product information buyers see in the store. Festival pickup is shown after payment.</p>'+
@@ -1371,7 +1393,9 @@ function productEditor(id){
       '<div class="field"><label for="merchName">Product name</label><input id="merchName" maxlength="100" value="'+esc(old.name)+'" placeholder="e.g. Game Tribe Fest T-shirt" required></div>'+
       '<div class="field"><label for="merchDescription">Product details</label><textarea id="merchDescription" maxlength="500" placeholder="Describe the colour, size, material or anything buyers should know.">'+esc(old.description)+'</textarea></div>'+
       '<div class="grid two"><div class="field"><label for="merchPrice">Price (₦)</label><input id="merchPrice" type="number" min="100" step="1" value="'+esc(old.price)+'" required></div><div class="field"><label for="merchStock">Stock available</label><input id="merchStock" type="number" min="0" step="1" value="'+esc(old.stock)+'" required></div></div>'+
-      '<div class="grid two"><div class="field"><label for="merchColours">Available colours</label><input id="merchColours" maxlength="500" value="'+esc((old.colours||[]).join(', '))+'" placeholder="e.g. Black, Red, Cream"><p class="help">Separate choices with commas. Buyers choose one before adding to cart.</p></div><div class="field"><label for="merchBatch">Batch ID</label><input id="merchBatch" value="'+esc(old.batch_id||'Auto-generated when saved')+'" readonly><p class="help">Generated automatically for every new product.</p></div></div>'+
+      '<div class="grid two"><div class="field"><label for="merchColours">Available colours</label><input id="merchColours" maxlength="500" value="'+esc((old.colours||[]).join(', '))+'" placeholder="e.g. Black, Red, Cream"><p class="help">For a simple product, separate colours with commas.</p></div><div class="field"><label for="merchBatch">Batch ID</label><input id="merchBatch" value="'+esc(old.batch_id||'Auto-generated when saved')+'" readonly><p class="help">Generated automatically for every new product.</p></div></div>'+
+      '<div class="field"><label for="merchVariants">Colour, size and stock (optional)</label><textarea id="merchVariants" rows="4" placeholder="Black | M | 12&#10;Black | L | 8&#10;Red | XL | 4">'+esc((old.variants||[]).map(function(v){return [v.colour,v.size,v.stock].join(' | ');}).join('\n'))+'</textarea><p class="help">One choice per line: colour | size | stock. When you add choices here, buyers must select both colour and size and stock is tracked per choice.</p></div>'+
+      '<div class="field"><label for="merchLowStock">Low-stock alert level</label><input id="merchLowStock" type="number" min="0" step="1" value="'+esc(old.low_stock_threshold===undefined?5:old.low_stock_threshold)+'"><p class="help">You will receive a reminder when stock reaches this number.</p></div>'+
       '<div class="field"><label for="merchImage">Product picture</label><div id="merchPreview" class="photo-preview'+(preview?' has-image':'')+'"'+(preview?' style="background-image:url(\''+esc(preview).replace(/'/g,'%27')+'\')"':'')+'>No picture selected</div><input id="merchImage" type="url" maxlength="1000" value="'+esc(old.image)+'" placeholder="Paste an image URL, or upload one below"><div class="media-actions"><button id="merchImageUpload" type="button" class="btn btn-line sm">Upload picture</button><button id="merchImageRemove" type="button" class="btn btn-ghost sm danger"'+(old.image?'':' hidden')+'>Remove picture</button></div><p id="merchUploadStatus" class="upload-status"></p></div>'+
       '<div class="field"><label class="switch"><input id="merchActive" type="checkbox"'+(old.active?' checked':'')+'><span>Put this product on sale now</span></label></div>'+
       '<div class="row"><button class="btn btn-red" id="merchSave" type="submit">'+(editing?'Save product':'Add product')+'</button><button class="btn btn-line" type="button" data-act="mclose">Cancel</button></div><p id="merchFormError" class="msg err" role="alert"></p></form>','wide');
@@ -1386,10 +1410,12 @@ function productEditor(id){
   });
   form.addEventListener('submit',function(event){
     event.preventDefault();
-    var button=$('#merchSave'),error=$('#merchFormError'),next={id:$('#merchId').value.trim().toLowerCase(),name:$('#merchName').value.trim(),description:$('#merchDescription').value.trim(),category:$('#merchCategory').value.trim(),image:image.value.trim(),price:Number($('#merchPrice').value),stock:Number($('#merchStock').value),colours:$('#merchColours').value.split(',').map(function(value){return value.trim();}).filter(Boolean),batchId:old.batch_id||'',active:$('#merchActive').checked};
+    var lines=$('#merchVariants').value.split(/\r?\n/).map(function(line){return line.trim();}).filter(Boolean),variants=[],bad=false;lines.forEach(function(line){var p=line.split('|').map(function(v){return v.trim();});if(p.length!==3||!p[0]||!p[1]||!Number.isInteger(Number(p[2]))||Number(p[2])<0){bad=true;return;}variants.push({colour:p[0],size:p[1],stock:Number(p[2])});});
+    var button=$('#merchSave'),error=$('#merchFormError'),next={id:$('#merchId').value.trim().toLowerCase(),name:$('#merchName').value.trim(),description:$('#merchDescription').value.trim(),category:$('#merchCategory').value.trim(),image:image.value.trim(),price:Number($('#merchPrice').value),stock:Number($('#merchStock').value),colours:$('#merchColours').value.split(',').map(function(value){return value.trim();}).filter(Boolean),variants:variants,lowStockThreshold:Number($('#merchLowStock').value),batchId:old.batch_id||'',active:$('#merchActive').checked};
     if(!/^[a-z0-9][a-z0-9_-]{1,59}$/.test(next.id)){error.textContent='Use a valid product ID with lowercase letters, numbers, hyphens or underscores.';return;}
     if(!next.name){error.textContent='Enter a product name.';return;}
-    if(!Number.isInteger(next.price)||next.price<100||!Number.isInteger(next.stock)||next.stock<0){error.textContent='Use a price of at least ₦100 and stock of 0 or more.';return;}
+    if(!Number.isInteger(next.price)||next.price<100||!Number.isInteger(next.stock)||next.stock<0||!Number.isInteger(next.lowStockThreshold)||next.lowStockThreshold<0){error.textContent='Use a price of at least ₦100 and stock values of 0 or more.';return;}
+    if(bad){error.textContent='Each product choice must use: colour | size | stock.';return;}
     button.disabled=true;button.textContent='Saving…';error.textContent='';
     api('merch-product-save',{body:{product:next}}).then(function(){closeModal();toast('Product saved ✓');loadMerch();}).catch(function(e){if(e.status===401)return showLogin();error.textContent=e.message;button.disabled=false;button.textContent=editing?'Save product':'Add product';});
   });
@@ -1439,6 +1465,8 @@ function render(){
   if(sec.custom==='tickets')h=ticketsHtml();
   else if(sec.custom==='sales')h=salesHtml();
   else if(sec.custom==='coupons')h=couponsHtml();
+  else if(sec.custom==='reports')h=reportsHtml();
+  else if(sec.custom==='feedback')h=feedbackHtml();
   else if(sec.custom==='merch')h=merchHtml();
   else if(sec.custom==='leads')h=leadsHtml();
   else if(sec.custom==='team')h=teamHtml();
@@ -1457,6 +1485,9 @@ function handleAct(t){
   var a=t.dataset.act,ref=t.dataset.ref;
   if(a==='gate'){gateModal(ref);return;}
   if(a==='merch-refresh'){loadMerch();return;}
+  if(a==='reports-refresh'){loadReports();return;}
+  if(a==='feedback-refresh'){loadFeedback();return;}
+  if(a==='feedback-send'){if(!confirm('Email every ticket holder a one-time feedback link now?'))return;t.disabled=true;t.textContent='Sending…';api('feedback-send',{body:{confirm:'SEND'}}).then(function(r){toast('Feedback request sent to '+r.sent+' people ✓');loadFeedback();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);t.disabled=false;t.textContent='Send feedback request';});return;}
   if(a==='coupons-refresh'){loadCoupons();return;}
   if(a==='coupon-add'){couponEditor('');return;}
   if(a==='coupon-edit'){couponEditor(t.dataset.code);return;}
@@ -1464,6 +1495,7 @@ function handleAct(t){
   if(a==='merch-add'){productEditor('');return;}
   if(a==='merch-edit'){productEditor(t.dataset.id);return;}
   if(a==='merch-disable'){if(!confirm('Hide this product from the store?'))return;api('merch-product-disable',{body:{id:t.dataset.id}}).then(function(){toast('Product hidden');loadMerch();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});return;}
+  if(a==='merch-pickup'){merchPickupModal();return;}
   if(a==='merch-ready'||a==='merch-collected'){var status=a==='merch-ready'?'ready':'collected';api('merch-order-status',{body:{reference:t.dataset.ref,status:status}}).then(function(){toast(status==='ready'?'Order marked ready ✓':'Order collected ✓');loadMerch();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});return;}
   if(a==='leads-refresh'){loadLeads();return;}
   if(a==='mclose'){state.scanMode=false;closeModal();return;}
@@ -1525,7 +1557,7 @@ document.addEventListener('click',function(e){
   if(t.id==='menuBtn'){openNavDrawer();return;}
   if(t.id==='closeNavBtn'||t.id==='navBackdrop'){closeNavDrawer();return;}
   if(t.dataset.act){handleAct(t);return;}
-  if(t.dataset.sec){closeNavDrawer();state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='coupons')loadCoupons();else if(t.dataset.sec==='merch')loadMerch();else if(t.dataset.sec==='leads')loadLeads();else if(t.dataset.sec==='team')loadTeam();else if(t.dataset.sec==='announce')loadAnnounce();else if(t.dataset.sec==='security')loadSecurity();else render();window.scrollTo(0,0);return;}
+  if(t.dataset.sec){closeNavDrawer();state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='coupons')loadCoupons();else if(t.dataset.sec==='merch')loadMerch();else if(t.dataset.sec==='reports')loadReports();else if(t.dataset.sec==='feedback')loadFeedback();else if(t.dataset.sec==='leads')loadLeads();else if(t.dataset.sec==='team')loadTeam();else if(t.dataset.sec==='announce')loadAnnounce();else if(t.dataset.sec==='security')loadSecurity();else render();window.scrollTo(0,0);return;}
   if(t.dataset.add){
     var L=listSpec(t.dataset.add),arr=getP(state.content,t.dataset.add),item=L.strings?'':clone(L.blank);
     if(item&&typeof item==='object'&&'id' in item)item.id=newId();

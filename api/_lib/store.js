@@ -101,8 +101,17 @@ export async function getCouponByCode(code) {
   if (!supabaseConfigured()) return null;
   const clean = String(code || '').trim().toUpperCase();
   if (!/^[A-Z0-9_-]{2,32}$/.test(clean)) return null;
-  const rows = await sb('/rest/v1/ticket_coupons?code=eq.' + encodeURIComponent(clean) + '&select=code,name,final_price,ticket_types,active&limit=1');
+  const rows = await sb('/rest/v1/ticket_coupons?code=eq.' + encodeURIComponent(clean) + '&select=code,name,final_price,ticket_types,active,starts_at,expires_at,max_uses,per_email_limit&limit=1');
   return rows && rows[0] ? rows[0] : null;
+}
+
+export async function couponUsage(code, email = '') {
+  if (!supabaseConfigured()) return { total: 0, byEmail: 0 };
+  const clean = String(code || '').trim().toUpperCase();
+  if (!clean) return { total: 0, byEmail: 0 };
+  const all = (await sb('/rest/v1/ticket_sales?select=email&coupon_code=eq.' + encodeURIComponent(clean) + '&limit=5000')) || [];
+  const target = String(email || '').trim().toLowerCase();
+  return { total: all.length, byEmail: target ? all.filter((row) => String(row.email || '').trim().toLowerCase() === target).length : 0 };
 }
 
 const NEW_SALE_COLUMNS = ['quantity', 'unit_price', 'coupon_code', 'coupon_name', 'admits_per_unit', 'admits_total', 'qr_sent_at'];

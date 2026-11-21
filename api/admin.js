@@ -74,7 +74,7 @@ async function qrRecipientsOrExplain(mode, res) {
     return await qrr.qrRecipients(mode);
   } catch (e) {
     if (e && e.code === 'MISSING_QR_COLUMN') {
-      res.status(400).json({ message: 'One more database step is needed first: run supabase/add-qr-sent-at.sql in the Supabase SQL Editor (it adds a "qr_sent_at" column), then reload this page.' });
+      res.status(400).json({ message: 'One more database step is needed first: run supabase/upgrade.sql in the Supabase SQL Editor (it adds the QR-ticket column), then reload this page.' });
       return null;
     }
     throw e;
@@ -350,15 +350,15 @@ export default async function handler(req, res) {
       add('SUPABASE_ANON_KEY is set', Boolean((process.env.SUPABASE_ANON_KEY || '').trim()), 'Needed for photo and video uploads.');
       if (supabaseConfigured()) {
         const tests = [
-          ['Table site_content is reachable', '/rest/v1/site_content?select=key&limit=1', 'Run supabase/setup.sql in the SQL Editor.'],
-          ['Table ticket_sales is reachable', '/rest/v1/ticket_sales?select=reference&limit=1', 'Run supabase/setup.sql in the SQL Editor.'],
+          ['Table site_content is reachable', '/rest/v1/site_content?select=key&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
+          ['Table ticket_sales is reachable', '/rest/v1/ticket_sales?select=reference&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table ticket_sales has the quantity and check-in columns', '/rest/v1/ticket_sales?select=quantity,admits_total,admitted_count,checked_in_at&limit=1', 'Run supabase/upgrade.sql in the SQL Editor (new sales are still saved without it, but quantities are not).'],
           ['Table checkin_log is reachable', '/rest/v1/checkin_log?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table team_members is reachable', '/rest/v1/team_members?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table rate_events is reachable (login protection)', '/rest/v1/rate_events?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table audit_log is reachable (activity log)', '/rest/v1/audit_log?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table admin_security is reachable (2-step login, sign-out-everywhere)', '/rest/v1/admin_security?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
-          ['Column ticket_sales.qr_sent_at exists (needed to send QR tickets)', '/rest/v1/ticket_sales?select=qr_sent_at&limit=1', 'Run supabase/add-qr-sent-at.sql in the SQL Editor.'],
+          ['Column ticket_sales.qr_sent_at exists (needed to send QR tickets)', '/rest/v1/ticket_sales?select=qr_sent_at&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table error_log is reachable (error monitoring)', '/rest/v1/error_log?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table reservations is reachable (ticket holds)', '/rest/v1/reservations?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
           ['Table waitlist is reachable', '/rest/v1/waitlist?select=id&limit=1', 'Run supabase/upgrade.sql in the SQL Editor.'],
@@ -368,7 +368,7 @@ export default async function handler(req, res) {
           ['Table merch_orders is reachable', '/rest/v1/merch_orders?select=reference&limit=1', 'Run supabase/commerce.sql in the SQL Editor.'],
           ['Table advertising_leads is reachable', '/rest/v1/advertising_leads?select=id&limit=1', 'Run supabase/commerce.sql in the SQL Editor.'],
           ['Table ticket_coupons is reachable', '/rest/v1/ticket_coupons?select=code&limit=1', 'Run supabase/commerce.sql in the SQL Editor.'],
-          ['Storage bucket "' + MEDIA_BUCKET + '" exists and is public', '/storage/v1/bucket/' + MEDIA_BUCKET, 'Run supabase/setup.sql, or create a public bucket with this name.']
+          ['Storage bucket "' + MEDIA_BUCKET + '" exists and is public', '/storage/v1/bucket/' + MEDIA_BUCKET, 'Run supabase/upgrade.sql, or create a public bucket with this name.']
         ];
         for (const [name, path, hint] of tests) {
           try {
@@ -455,6 +455,46 @@ export default async function handler(req, res) {
       return res.status(200).json({ sales, configured: true, role, capacityTotal });
     }
 
+    if (action === 'reports' && req.method === 'GET') {
+      const sales = await listSales();
+      const orders = (await sb('/rest/v1/merch_orders?status=in.(paid,ready,collected)&select=amount,status,items,paid_at&limit=5000')) || [];
+      const ticketRevenue = sales.reduce((sum, sale) => sum + Number(sale.amount || 0), 0);
+      const merchRevenue = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+      const couponUse = sales.reduce((out, sale) => { const key = sale.coupon_code || 'No coupon'; out[key] = (out[key] || 0) + 1; return out; }, {});
+      const products = {};
+      orders.forEach((order) => (order.items || []).forEach((item) => { const key = item.name || item.id || 'Product'; products[key] = (products[key] || 0) + Number(item.quantity || 0); }));
+      return res.status(200).json({ ticketRevenue, merchRevenue, ticketOrders: sales.length, merchOrders: orders.length, coupons: Object.entries(couponUse).map(([name, uses]) => ({ name, uses })).sort((a, b) => b.uses - a.uses), products: Object.entries(products).map(([name, quantity]) => ({ name, quantity })).sort((a, b) => b.quantity - a.quantity) });
+    }
+    if (action === 'feedback-list' && req.method === 'GET') {
+      const feedback = (await sb('/rest/v1/attendee_feedback?select=reference,rating,favourite,improvements,recommend,submitted_at,created_at&order=submitted_at.desc&limit=1000')) || [];
+      return res.status(200).json({ feedback });
+    }
+    if (action === 'feedback-send' && req.method === 'POST') {
+      const body = await readBody(req);
+      if (body.confirm !== 'SEND') return res.status(400).json({ message: 'Confirm this post-event email before sending.' });
+      if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) return res.status(503).json({ message: 'Email is not configured yet.' });
+      const sales = await listSales();
+      const origin = siteOrigin(req);
+      const messages = [];
+      for (const sale of sales.slice(0, 2000)) {
+        const token = crypto.randomBytes(24).toString('base64url');
+        const rows = await sb('/rest/v1/attendee_feedback?on_conflict=reference', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: { reference: sale.reference, token } });
+        const record = rows && rows[0];
+        if (!record || !sale.email) continue;
+        const link = origin + '/feedback?t=' + encodeURIComponent(record.token);
+        const first = cleanName(sale.name, 'there').split(' ')[0];
+        messages.push({ from: process.env.RESEND_FROM_EMAIL, to: [sale.email], subject: 'How was Game Tribe Fest?', html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#1C1410"><div style="background:#E8342A;color:#FFF6E5;padding:22px;border-radius:16px 16px 0 0"><h1 style="margin:0">GAME TRIBE</h1></div><div style="border:2px solid #1C1410;border-top:0;padding:24px;border-radius:0 0 16px 16px"><p>Hi ' + cleanName(first) + ',</p><p>Thanks for being part of Game Tribe Fest. Your honest feedback helps us make the next one even better.</p><p><a href="' + link + '" style="display:inline-block;background:#E8342A;color:#fff;padding:12px 18px;border-radius:8px;font-weight:bold;text-decoration:none">Share feedback</a></p><p style="font-size:12px;color:#675f59">This link is personal and can be used once.</p></div></div>', text: 'Hi ' + first + ',\n\nThanks for being part of Game Tribe Fest. Please share your feedback: ' + link });
+      }
+      let sent = 0;
+      for (let i = 0; i < messages.length; i += 100) {
+        const response = await fetch('https://api.resend.com/emails/batch', { method: 'POST', headers: { Authorization: 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json', 'Idempotency-Key': 'feedback-' + Date.now() + '-' + i }, body: JSON.stringify(messages.slice(i, i + 100)) });
+        if (!response.ok) throw new Error('Email provider could not send the feedback invitations.');
+        sent += Math.min(100, messages.length - i);
+      }
+      await sec.audit(req, who.name, role, 'feedback_invitations_sent', String(sent));
+      return res.status(200).json({ ok: true, sent });
+    }
+
     if (action === 'merch-products' && req.method === 'GET') {
       const products = (await sb('/rest/v1/merch_products?select=*&order=created_at.asc')) || [];
       return res.status(200).json({ products });
@@ -471,10 +511,15 @@ export default async function handler(req, res) {
       const category = String(product.category || '').trim().slice(0, 60) || 'Other';
       const image = String(product.image || '').trim().slice(0, 1000);
       const price = Number(product.price), stock = Number(product.stock);
-      const colours = Array.isArray(product.colours) ? [...new Set(product.colours.map((colour) => String(colour).trim().slice(0, 40)).filter(Boolean))].slice(0, 20) : [];
+      const variants = Array.isArray(product.variants) ? product.variants.slice(0, 100).map((variant) => ({
+        colour: String(variant.colour || '').trim().slice(0, 40), size: String(variant.size || '').trim().slice(0, 20), stock: Number(variant.stock)
+      })).filter((variant) => variant.colour && variant.size && Number.isInteger(variant.stock) && variant.stock >= 0) : [];
+      if (Array.isArray(product.variants) && product.variants.length !== variants.length) return res.status(400).json({ message: 'Each product option needs a colour, size and whole-number stock of 0 or more.' });
+      const colours = variants.length ? [...new Set(variants.map((variant) => variant.colour))] : (Array.isArray(product.colours) ? [...new Set(product.colours.map((colour) => String(colour).trim().slice(0, 40)).filter(Boolean))].slice(0, 20) : []);
       const batchId = String(product.batchId || '').trim().slice(0, 60) || ('GTM-' + Date.now().toString(36).toUpperCase() + '-' + crypto.randomBytes(3).toString('hex').toUpperCase());
-      if (!/^[a-z0-9][a-z0-9_-]{1,59}$/.test(id) || !name || !Number.isInteger(price) || price < 100 || !Number.isInteger(stock) || stock < 0) return res.status(400).json({ message: 'Every product needs a valid ID, name, whole-naira price of at least ₦100 and non-negative stock.' });
-      const rows = await sb('/rest/v1/merch_products?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: { id, name, description, category, image, price, stock, colours, batch_id: batchId, active: Boolean(product.active), updated_at: new Date().toISOString() } });
+      const lowStockThreshold = Number(product.lowStockThreshold);
+      if (!/^[a-z0-9][a-z0-9_-]{1,59}$/.test(id) || !name || !Number.isInteger(price) || price < 100 || !Number.isInteger(stock) || stock < 0 || !Number.isInteger(lowStockThreshold) || lowStockThreshold < 0) return res.status(400).json({ message: 'Every product needs a valid ID, name, whole-naira price, and stock values of 0 or more.' });
+      const rows = await sb('/rest/v1/merch_products?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: { id, name, description, category, image, price, stock, colours, variants, batch_id: batchId, low_stock_threshold: lowStockThreshold, active: Boolean(product.active), updated_at: new Date().toISOString() } });
       await sec.audit(req, who.name, role, 'merch_product_saved', id + ' · ' + name);
       return res.status(200).json({ product: rows && rows[0] });
     }
@@ -487,10 +532,26 @@ export default async function handler(req, res) {
     if (action === 'merch-order-status' && req.method === 'POST') {
       const body = await readBody(req), reference = String(body.reference || '').trim(), status = String(body.status || '');
       if (!['ready', 'collected'].includes(status)) return res.status(400).json({ message: 'Orders can only be marked ready or collected here. Paid status is set by Paystack.' });
-      const patch = status === 'collected' ? { status, collected_at: new Date().toISOString() } : { status };
+      const patch = status === 'collected' ? { status, collected_at: new Date().toISOString(), picked_up_by: who.name } : { status };
       await sb('/rest/v1/merch_orders?reference=eq.' + encodeURIComponent(reference) + '&status=in.(paid,ready)', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: patch });
       await sec.audit(req, who.name, role, 'merch_order_' + status, reference);
       return res.status(200).json({ ok: true });
+    }
+    if (action === 'merch-pickup-scan' && req.method === 'POST') {
+      const body = await readBody(req);
+      const raw = String(body.code || '').trim();
+      const reference = referenceFromPayload(raw) || (/^GTM-[A-Z0-9-]{4,100}$/i.test(raw) ? raw.toUpperCase() : '');
+      const pickupCode = /^GTP-[A-Z0-9-]{4,100}$/i.test(raw) ? raw.toUpperCase() : '';
+      if (!reference && !pickupCode) return res.status(400).json({ message: 'Scan a Game Tribe merch QR code, pickup code or order reference.' });
+      const query = reference ? 'reference=eq.' + encodeURIComponent(reference) : 'pickup_code=eq.' + encodeURIComponent(pickupCode);
+      const rows = await sb('/rest/v1/merch_orders?' + query + '&select=*&limit=1');
+      const order = rows && rows[0];
+      if (!order) return res.status(404).json({ message: 'That merch order was not found.' });
+      if (order.status === 'collected') return res.status(409).json({ message: 'This order was already collected' + (order.collected_at ? ' on ' + fmtTime(order.collected_at) : '') + '.', order });
+      if (!['paid', 'ready'].includes(order.status)) return res.status(409).json({ message: 'This order is not paid yet.', order });
+      const updated = await sb('/rest/v1/merch_orders?reference=eq.' + encodeURIComponent(order.reference) + '&status=in.(paid,ready)', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: { status: 'collected', collected_at: new Date().toISOString(), picked_up_by: who.name } });
+      await sec.audit(req, who.name, role, 'merch_order_collected', order.reference + ' · QR pickup');
+      return res.status(200).json({ ok: true, order: (updated && updated[0]) || order });
     }
     if (action === 'coupon-list' && req.method === 'GET') {
       const coupons = (await sb('/rest/v1/ticket_coupons?select=*&order=created_at.desc&limit=1000')) || [];
@@ -511,7 +572,11 @@ export default async function handler(req, res) {
       if (ticketTypes.some((type) => !known.has(type))) return res.status(400).json({ message: 'One of the selected ticket types no longer exists.' });
       const applicable = allTickets.filter((ticket) => !ticketTypes.length || ticketTypes.includes(ticket.id));
       if (!applicable.length || applicable.some((ticket) => finalPrice > Number(ticket.price))) return res.status(400).json({ message: 'The final price cannot be higher than any ticket this coupon applies to. Choose specific ticket types or lower the price.' });
-      const rows = await sb('/rest/v1/ticket_coupons?on_conflict=code', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: { code, name, final_price: finalPrice, ticket_types: ticketTypes, active: Boolean(body.active), updated_at: new Date().toISOString() } });
+      const date = (value) => value ? new Date(value) : null;
+      const starts = date(body.startsAt), expires = date(body.expiresAt);
+      const maxUses = Number(body.maxUses || 0), perEmailLimit = Number(body.perEmailLimit || 0);
+      if ((starts && Number.isNaN(starts.getTime())) || (expires && Number.isNaN(expires.getTime())) || (starts && expires && starts >= expires) || !Number.isInteger(maxUses) || maxUses < 0 || !Number.isInteger(perEmailLimit) || perEmailLimit < 0) return res.status(400).json({ message: 'Check the coupon dates and usage limits.' });
+      const rows = await sb('/rest/v1/ticket_coupons?on_conflict=code', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: { code, name, final_price: finalPrice, ticket_types: ticketTypes, active: Boolean(body.active), starts_at: starts && starts.toISOString(), expires_at: expires && expires.toISOString(), max_uses: maxUses, per_email_limit: perEmailLimit, updated_at: new Date().toISOString() } });
       await sec.audit(req, who.name, role, 'coupon_saved', code + ' · ₦' + finalPrice);
       return res.status(200).json({ coupon: rows && rows[0] });
     }
@@ -903,7 +968,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ waitlist: rows });
       }
       if (action === 'announce-list' && req.method === 'GET') {
-        const rows = (await sb('/rest/v1/announcements?select=id,created_at,created_by,subject,audience,total,next_index,sent_count,failed_count,status&order=id.desc&limit=10')) || [];
+        const rows = (await sb('/rest/v1/announcements?select=id,created_at,created_by,subject,audience,total,next_index,sent_count,failed_count,status,scheduled_for&order=id.desc&limit=10')) || [];
         return res.status(200).json({ announcements: rows, audiences: ann.AUDIENCES, resendReady: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL) });
       }
       if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed.' });
@@ -945,13 +1010,15 @@ export default async function handler(req, res) {
         const list = await ann.recipientsFor(body.audience);
         if (!list.length) return res.status(400).json({ message: 'Nobody to send to yet.' });
         if (list.length > ann.MAX_RECIPIENTS) return res.status(400).json({ message: 'That is more than ' + ann.MAX_RECIPIENTS + ' people. Contact your developer for a bigger send.' });
+        const scheduled = body.scheduledFor ? new Date(body.scheduledFor) : null;
+        if (scheduled && (Number.isNaN(scheduled.getTime()) || scheduled.getTime() <= Date.now() + 60 * 1000)) return res.status(400).json({ message: 'Choose a scheduled time at least one minute from now, or leave it empty to send now.' });
         const rows = await sb('/rest/v1/announcements', {
           method: 'POST',
           headers: { Prefer: 'return=representation' },
-          body: { created_by: who.name, subject, body: text, audience: body.audience, recipients: list.map((r) => ({ email: r.email, name: r.name })), total: list.length }
+          body: { created_by: who.name, subject, body: text, audience: body.audience, recipients: list.map((r) => ({ email: r.email, name: r.name })), total: list.length, status: scheduled ? 'scheduled' : 'sending', scheduled_for: scheduled && scheduled.toISOString(), started_at: scheduled ? null : new Date().toISOString() }
         });
-        await sec.audit(req, who.name, role, 'announcement_created', subject + ' → ' + list.length + ' people (' + body.audience + ')');
-        return res.status(200).json({ ok: true, id: rows[0].id, total: list.length });
+        await sec.audit(req, who.name, role, 'announcement_created', subject + ' → ' + list.length + ' people (' + body.audience + ')' + (scheduled ? ' scheduled' : ''));
+        return res.status(200).json({ ok: true, id: rows[0].id, total: list.length, scheduled: Boolean(scheduled) });
       }
       if (action === 'announce-send') {
         const id = Number(body.id);

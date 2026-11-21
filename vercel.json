@@ -1,5 +1,8 @@
 {
   "cleanUrls": true,
+  "crons": [
+    { "path": "/api/health", "schedule": "*/15 * * * *" }
+  ],
   "rewrites": [
     {
       "source": "/api/availability",

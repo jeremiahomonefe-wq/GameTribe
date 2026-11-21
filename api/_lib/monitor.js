@@ -159,3 +159,22 @@ export async function checkOvercapacity() {
       '. This can happen when several people pay at the same moment. Everyone who paid still has a valid ticket. Increase the capacity in Tickets & prices, or contact the extra buyers.', 6 * 3600 * 1000);
   } catch (e) { /* ignore */ }
 }
+
+/* Sends one reminder per product every six hours when stock reaches the
+   dashboard's alert level. Variant stock is checked individually. */
+export async function checkInventoryAlerts() {
+  try {
+    if (!supabaseConfigured()) return;
+    const products = (await sb('/rest/v1/merch_products?active=eq.true&select=id,name,stock,variants,low_stock_threshold&limit=1000')) || [];
+    for (const product of products) {
+      const threshold = Math.max(0, Number(product.low_stock_threshold) || 0);
+      const variants = Array.isArray(product.variants) ? product.variants : [];
+      const low = variants.length
+        ? variants.filter((v) => Number(v.stock) <= threshold).map((v) => (v.colour || 'Option') + ' / ' + (v.size || 'One size') + ': ' + Number(v.stock))
+        : (Number(product.stock) <= threshold ? ['Stock: ' + Number(product.stock)] : []);
+      if (!low.length) continue;
+      await alertOnce('low-stock:' + product.id, 'Low Game Tribe merch stock: ' + product.name,
+        product.name + ' is at or below its low-stock alert level (' + threshold + ').\n\n' + low.join('\n') + '\n\nOpen Merch in the dashboard to update stock.', 6 * 60 * 60 * 1000);
+    }
+  } catch (e) { /* monitoring must never interrupt the website */ }
+}

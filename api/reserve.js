@@ -33,8 +33,8 @@ export default async function handler(req, res) {
     const maxQty = Math.min(200, Number(content.ticketing && content.ticketing.maxQuantity) || 50);
     const qty = Number(body.quantity);
     if (!Number.isInteger(qty) || qty < 1 || qty > maxQty) return res.status(400).json({ message: 'Choose between 1 and ' + maxQty + ' tickets.' });
-    const coupon = await resolveCoupon({ amount: Number(ticket.price) }, ticket.id, body.couponCode);
     const buyer = body.buyer || {};
+    const coupon = await resolveCoupon({ amount: Number(ticket.price) }, ticket.id, body.couponCode, normEmail(buyer.email));
     if (!supabaseConfigured()) return res.status(200).json({ reference: newRef(), hold: false, unitPrice: coupon.unitPrice, total: coupon.unitPrice * qty, coupon });
 
     /* A buyer who goes back and tries again gives up their earlier hold. */
