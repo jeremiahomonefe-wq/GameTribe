@@ -97,7 +97,15 @@ export async function getTicketMap() {
   return map;
 }
 
-const NEW_SALE_COLUMNS = ['quantity', 'unit_price', 'admits_per_unit', 'admits_total', 'qr_sent_at'];
+export async function getCouponByCode(code) {
+  if (!supabaseConfigured()) return null;
+  const clean = String(code || '').trim().toUpperCase();
+  if (!/^[A-Z0-9_-]{2,32}$/.test(clean)) return null;
+  const rows = await sb('/rest/v1/ticket_coupons?code=eq.' + encodeURIComponent(clean) + '&select=code,name,final_price,ticket_types,active&limit=1');
+  return rows && rows[0] ? rows[0] : null;
+}
+
+const NEW_SALE_COLUMNS = ['quantity', 'unit_price', 'coupon_code', 'coupon_name', 'admits_per_unit', 'admits_total', 'qr_sent_at'];
 
 /* Record a paid ticket. Safe to call more than once for the same reference
    (webhook + browser verification both call it).
