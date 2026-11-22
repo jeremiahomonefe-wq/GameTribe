@@ -388,6 +388,15 @@ a{color:inherit}
 @media(min-width:768px){.foot-grid{padding:72px 0 64px}.foot li{margin-bottom:6px}.foot li a{display:inline-block;padding:5px 0}}
 .social{width:42px;height:42px}
 .foot li a[href^="mailto:"]{overflow-wrap:anywhere}
+
+/* video embeds + lazy video */
+.yt-facade{position:absolute;inset:0;width:100%;height:100%;display:grid;place-items:center;border:0;padding:0;background:#000 center/cover no-repeat;cursor:pointer;color:#fff}
+.yt-play{width:64px;height:64px;border-radius:50%;background:rgba(232,52,42,.95);display:block;position:relative;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.yt-play:after{content:"";position:absolute;left:25px;top:19px;border-left:20px solid #fff;border-top:13px solid transparent;border-bottom:13px solid transparent}
+.yt-label{position:absolute;bottom:14px;left:0;right:0;text-align:center;font:800 12px system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase}
+.mv-embed,.video-embed iframe{position:relative}
+.mv-embed{aspect-ratio:16/9;background:#000}
+.mv-embed iframe,.video-embed iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 </style>
 </head>
 <body>
@@ -544,10 +553,10 @@ a{color:inherit}
         <p data-c="videos.subtitle">See what Game Tribe moments look like. Press play.</p>
       </div>
       <div class="videos-grid" id="videosGrid">
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5307.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5308.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5308.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
-        <div class="video-card"><video playsinline preload="metadata"><source src="IMG_5307.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+        <div class="video-card"><video playsinline preload="none" data-lazy><source src="IMG_5307.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+        <div class="video-card"><video playsinline preload="none" data-lazy><source src="IMG_5308.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+        <div class="video-card"><video playsinline preload="none" data-lazy><source src="IMG_5308.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
+        <div class="video-card"><video playsinline preload="none" data-lazy><source src="IMG_5307.MP4" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>
       </div>
       <div class="center" style="margin-top:40px">
         <a class="more-link y" data-link="instagram" href="https://www.instagram.com/gametribe_abraka/" target="_blank" rel="noopener">More on our Instagram <span aria-hidden="true">→</span></a>
@@ -1233,7 +1242,8 @@ a{color:inherit}
   function playInlineVideo(){
     var visual = document.getElementById('mediaVisual');
     if(visual.querySelector('video')) return; // already playing
-    visual.innerHTML = '<video src="' + VIDEO_SRC + '" controls autoplay playsinline></video>';
+    var em = embedInfo(VIDEO_SRC);
+    visual.innerHTML = em ? '<iframe src="' + em.embed + '" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="Video" style="width:100%;height:100%;border:0"></iframe>' : '<video src="' + VIDEO_SRC + '" controls autoplay playsinline></video>';
     visual.style.cursor = 'default';
     visual.onclick = null;
   }
@@ -1695,7 +1705,10 @@ document.querySelectorAll('.video-card').forEach(function(card){
 (function(){
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function get(o,p){return p.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
-  function url(u){u=String(u||'').trim();return /^(https?:\/\/|mailto:|tel:|\/|#|data:image\/|[\w\-. %()\/]+$)/i.test(u)?u:'';}
+  function viaProxy(u){var m=String(u||'').match(/^https:\/\/kznxobrdftfshkunpbmx\.supabase\.co\/storage\/v1\/object\/public\/(.+\.(?:jpe?g|png|webp|gif|avif))(\?.*)?$/i);return m?'/m/'+m[1]+(m[2]||''):u;}
+  /* If the image proxy ever fails, fall back to the original address so no picture goes missing. */
+  document.addEventListener('error',function(e){var t=e.target;if(!t||t.tagName!=='IMG'||t.getAttribute('data-fb'))return;var s=t.getAttribute('src')||'';if(s.indexOf('/m/')===0){t.setAttribute('data-fb','1');t.setAttribute('src','https://kznxobrdftfshkunpbmx.supabase.co/storage/v1/object/public/'+s.slice(3));}},true);
+  function url(u){u=String(u||'').trim();return /^(https?:\/\/|mailto:|tel:|\/|#|data:image\/|[\w\-. %()\/]+$)/i.test(u)?viaProxy(u):'';}
   function money(n){return '\u20A6'+Number(n).toLocaleString('en-NG');}
   function setHtml(id,html){var el=document.getElementById(id);if(el)el.innerHTML=html;}
 
@@ -1710,6 +1723,19 @@ document.querySelectorAll('.video-card').forEach(function(card){
     window.scrollTo({top:Math.max(0,t.getBoundingClientRect().top+window.pageYOffset-pad),behavior:'instant'});
   }
   window.addEventListener('load',function(){restoreHash();});
+
+  function embedInfo(u){u=String(u||'').trim();var m;
+    if((m=u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/))([\w-]{11})/i)))return {kind:'youtube',embed:'https://www.youtube-nocookie.com/embed/'+m[1]+'?autoplay=1&rel=0&playsinline=1',thumb:'https://i.ytimg.com/vi/'+m[1]+'/hqdefault.jpg'};
+    if((m=u.match(/vimeo\.com\/(?:video\/)?(\d+)/i)))return {kind:'vimeo',embed:'https://player.vimeo.com/video/'+m[1]+'?autoplay=1',thumb:''};
+    return null;}
+  function facadeHtml(info){return '<button class="yt-facade" type="button" data-embed="'+esc(info.embed)+'" aria-label="Play video"'+(info.thumb?' style="background-image:url(&quot;'+info.thumb+'&quot;)"':'')+'><span class="yt-play" aria-hidden="true"></span>'+(info.kind==='vimeo'?'<span class="yt-label">Play on Vimeo</span>':'')+'</button>';}
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.yt-facade');if(!b)return;e.preventDefault();var f=document.createElement('iframe');f.src=b.getAttribute('data-embed');f.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';f.setAttribute('allowfullscreen','');f.title='Video';b.parentNode.replaceChild(f,b);});
+  window.embedInfo=embedInfo;
+  /* videos only start downloading when they are about to be seen */
+  function lazyVideos(){var list=[].slice.call(document.querySelectorAll('video[data-lazy]:not([data-lz])'));if(!list.length)return;
+    if(!('IntersectionObserver' in window)){list.forEach(function(v){v.setAttribute('data-lz','1');v.preload='metadata';});return;}
+    var io=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){var v=en.target;io.unobserve(v);v.preload='metadata';try{v.load();}catch(x){}}});},{rootMargin:'300px'});
+    list.forEach(function(v){v.setAttribute('data-lz','1');io.observe(v);});}
 
   function wireVideoCard(card){
     var video=card.querySelector('video'),btn=card.querySelector('.video-play-btn');
@@ -1799,11 +1825,12 @@ document.querySelectorAll('.video-card').forEach(function(card){
     /* videos */
     var vsrc=c.videos&&c.videos.items?c.videos.items.filter(function(v){return url(v.src);}).map(function(v){return url(v.src);}):null;
     var vcur=[].map.call(document.querySelectorAll('#videosGrid source'),function(x){return x.getAttribute('src');});
+    if(vsrc&&vsrc.some(function(x){return embedInfo(x);}))vcur=null;
     if(vsrc&&JSON.stringify(vsrc)!==JSON.stringify(vcur)){   /* only rebuild when the list really changed (avoids cancelled downloads) */
       setHtml('videosGrid',c.videos.items.filter(function(v){return url(v.src);}).map(function(v){
-        return '<div class="video-card"><video playsinline preload="metadata"><source src="'+esc(url(v.src))+'" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>';
+        var em=embedInfo(v.src);if(em)return '<div class="video-card video-embed">'+facadeHtml(em)+'</div>';return '<div class="video-card"><video playsinline preload="none" data-lazy><source src="'+esc(url(v.src))+'" type="video/mp4"></video><button class="video-play-btn" type="button" aria-label="Play video"></button></div>';
       }).join(''));
-      document.querySelectorAll('#videosGrid .video-card').forEach(wireVideoCard);
+      document.querySelectorAll('#videosGrid .video-card').forEach(wireVideoCard);lazyVideos();
     }
     if(c.intro&&url(c.intro.video)&&typeof VIDEO_SRC!=='undefined')VIDEO_SRC=url(c.intro.video);
 

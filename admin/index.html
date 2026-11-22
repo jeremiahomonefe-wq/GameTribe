@@ -646,26 +646,36 @@ function save(){
 
 /* ---------- uploads ---------- */
 function resizeImage(file,maxW){
+  /* Photos are shrunk and converted to WebP before upload so visitors download far less (this protects your free Supabase bandwidth). */
   return new Promise(function(resolve){
     if(!/^image\/(jpeg|png|webp)$/.test(file.type)){resolve(file);return;}
     var img=new Image(),u=URL.createObjectURL(file);
     img.onload=function(){
       URL.revokeObjectURL(u);
-      if(img.width<=maxW){resolve(file);return;}
-      var c=document.createElement('canvas');c.width=maxW;c.height=Math.round(img.height*maxW/img.width);
-      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-      var type=file.type==='image/png'?'image/png':'image/jpeg';
-      c.toBlob(function(b){resolve(b?new File([b],file.name,{type:type}):file);},type,.86);
+      var limit=Math.min(maxW||1600,1600),scale=Math.min(1,limit/Math.max(img.width,img.height)),w=Math.round(img.width*scale),h=Math.round(img.height*scale);
+      var c=document.createElement('canvas');c.width=w;c.height=h;
+      var g=c.getContext('2d');g.drawImage(img,0,0,w,h);
+      var tryType=function(type,q,fallback){c.toBlob(function(blob){
+        if(!blob||(type==='image/webp'&&blob.type!=='image/webp')){if(fallback)return fallback();resolve(file);return;}
+        if(blob.size>=file.size&&scale===1){resolve(file);return;}
+        var ext=type==='image/webp'?'webp':'jpg',name=file.name.replace(/\.[^.]+$/,'')+'.'+ext;
+        uploadInfo.note='Optimised '+(file.size/1048576).toFixed(1)+' MB → '+(blob.size/1024<1024?Math.round(blob.size/1024)+' KB':(blob.size/1048576).toFixed(1)+' MB');
+        resolve(new File([blob],name,{type:type}));
+      },type,q);};
+      tryType('image/webp',.8,function(){tryType('image/jpeg',.82,null);});
     };
     img.onerror=function(){resolve(file);};
     img.src=u;
   });
 }
+var uploadInfo={note:''};
 function uploadFile(file,folder,onProgress){
-  return resizeImage(file,file.type==='image/png'?1400:1800).then(function(f){
+  uploadInfo.note='';
+  if(/^video\//.test(file.type)&&file.size>8*1048576&&!confirm('This video is '+(file.size/1048576).toFixed(0)+' MB. Every time someone watches it, that much counts against your free Supabase bandwidth.\n\nA better option: upload it to YouTube (or Vimeo) and paste the link into this field instead. The website plays it without using any of your bandwidth.\n\nUpload it here anyway?'))return Promise.reject(new Error('Upload cancelled. Paste a YouTube or Vimeo link in the box instead.'));
+  return resizeImage(file,1600).then(function(f){
     return api('sign-upload',{body:{filename:f.name,contentType:f.type,folder:folder,size:f.size}}).then(function(sig){
       return new Promise(function(resolve,reject){
-        var fd=new FormData();fd.append('cacheControl','3600');fd.append('',f);
+        var fd=new FormData();fd.append('cacheControl','31536000');fd.append('',f);
         var x=new XMLHttpRequest();x.open('PUT',sig.uploadUrl);
         if(sig.anonKey){x.setRequestHeader('apikey',sig.anonKey);x.setRequestHeader('Authorization','Bearer '+sig.anonKey);}
         x.setRequestHeader('x-upsert','false');
@@ -699,7 +709,7 @@ function fieldHtml(f,value,bind){
     var th=isImg&&s?'<div class="thumb'+(f.contain?' contain':'')+'" data-src="'+esc(s)+'" style="background-image:url(\''+esc(s).replace(/'/g,'%27')+'\')"></div>'
       :(f.type===VID&&s?'<div class="thumb"><video src="'+esc(s)+'" muted preload="metadata"></video></div>':'<div class="thumb">'+(f.type==='pdf'?'PDF':(value?'':'None'))+'</div>');
     var accept=isImg?'image/jpeg,image/png,image/webp,image/gif':(f.type===VID?'video/mp4,video/webm,video/quicktime':'application/pdf');
-    return '<div class="'+cls+'">'+lab+'<div class="media">'+th+'<div class="media-body"><input id="'+id+'" type="text" placeholder="Upload a file or paste a link" value="'+esc(value)+'"'+b+'>'+
+    return '<div class="'+cls+'">'+lab+'<div class="media">'+th+'<div class="media-body"><input id="'+id+'" type="text" placeholder="'+(f.type===VID?'Upload, or paste a YouTube / Vimeo / .mp4 link':'Upload a file or paste a link')+'" value="'+esc(value)+'"'+b+'>'+
       '<div class="media-actions"><button class="btn btn-line sm" type="button" data-upload="'+accept+'" data-kind="'+f.type+'">Upload</button>'+
       (value?'<button class="btn btn-ghost sm danger" type="button" data-clear>Remove</button>':'')+
       '<span class="bar" hidden><i></i></span><span class="msg"></span></div></div></div>'+help+'</div>';
@@ -1754,7 +1764,7 @@ document.addEventListener('click',function(e){
       msg.textContent='Uploading…';msg.className='msg';bar.hidden=false;bar.firstChild.style.width='0';t.disabled=true;
       var folder=t.dataset.kind==='video'?'videos':(t.dataset.kind==='pdf'?'files':'images');
       uploadFile(f,folder,function(p){bar.firstChild.style.width=Math.round(p*100)+'%';}).then(function(url){
-        setP(state.content,input.dataset.bind,url);markDirty();render();toast('Uploaded ✓ — now click “Publish changes” to show it on the website');$('#saveBtn').classList.add('pulse');
+        setP(state.content,input.dataset.bind,url);markDirty();render();toast('Uploaded ✓'+(uploadInfo.note?' ('+uploadInfo.note+')':'')+' — now click “Publish changes” to show it on the website');$('#saveBtn').classList.add('pulse');
       }).catch(function(err){msg.textContent=err.message;msg.className='msg err';bar.hidden=true;t.disabled=false;});
     };
     fi.click();return;

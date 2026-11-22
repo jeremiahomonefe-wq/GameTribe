@@ -58,12 +58,18 @@ function migrate(saved) {
   return saved;
 }
 
-export async function getContent() {
+/* The public site reads content very often, so it may use a short in-memory copy.
+   The admin always reads the database directly so it never edits stale content. */
+let contentCache = { at: 0, value: null };
+export async function getContent({ cache = false } = {}) {
   if (!supabaseConfigured()) return DEFAULT_CONTENT;
+  if (cache && contentCache.value && Date.now() - contentCache.at < 30000) return contentCache.value;
   try {
     const rows = await sb('/rest/v1/site_content?key=eq.main&select=value');
     const saved = migrate(rows && rows[0] && rows[0].value);
-    return saved ? merge(DEFAULT_CONTENT, saved) : DEFAULT_CONTENT;
+    const value = saved ? merge(DEFAULT_CONTENT, saved) : DEFAULT_CONTENT;
+    contentCache = { at: Date.now(), value };
+    return value;
   } catch (error) {
     console.error('getContent failed, using defaults:', error.message);
     return DEFAULT_CONTENT;
@@ -76,6 +82,7 @@ export async function saveContent(content) {
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: { key: 'main', value: content, updated_at: new Date().toISOString() }
   });
+  contentCache = { at: 0, value: null };
 }
 
 /* How many people one ticket admits. Saved content from before this update
