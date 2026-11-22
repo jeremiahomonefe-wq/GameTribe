@@ -11,6 +11,7 @@
   function get(o,p){return p.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
   function url(u){u=String(u||'').trim();return /^(https?:\/\/|mailto:|tel:|\/|#|data:image\/|[\w\-. %()\/]+$)/i.test(u)?u:'';}
   function setHtml(id,h){var e=$(id);if(e)e.innerHTML=h;}
+  function mediaSrc(v){v=String(v||'').trim();if(!v)return '';return /^(https?:|data:image\/|\/)/i.test(v)?v:'/'+v;}
   var legacyIcons={'🏹':'target','🧱':'layers','🦶':'play','🪢':'users','🎲':'gamepad','💬':'message','🛋️':'store','🤝':'handshake','🧠':'help','🖼️':'images','⭐':'trophy'};
   function iconFor(item){return item&&(item.icon||legacyIcons[item.emoji])||'info';}
   function show(id,on){var e=$(id);if(e)e.hidden=!on;}
@@ -254,26 +255,55 @@
 
   R.advertise=function(c){
     var p=((c.pages||{}).advertise)||{};
-    var hero=document.querySelector('.adv-hero h1'),formHead=document.querySelector('#enquiry .sec-head');
-    if($('.adv-eyebrow')&&p.pill)$('.adv-eyebrow').textContent=p.pill;
+    var DEF={chips:[{text:'27 Nov 2026'},{text:'Ojeta Primary School, Abraka'}],stats:[{value:'01',label:'Festival day of energy'},{value:'IRL',label:'Real community moments'},{value:'360°',label:'On-ground & social visibility'}],
+      packages:[{name:'Community Shoutout',description:'A simple, social-first way to get your name into the conversation.',features:'Brand mention in selected event content\nInclusion in a community update\nPartnership team support',button:'Ask about this'},{name:'Play Zone Partner',description:'Own a memorable part of the festival experience and make it yours.',features:'Branded festival activation\nOn-ground audience engagement\nSelected social media support',button:'Build this package',featured:'yes',badge:'Most flexible'},{name:'Main Event Partner',description:'Bring your brand to the centre of the day with a custom collaboration.',features:'Tailored brand integration\nPremium visibility opportunities\nDedicated partnership planning',button:'Start the conversation'}],
+      moments:[{title:'Be useful',text:'Give festival-goers something to enjoy, play, try or take home.'},{title:'Be seen',text:'Bring your story to the spaces where the tribe is already gathering.'},{title:'Be remembered',text:'Create the kind of real-life interaction that outlasts the event day.'}],
+      ticker:['🔥 Game Tribe Fest 2026','27 November 2026','Abraka, Delta State','Games • Banters • Hangout • Connect'],
+      requirements:[{title:'Content submission',text:'All brand content must be shared with the Game Tribe team for review and approval before it is displayed.'},{title:'Content guidelines',text:'Content should clearly feature your brand identity: logo, key products or services and your main message.'},{title:'Deadline',text:'Once your package is confirmed, send your approved materials within 72 hours to guarantee inclusion.'}]};
+    var list=function(v,d){return Array.isArray(v)&&v.length?v:d;};
+    var txt=function(id,v){var el=$(id);if(el&&v)el.textContent=v;};
+    var hero=document.querySelector('.adv-hero h1');
+    if(document.querySelector('.adv-eyebrow')&&p.pill)document.querySelector('.adv-eyebrow').textContent=p.pill;
     if(hero&&(p.title||p.highlight))hero.innerHTML=esc(p.title||'Put your brand')+' <span>'+esc(p.highlight||'in the game.')+'</span>';
     if(document.querySelector('.adv-intro')&&p.intro)document.querySelector('.adv-intro').textContent=p.intro;
-    if(formHead){var pill=formHead.querySelector('.pill'),heading=formHead.querySelector('h2'),intro=formHead.querySelector('p');if(pill&&p.formPill)pill.textContent=p.formPill;if(heading&&p.formTitle)heading.textContent=p.formTitle;if(intro&&p.formIntro)intro.textContent=p.formIntro;}
-    if(document.querySelector('.adv-form-note')&&p.formNote)document.querySelector('.adv-form-note').textContent=p.formNote;
-    var button=document.querySelector('#advertiseForm button[type="submit"]');if(button&&p.formButton)button.textContent=p.formButton;
+    txt('advSubline',p.subline);
+    var chips=$('advChips');if(chips)chips.innerHTML=list(p.chips,DEF.chips).map(function(x){return x&&x.text?'<li>'+esc(x.text)+'</li>':'';}).join('');
+    var stats=$('advStats');if(stats)stats.innerHTML=list(p.stats,DEF.stats).map(function(x){return '<div><strong>'+esc(x.value)+'</strong><span>'+esc(x.label)+'</span></div>';}).join('');
+    var poster=$('advPoster'),img=$('advPosterImg');if(poster&&img){var src=p.heroImage?mediaSrc(p.heroImage):'';if(src){img.src=src;poster.hidden=false;}else poster.hidden=true;}
+    txt('advFormPill',p.formPill);txt('advFormTitle',p.formTitle);txt('advFormIntro',p.formIntro);txt('advFormNote',p.formNote);
+    var button=$('advSubmit');if(button&&p.formButton){button.textContent=p.formButton;button.dataset.label=p.formButton;}
+    txt('advPkgKicker',p.packagesKicker);txt('advPkgTitle',p.packagesTitle);txt('advPkgIntro',p.packagesIntro);txt('advMomKicker',p.momentsKicker);txt('advMomTitle',p.momentsTitle);txt('advReqTitle',p.requirementsTitle);
+    var pk=list(p.packages,DEF.packages).filter(function(x){return x&&x.name;});
+    var grid=$('advPackages');
+    if(grid)grid.innerHTML=pk.map(function(x,i){var feat=String(x.features||'').split(/\n+/).map(function(t){return t.trim();}).filter(Boolean);var star=x.featured==='yes'||x.featured===true;
+      return '<article class="adv-card'+(star?' featured':'')+'">'+(star&&(x.badge||'Most flexible')?'<span class="adv-badge">'+esc(x.badge||'Most flexible')+'</span>':'')+'<h3>'+esc(x.name)+'</h3><div class="adv-price">'+(x.price?esc(x.price):'Custom quote')+'</div>'+(x.description?'<p>'+esc(x.description)+'</p>':'')+(feat.length?'<ul>'+feat.map(function(t){return '<li>'+esc(t)+'</li>';}).join('')+'</ul>':'<ul></ul>')+'<button class="btn '+(star?'btn-red':'btn-outline')+'" type="button" data-adv-pick="'+i+'">'+esc(x.button||'Ask about this')+'</button></article>';}).join('');
+    var select=$('package');
+    if(select){var cur=select.value;select.innerHTML='<option value="">Select a package</option>'+pk.map(function(x){return '<option value="'+esc(x.name)+'">'+esc(x.name)+(x.price?' — '+esc(x.price):'')+'</option>';}).join('')+'<option value="Something custom">Something custom</option>';if(cur)select.value=cur;}
+    if(grid&&!grid.getAttribute('data-bound')){grid.setAttribute('data-bound','1');grid.addEventListener('click',function(e){var b=e.target.closest('[data-adv-pick]');if(!b)return;var item=pk[Number(b.getAttribute('data-adv-pick'))];if(select&&item)select.value=item.name;var f=$('enquiry');if(f)f.scrollIntoView({behavior:'smooth',block:'start'});var first=$('brand');if(first)setTimeout(function(){first.focus({preventScroll:true});},450);});}
+    var mom=$('advMoments');if(mom)mom.innerHTML=list(p.moments,DEF.moments).map(function(x){return '<article class="adv-proof-item"><strong>'+esc(x.title)+'</strong><p>'+esc(x.text)+'</p></article>';}).join('');
+    var tick=$('advTicker');if(tick){var items=list(p.ticker,DEF.ticker).filter(Boolean);var one=items.map(function(t){return '<span>'+esc(t)+'</span>';}).join('');tick.innerHTML=one+one+one+one;}
+    var req=$('advReq');if(req)req.innerHTML=list(p.requirements,DEF.requirements).map(function(x,i){return '<div class="adv-req-item"><span class="adv-req-ico">'+(i+1)+'</span><div><b>'+esc(x.title)+'</b><p>'+esc(x.text)+'</p></div></div>';}).join('');
+    var enq=$('advEnq');if(enq){var mail=p.enquiryEmail||((c.links||{}).email)||'gametribe001@gmail.com';enq.innerHTML=esc(p.enquiryText||'For enquiries:')+' <a href="mailto:'+esc(mail)+'">'+esc(mail)+'</a>';}
   };
 
-  var merchStoreReady=false;
+  var merchStoreReady=false,merchCfg={};
   R.merch=function(c){
-    var p=((c.pages||{}).merch)||{};
-    var hero=document.querySelector('.shop-hero h1'),sticker=document.querySelector('.shop-sticker strong'),stickerSub=document.querySelector('.shop-sticker span'),head=document.querySelector('#collection .sec-head');
-    if(document.querySelector('.shop-hero .pill')&&p.pill)document.querySelector('.shop-hero .pill').textContent=p.pill;
+    var p=((c.pages||{}).merch)||{};merchCfg=p;
+    var txt=function(sel,v){var el=document.querySelector(sel);if(el&&v)el.textContent=v;};
+    var hero=document.querySelector('.shop-hero h1');
+    txt('.shop-hero .shop-pill',p.pill);
     if(hero&&(p.title||p.highlight))hero.innerHTML=esc(p.title||'Wear the vibe.')+' <span>'+esc(p.highlight||'Own the moment.')+'</span>';
-    if(document.querySelector('.shop-copy')&&p.intro)document.querySelector('.shop-copy').textContent=p.intro;
-    if(sticker&&p.stickerTitle)sticker.innerHTML=esc(p.stickerTitle).replace(/\n/g,'<br>');
-    if(stickerSub&&p.stickerSubtitle)stickerSub.textContent=p.stickerSubtitle;
-    if(head){var kicker=head.querySelector('.kicker'),heading=head.querySelector('h2'),intro=head.querySelector('p');if(kicker&&p.collectionKicker)kicker.textContent=p.collectionKicker;if(heading&&p.collectionTitle)heading.textContent=p.collectionTitle;if(intro&&p.collectionIntro)intro.textContent=p.collectionIntro;}
+    txt('.shop-copy',p.intro);txt('#merchHeroNote',p.heroNote);
+    var sticker=document.querySelector('.shop-sticker');
+    if(sticker){var st=p.stickerTitle;if(st===undefined||st===null)st='Game\nTribe\nDrop 01';if(String(st).trim()){sticker.hidden=false;sticker.querySelector('strong').innerHTML=esc(st).replace(/\n/g,'<br>');var ss=sticker.querySelector('span');if(ss)ss.textContent=p.stickerSubtitle||'';}else sticker.hidden=true;}
+    var heroEl=document.querySelector('.shop-hero');if(heroEl){var hi=p.heroImage?mediaSrc(p.heroImage):'';heroEl.style.backgroundImage=hi?'linear-gradient(rgba(28,20,16,.78),rgba(28,20,16,.88)),url("'+hi.replace(/"/g,'%22')+'")':'';}
+    txt('#collection .shop-kicker',p.collectionKicker);txt('#collection .shop-heading',p.collectionTitle);txt('#collection .shop-intro',p.collectionIntro);
+    txt('#cartHeading',p.cartTitle);txt('#cartNote',p.cartNote);
+    var ct=document.getElementById('checkoutTitle');if(ct&&p.pickupTitle)ct.textContent=p.pickupTitle;
+    var cp=document.querySelector('#checkoutForm>p');if(cp&&p.pickupText)cp.textContent=p.pickupText;
+    txt('#receipt .shop-kicker',p.lookupKicker);txt('#receipt h2',p.lookupTitle);txt('#receipt .sec-head p',p.lookupIntro);
     setupMerchStore();
+    if(merchStoreReady&&window.__gtMerchDraw)window.__gtMerchDraw();
   };
 
   function setupMerchStore(){
@@ -288,21 +318,40 @@
     var productFor=function(id){return products.filter(function(product){return product.id===id;})[0];};
     var stockFor=function(product,colour,size){var choices=Array.isArray(product.variants)?product.variants:[];if(!choices.length)return Number(product.stock)||0;var found=choices.filter(function(choice){return choice.colour===colour&&choice.size===size;})[0];return found?Number(found.stock)||0:0;};
     var total=function(){return picked().reduce(function(sum,item){var product=productFor(item.id);return sum+(product?Number(product.price)*item.quantity:0);},0);};
+    function badgeFor(product){
+      var choices=Array.isArray(product.variants)?product.variants:[];
+      var stock=choices.length?choices.reduce(function(n,v){return n+(Number(v.stock)||0);},0):(Number(product.stock)||0);
+      var limit=Number(product.low_stock_threshold);if(isNaN(limit))limit=5;
+      if(stock<=0)return {soldOut:true,text:merchCfg.soldOutText||'Sold out'};
+      if(limit>0&&stock<=limit)return {fast:true,text:merchCfg.sellingFastText||'Selling fast'};
+      return {};
+    }
+    function cardHtml(product,index){
+      var badge=badgeFor(product),src=product.image?mediaSrc(product.image):'';
+      var art=src?'<div class="shop-art"><img src="'+esc(src)+'" alt="'+esc(product.name)+'" loading="lazy"></div>':'<div class="shop-art '+['red','ink','gold','orange'][index%4]+'"><span class="art-word">'+esc(product.name)+'</span></div>';
+      var choices=Array.isArray(product.variants)?product.variants:[],colours=choices.length?choices.filter(function(v){return Number(v.stock)>0;}).map(function(v){return v.colour;}).filter(function(v,i,a){return a.indexOf(v)===i;}):(Array.isArray(product.colours)?product.colours:[]),firstColour=colours[0]||'',sizes=choices.length?choices.filter(function(v){return v.colour===firstColour&&Number(v.stock)>0;}).map(function(v){return v.size;}).filter(function(v,i,a){return a.indexOf(v)===i;}):[];
+      var picker='';
+      if(!badge.soldOut){
+        picker=colours.length?'<label class="shop-colour-wrap">Colour <select class="shop-colour">'+colours.map(function(colour){return '<option value="'+esc(colour)+'">'+esc(colour)+'</option>';}).join('')+'</select></label>':'';
+        if(sizes.length)picker+='<label class="shop-colour-wrap">Size <select class="shop-size">'+sizes.map(function(size){return '<option value="'+esc(size)+'">'+esc(size)+'</option>';}).join('')+'</select></label>';
+      }
+      return '<article class="shop-card'+(badge.soldOut?' is-sold':'')+'" data-gt-product="'+esc(product.id)+'"><div class="shop-media">'+art+(badge.text?'<span class="shop-badge'+(badge.soldOut?' sold':'')+'">'+esc(badge.text)+'</span>':'')+'</div><div class="shop-card-body"><span class="shop-kind">'+esc(product.category)+'</span><h3>'+esc(product.name)+'</h3>'+(product.description?'<p>'+esc(product.description)+'</p>':'')+picker+'<strong class="shop-price">'+money(product.price)+'</strong><button class="btn '+(badge.soldOut?'btn-outline':'btn-red')+'" type="button" data-gt-add="'+esc(product.id)+'"'+(badge.soldOut?' disabled':'')+'>'+(badge.soldOut?esc(badge.text):'Add to cart')+'</button></div></article>';
+    }
     function draw(){
       var tabs=$('shopTabs'),grid=$('shopGrid'),list=$('cartList'),totalEl=$('cartTotal'),checkout=$('checkoutButton');if(!tabs||!grid||!list||!totalEl||!checkout)return;
-      var categories=['All'].concat(products.map(function(product){return product.category;}).filter(function(value,index,all){return all.indexOf(value)===index;}));
-      tabs.innerHTML=categories.map(function(category){return '<button class="shop-tab" type="button" data-gt-category="'+esc(category)+'" aria-pressed="'+(category===active)+'">'+esc(category)+'</button>';}).join('');
-      var view=products.filter(function(product){return active==='All'||product.category===active;});
-      grid.innerHTML=view.length?view.map(function(product,index){
-        var art=product.image?'<div class="shop-art"><img src="'+esc(product.image)+'" alt="'+esc(product.name)+'"></div>':'<div class="shop-art '+['red','ink','gold','orange'][index%4]+'"><span class="art-word">'+esc(product.name)+'</span></div>';
-        var choices=Array.isArray(product.variants)?product.variants:[],colours=choices.length?choices.filter(function(v){return Number(v.stock)>0;}).map(function(v){return v.colour;}).filter(function(v,i,a){return a.indexOf(v)===i;}):(Array.isArray(product.colours)?product.colours:[]),firstColour=colours[0]||'',sizes=choices.length?choices.filter(function(v){return v.colour===firstColour&&Number(v.stock)>0;}).map(function(v){return v.size;}).filter(function(v,i,a){return a.indexOf(v)===i;}):[];
-        var picker=colours.length?'<label class="shop-colour-wrap">Colour <select class="shop-colour">'+colours.map(function(colour){return '<option value="'+esc(colour)+'">'+esc(colour)+'</option>';}).join('')+'</select></label>':'';
-        if(sizes.length)picker+='<label class="shop-colour-wrap">Size <select class="shop-size">'+sizes.map(function(size){return '<option value="'+esc(size)+'">'+esc(size)+'</option>';}).join('')+'</select></label><p class="shop-option-note">Choose a colour and size before adding to cart.</p>';
-        return '<article class="shop-card" data-gt-product="'+esc(product.id)+'">'+art+'<div class="shop-card-body"><span class="shop-kind">'+esc(product.category)+'</span><h3>'+esc(product.name)+'</h3><p>'+esc(product.description)+'</p>'+picker+'<strong class="shop-price">'+money(product.price)+'</strong><button class="btn btn-outline" type="button" data-gt-add="'+esc(product.id)+'">Add to cart</button></div></article>';
-      }).join(''):'<div class="shop-empty">Nothing in this category right now.</div>';
+      var cats=products.map(function(product){return product.category;}).filter(function(value,index,all){return value&&all.indexOf(value)===index;});
+      if(active!=='All'&&cats.indexOf(active)<0)active='All';
+      var cfg=Array.isArray(merchCfg.categories)?merchCfg.categories:[];
+      var info=function(name){var k=String(name).toLowerCase();return cfg.filter(function(x){return x&&String(x.name||'').toLowerCase()===k;})[0]||{};};
+      tabs.innerHTML=['All'].concat(cats).map(function(category){var i=info(category);return '<button class="shop-tab" type="button" data-gt-category="'+esc(category)+'" aria-pressed="'+(category===active)+'">'+(category!=='All'&&i.emoji?'<span aria-hidden="true">'+esc(i.emoji)+'</span> ':'')+esc(category)+'</button>';}).join('');
+      var shown=cats.filter(function(category){return active==='All'||category===active;}),n=0;
+      grid.innerHTML=shown.length?shown.map(function(category){
+        var i=info(category),items=products.filter(function(product){return product.category===category;});
+        return '<section class="shop-cat" aria-label="'+esc(category)+'"><header class="shop-cat-head"><h2>'+(i.emoji?'<span aria-hidden="true">'+esc(i.emoji)+'</span> ':'')+esc(category)+'</h2>'+(i.description?'<p>'+esc(i.description)+'</p>':'')+'</header><div class="shop-grid">'+items.map(function(product){return cardHtml(product,n++);}).join('')+'</div></section>';
+      }).join(''):'<div class="shop-empty">'+esc(products.length?(merchCfg.emptyText||'Nothing here right now.'):(ready?(merchCfg.emptyText||'Nothing here right now.'):'Loading the collection…'))+'</div>';
       var chosen=picked();
-      list.innerHTML=chosen.length?chosen.map(function(item){var product=productFor(item.id);if(!product)return '';return '<div class="cart-row"><div><strong>'+esc(product.name)+'</strong><small>'+money(product.price)+' each'+(item.colour?' · '+esc(item.colour):'')+(item.size?' · '+esc(item.size):'')+'</small><div class="cart-controls"><button type="button" data-gt-cart="'+esc(item.key)+'" data-gt-delta="-1">−</button><b>'+item.quantity+'</b><button type="button" data-gt-cart="'+esc(item.key)+'" data-gt-delta="1">+</button></div></div><strong>'+money(product.price*item.quantity)+'</strong></div>';}).join(''):'<p class="empty-cart">Your cart is ready when you are.</p>';
-      totalEl.textContent=money(total());checkout.disabled=!chosen.length;
+      list.innerHTML=chosen.length?chosen.map(function(item){var product=productFor(item.id);if(!product)return '';return '<div class="cart-row"><div><strong>'+esc(product.name)+'</strong><small>'+money(product.price)+' each'+(item.colour?' · '+esc(item.colour):'')+(item.size?' · '+esc(item.size):'')+'</small><div class="cart-controls"><button type="button" data-gt-cart="'+esc(item.key)+'" data-gt-delta="-1">−</button><b>'+item.quantity+'</b><button type="button" data-gt-cart="'+esc(item.key)+'" data-gt-delta="1">+</button></div></div><strong>'+money(product.price*item.quantity)+'</strong></div>';}).join(''):'<p class="empty-cart">'+esc(merchCfg.cartEmpty||'Your cart is ready when you are.')+'</p>';
+      totalEl.textContent=money(total());checkout.disabled=!chosen.length;var count=chosen.reduce(function(n,i){return n+i.quantity;},0),cc=$('cartCount');if(cc){cc.textContent=count;cc.hidden=!count;}
     }
     function openCheckout(){var summary=$('checkoutSummary'),overlay=$('checkoutOverlay');if(!summary||!overlay)return;summary.textContent=picked().map(function(item){var product=productFor(item.id);return item.quantity+' × '+product.name+(item.colour?' ('+item.colour+(item.size?' / '+item.size:'')+')':'')+' — '+money(product.price*item.quantity);}).join('\n')+'\n\nTotal: '+money(total())+'\nPickup: Game Tribe Fest';overlay.classList.add('active');}
     function closeCheckout(){var overlay=$('checkoutOverlay');if(overlay)overlay.classList.remove('active');}
@@ -314,6 +363,16 @@
       }).catch(function(error){status.textContent=error.message;button.disabled=false;button.textContent='Pay with Paystack';});
     }
     var style=document.createElement('style');style.textContent='.shop-colour-wrap{display:grid;gap:5px;margin-top:12px;font-size:12px;font-weight:800;color:#1C1410}.shop-colour,.shop-size{width:100%;padding:9px 10px;border:1px solid rgba(28,20,16,.25);border-radius:9px;background:#fff;font:inherit;color:#1C1410}.shop-option-note{font-size:11px!important;margin:8px 0 0!important}';document.head.appendChild(style);
+    window.__gtMerchDraw=function(){draw();};
+    function drawer(open){var d=$('cartDrawer'),b=$('drawerBack'),t=$('cartToggle');if(!d)return;d.classList.toggle('open',open);if(b)b.classList.toggle('open',open);d.setAttribute('aria-hidden',open?'false':'true');if(t)t.setAttribute('aria-expanded',open?'true':'false');document.documentElement.classList.toggle('drawer-open',open);if(open){var c=$('cartClose');if(c)setTimeout(function(){c.focus();},60);}else if(t&&document.activeElement&&d.contains(document.activeElement))t.focus();}
+    document.addEventListener('click',function(e){
+      var d=$('cartDrawer');
+      if(e.target.closest&&e.target.closest('#cartToggle,#cartBarBtn')){e.preventDefault();e.stopPropagation();drawer(!(d&&d.classList.contains('open')));return;}
+      if(e.target.closest&&e.target.closest('#cartClose')){drawer(false);return;}
+      if(e.target.id==='drawerBack'){drawer(false);return;}
+      if(e.target.closest&&e.target.closest('#checkoutButton'))drawer(false);
+    },true);
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'){var d=$('cartDrawer');if(d&&d.classList.contains('open'))drawer(false);}});
     document.addEventListener('click',function(event){
       var button=event.target.closest&&event.target.closest('button');if(!button)return;
       if(button.matches('[data-gt-category]')){event.preventDefault();event.stopPropagation();active=button.getAttribute('data-gt-category');draw();return;}

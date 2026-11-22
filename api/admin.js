@@ -31,7 +31,7 @@ const PERMS = {
   gate: new Set(['me', 'sales', 'checkin', 'checkin-log', 'ticket-scan']),
   content: new Set(['me', 'content', 'save', 'sign-upload']),
   merch: new Set(['me', 'merch-products', 'merch-orders', 'merch-product-save', 'merch-product-disable', 'merch-order-status', 'merch-pickup-scan']),
-  communications: new Set(['me', 'announce-list', 'announce-preview', 'announce-test', 'announce-create', 'announce-send', 'waitlist-list', 'waitlist-remove', 'feedback-list', 'feedback-send']),
+  communications: new Set(['me', 'announce-list', 'announce-preview', 'announce-test', 'announce-create', 'announce-send', 'waitlist-list', 'waitlist-remove', 'feedback-list', 'feedback-send', 'feedback-test']),
   insights: new Set(['me', 'reports', 'feedback-list'])
 };
 function allowed(role, action) {
@@ -106,6 +106,15 @@ function safeName(name) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40) || 'file';
+}
+
+/* The post-event feedback email (used for the real send and for the admin test email). */
+function feedbackEmail(link, first) {
+  first = cleanName(first, 'there');
+  return {
+    html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#1C1410"><div style="background:#E8342A;color:#FFF6E5;padding:22px;border-radius:16px 16px 0 0"><h1 style="margin:0">GAME TRIBE</h1></div><div style="border:2px solid #1C1410;border-top:0;padding:24px;border-radius:0 0 16px 16px"><p>Hi ' + first + ',</p><p>Thanks for being part of Game Tribe Fest. Your honest feedback helps us make the next one even better.</p><p><a href="' + link + '" style="display:inline-block;background:#E8342A;color:#fff;padding:12px 18px;border-radius:8px;font-weight:bold;text-decoration:none">Share feedback</a></p><p style="font-size:12px;color:#675f59">This link is personal and can be used once.</p></div></div>',
+    text: 'Hi ' + first + ',\n\nThanks for being part of Game Tribe Fest. Please share your feedback: ' + link
+  };
 }
 
 function validateContent(content) {
@@ -481,6 +490,18 @@ export default async function handler(req, res) {
       const feedback = (await sb('/rest/v1/attendee_feedback?select=reference,rating,favourite,improvements,recommend,submitted_at,created_at&order=submitted_at.desc&limit=1000')) || [];
       return res.status(200).json({ feedback });
     }
+    if (action === 'feedback-test' && req.method === 'POST') {
+      const body = await readBody(req);
+      const to = team.normEmail(body.to);
+      if (!team.validEmail(to)) return res.status(400).json({ message: 'Enter a valid email address to send the test to.' });
+      if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) return res.status(503).json({ message: 'Email is not configured yet (RESEND_API_KEY and RESEND_FROM_EMAIL).' });
+      if (!(await sec.allow('feedback-test', 'owner', 10, 3600 * 1000))) return res.status(429).json({ message: 'That is enough tests for now. Try again in an hour.' });
+      const mail = feedbackEmail(siteOrigin(req) + '/feedback?t=preview', cleanName(who.name, 'there').split(' ')[0]);
+      const response = await fetch(process.env.RESEND_API_URL || 'https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: process.env.RESEND_FROM_EMAIL, to: [to], subject: '[TEST] How was Game Tribe Fest?', html: mail.html, text: mail.text }) });
+      if (!response.ok) return res.status(502).json({ message: 'The email provider could not send the test email. Check your Resend settings.' });
+      await sec.audit(req, who.name, role, 'feedback_test_sent', to);
+      return res.status(200).json({ ok: true, to });
+    }
     if (action === 'feedback-send' && req.method === 'POST') {
       const body = await readBody(req);
       if (body.confirm !== 'SEND') return res.status(400).json({ message: 'Confirm this post-event email before sending.' });
@@ -495,7 +516,8 @@ export default async function handler(req, res) {
         if (!record || !sale.email) continue;
         const link = origin + '/feedback?t=' + encodeURIComponent(record.token);
         const first = cleanName(sale.name, 'there').split(' ')[0];
-        messages.push({ from: process.env.RESEND_FROM_EMAIL, to: [sale.email], subject: 'How was Game Tribe Fest?', html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#1C1410"><div style="background:#E8342A;color:#FFF6E5;padding:22px;border-radius:16px 16px 0 0"><h1 style="margin:0">GAME TRIBE</h1></div><div style="border:2px solid #1C1410;border-top:0;padding:24px;border-radius:0 0 16px 16px"><p>Hi ' + cleanName(first) + ',</p><p>Thanks for being part of Game Tribe Fest. Your honest feedback helps us make the next one even better.</p><p><a href="' + link + '" style="display:inline-block;background:#E8342A;color:#fff;padding:12px 18px;border-radius:8px;font-weight:bold;text-decoration:none">Share feedback</a></p><p style="font-size:12px;color:#675f59">This link is personal and can be used once.</p></div></div>', text: 'Hi ' + first + ',\n\nThanks for being part of Game Tribe Fest. Please share your feedback: ' + link });
+        const mail = feedbackEmail(link, first);
+        messages.push({ from: process.env.RESEND_FROM_EMAIL, to: [sale.email], subject: 'How was Game Tribe Fest?', html: mail.html, text: mail.text });
       }
       let sent = 0;
       for (let i = 0; i < messages.length; i += 100) {

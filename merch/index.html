@@ -5,51 +5,83 @@
 <title>Game Tribe Merch · Game Tribe Fest</title><meta name="description" content="Shop Game Tribe merch online and pick up your order at Game Tribe Fest."><meta name="theme-color" content="#E8342A">
 <link rel="icon" href="/assets/logo.png" type="image/png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/site.css"><script defer src="/assets/icons.js"></script><script src="https://js.paystack.co/v2/inline.js"></script>
 <style>
-.shop-hero{position:relative;overflow:hidden;background:var(--cream);padding:64px 0 48px}.shop-hero:after{content:"";position:absolute;right:-140px;top:-190px;width:480px;height:480px;border-radius:50%;background:var(--gold);opacity:.42}.shop-hero .wrap{position:relative;z-index:1}.shop-hero-grid{display:grid;gap:30px;align-items:center}.shop-hero h1{font-size:clamp(48px,9vw,96px);max-width:660px;margin-top:15px}.shop-hero h1 span{color:var(--red)}.shop-copy{max-width:570px;margin-top:15px;color:rgba(28,20,16,.74);font-size:18px;font-weight:700}.shop-sticker{display:grid;place-items:center;justify-self:center;width:min(250px,65vw);aspect-ratio:1;border-radius:50%;background:var(--red);color:#fff;text-align:center;transform:rotate(10deg);box-shadow:0 18px 0 var(--ink)}.shop-sticker strong{display:block;font-family:var(--display);font-size:clamp(28px,5vw,44px);line-height:.95;text-transform:uppercase}.shop-sticker span{display:block;margin-top:10px;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.shop-layout{display:grid;gap:28px}.shop-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 28px}.shop-tab{border:1.5px solid var(--ink);border-radius:999px;background:#fff;color:var(--ink);font:800 13px var(--body);padding:10px 16px;cursor:pointer}.shop-tab[aria-pressed="true"]{background:var(--ink);color:#fff}.shop-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.shop-card{overflow:hidden;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 5px 18px rgba(28,20,16,.06)}.shop-art{position:relative;display:grid;place-items:center;aspect-ratio:1;background:var(--cream-dark);overflow:hidden}.shop-art img{width:100%;height:100%;object-fit:cover}.shop-art:before,.shop-art:after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.48)}.shop-art:before{width:70%;height:70%;top:-32%;right:-26%}.shop-art:after{width:52%;height:52%;bottom:-23%;left:-20%}.shop-art.red{background:var(--red)}.shop-art.gold{background:var(--gold)}.shop-art.ink{background:var(--ink)}.shop-art.orange{background:var(--orange)}.art-word{position:relative;z-index:1;max-width:90%;font-family:var(--display);font-size:clamp(22px,4vw,38px);line-height:.9;text-align:center;text-transform:uppercase;color:var(--ink);transform:rotate(-8deg)}.shop-art.red .art-word,.shop-art.ink .art-word{color:#fff}.shop-card-body{padding:14px}.shop-kind{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--red)}.shop-card h3{margin-top:4px;font-family:var(--display);font-size:clamp(17px,2.3vw,23px);line-height:1.05;text-transform:uppercase}.shop-card p{margin-top:7px;font-size:13px;color:rgba(28,20,16,.68);line-height:1.35}.shop-price{display:block;margin-top:12px;font-weight:800;font-size:18px}.shop-card .btn{margin-top:14px;width:100%;padding:10px 12px;font-size:12px}.cart{position:sticky;top:92px;align-self:start;border-radius:20px;background:var(--ink);color:#fff;padding:22px}.cart h2{font-family:var(--display);font-size:24px;line-height:1;text-transform:uppercase}.cart-list{margin:16px 0}.cart-row{display:grid;grid-template-columns:1fr auto;gap:10px;padding:12px 0;border-top:1px solid rgba(255,255,255,.16)}.cart-row small{display:block;color:rgba(255,255,255,.7);margin-top:3px}.cart-controls{display:flex;align-items:center;gap:6px;margin-top:9px}.cart-controls button{width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:none;color:#fff;font-weight:800;cursor:pointer}.cart-total{display:flex;justify-content:space-between;gap:12px;padding-top:16px;border-top:1px solid rgba(255,255,255,.25);font-weight:800}.cart .btn{width:100%;margin-top:16px}.cart-note{margin-top:14px;font-size:12px;line-height:1.45;color:rgba(255,255,255,.7)}.empty-cart{color:rgba(255,255,255,.7);font-size:14px}.shop-empty{grid-column:1/-1;border:2px dashed var(--line);padding:30px;text-align:center;border-radius:16px;font-weight:700;color:rgba(28,20,16,.65)}.checkout-back{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(28,20,16,.7)}.checkout-back.active{display:flex}.checkout{width:min(100%,620px);max-height:90vh;overflow:auto;border-radius:22px;background:#fff;padding:24px}.checkout h2{font-family:var(--display);font-size:28px;text-transform:uppercase;line-height:1}.checkout p{margin:10px 0 18px;color:rgba(28,20,16,.7)}.checkout-grid{display:grid;gap:14px}.checkout label{display:grid;gap:6px;font-size:13px;font-weight:800}.checkout input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font:inherit}.checkout-summary{margin:18px 0;padding:16px;background:var(--cream);border-radius:14px;font-size:14px;white-space:pre-line}.checkout-actions{display:flex;gap:10px;flex-wrap:wrap}.checkout-status{min-height:20px;margin-top:12px;font-size:13px;font-weight:700}.checkout-close{float:right;border:0;background:none;font-size:26px;cursor:pointer;line-height:1}.checkout-success{display:none;text-align:center;padding:22px 0}.checkout-success.show{display:block}.checkout-form.hide{display:none}@media(min-width:760px){.shop-hero-grid{grid-template-columns:1.25fr .75fr}.shop-layout{grid-template-columns:minmax(0,1fr) 300px}.shop-grid{grid-template-columns:repeat(3,1fr);gap:20px}.checkout-grid{grid-template-columns:1fr 1fr}.checkout label.full{grid-column:1/-1}}@media(max-width:759px){.cart{position:static}}
-
-/* ---- UI + responsive polish ---- */
-.shop-hero{padding:48px 0 40px}
-.shop-hero h1{font-size:clamp(38px,10.5vw,96px);overflow-wrap:anywhere}
-.shop-copy{font-size:clamp(16px,2vw,18px)}
-.shop-hero-grid{gap:22px}
-.shop-sticker{width:min(170px,44vw);box-shadow:0 12px 0 var(--ink);margin-bottom:10px}
-.shop-sticker strong{font-size:clamp(20px,6vw,44px)}
-.shop-sticker span{font-size:11px}
-.shop-hero .btn-row .btn{flex:1 1 auto}
-.shop-tabs{flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 8px;margin:0 -24px 22px;padding-inline:24px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+body.merch{background:#fff}
+.shop-hero{position:relative;background:var(--ink) center/cover no-repeat;color:#fff;text-align:center;padding:48px 0 52px;overflow:hidden}
+.shop-hero:before{content:"";position:absolute;width:320px;height:320px;border-radius:50%;background:var(--red);opacity:.28;right:-120px;top:-140px}
+.shop-hero:after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;background:var(--gold);opacity:.2;left:-90px;bottom:-110px}
+.shop-hero .wrap{position:relative;z-index:1}
+.shop-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;background:var(--gold);color:var(--ink);font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:18px;max-width:100%}
+.shop-hero h1{font-size:clamp(34px,9.5vw,84px);line-height:1;color:#fff;overflow-wrap:break-word}
+.shop-hero h1 span{display:block;color:var(--gold)}
+.shop-copy{max-width:620px;margin:16px auto 0;font-size:clamp(15px,2vw,18px);color:rgba(255,255,255,.82)}
+.shop-note{max-width:620px;margin:8px auto 0;font-weight:700;color:rgba(255,255,255,.6);font-size:14px}
+.shop-jump{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:22px}
+.shop-jump a{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border:1.5px solid rgba(255,255,255,.35);border-radius:999px;color:#fff;font-weight:800;font-size:13px;text-decoration:none;background:rgba(255,255,255,.07);transition:background .15s,color .15s}
+.shop-jump a:hover,.shop-jump a:focus-visible{background:#fff;color:var(--ink)}
+.shop-sticker{display:none}
+.shop-main{padding:26px 0 56px;background:#fff}
+.shop-head{margin-bottom:18px}
+.shop-kicker{display:block;color:var(--red);font-size:12px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;margin-bottom:8px}
+.shop-heading{font-family:var(--display);text-transform:uppercase;font-size:clamp(26px,5vw,44px);line-height:1.05}
+.shop-intro{margin-top:8px;color:rgba(28,20,16,.7);max-width:620px}
+.shop-bar{position:sticky;top:68px;z-index:30;display:flex;align-items:center;gap:10px;margin:0 -18px 8px;padding:10px 18px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.shop-tabs{flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;padding:2px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .shop-tabs::-webkit-scrollbar{display:none}
-.shop-tab{flex:0 0 auto;min-height:40px;white-space:nowrap;transition:background .15s,color .15s}
+.shop-tab{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:8px 16px;border:1.5px solid rgba(28,20,16,.2);border-radius:999px;background:#fff;color:var(--ink);font:800 13px var(--body);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
 .shop-tab:hover{background:var(--cream-dark)}
-.shop-tab[aria-pressed="true"]:hover{background:var(--ink)}
-.shop-grid{align-items:stretch}
-.shop-card{display:flex;flex-direction:column;min-width:0}
+.shop-tab[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:#fff}
+.shop-cart-btn{position:relative;flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:8px 16px;border:1.5px solid var(--ink);border-radius:999px;background:#fff;font:800 13px var(--body);cursor:pointer;color:var(--ink)}
+.shop-cart-btn:hover{background:var(--ink);color:#fff}
+.shop-cart-btn b{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;font-size:12px}
+.shop-cart-btn b[hidden]{display:none}
+.shop-cat{margin-top:30px}
+.shop-cat-head h2{font-family:var(--display);text-transform:uppercase;font-size:clamp(22px,4vw,30px);line-height:1.1;display:flex;align-items:center;gap:10px;overflow-wrap:anywhere}
+.shop-cat-head p{margin-top:4px;color:rgba(28,20,16,.62);font-size:14px}
+.shop-grid{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px}
+.shop-card{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(28,20,16,.06);transition:transform .2s,box-shadow .2s}
+.shop-card:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(28,20,16,.12)}
+.shop-media{position:relative;background:var(--cream)}
+.shop-art{display:grid;place-items:center;aspect-ratio:4/5;overflow:hidden;text-align:center;padding:14px}
+.shop-art img{width:100%;height:100%;object-fit:cover}
+.shop-art.red{background:var(--red);color:#fff}.shop-art.ink{background:var(--ink);color:#fff}.shop-art.gold{background:var(--gold);color:var(--ink)}.shop-art.orange{background:var(--orange);color:var(--ink)}
+.art-word{font-family:var(--display);text-transform:uppercase;transform:rotate(-6deg);line-height:1.05;font-size:clamp(12px,3.4vw,24px);overflow-wrap:break-word;word-break:break-word;hyphens:auto;padding:0 6px;max-width:100%}
+.shop-badge{position:absolute;left:10px;top:10px;padding:5px 10px;border-radius:6px;background:var(--red);color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.shop-badge.sold{background:var(--ink)}
+.is-sold .shop-art{filter:grayscale(1);opacity:.55}
 .shop-card-body{display:flex;flex-direction:column;flex:1;padding:12px 12px 14px}
-.shop-card h3{overflow-wrap:break-word;hyphens:auto;font-size:clamp(15px,4.3vw,23px)}
-.shop-card p{overflow-wrap:anywhere}
-.shop-price{margin-top:auto;padding-top:12px}
-.shop-card .btn{margin-top:10px;min-height:42px}
-.art-word{overflow-wrap:break-word;hyphens:auto;font-size:clamp(15px,4.6vw,26px);padding:0 10px}
+.shop-kind{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:rgba(28,20,16,.5)}
+.shop-card h3{margin-top:4px;font-family:var(--display);text-transform:uppercase;font-size:clamp(14px,3.8vw,18px);line-height:1.1;overflow-wrap:break-word;hyphens:auto}
+.shop-card p{margin-top:6px;font-size:12.5px;color:rgba(28,20,16,.65);overflow-wrap:anywhere}
+.shop-price{margin-top:auto;padding-top:12px;font-size:17px;font-weight:900}
+.shop-card .btn{margin-top:10px;min-height:42px;width:100%}
+.shop-card .btn:disabled{opacity:.55;cursor:not-allowed}
+.shop-colour-wrap{display:grid;gap:5px;margin-top:10px;font-size:12px;font-weight:800}
+.shop-colour,.shop-size{width:100%;min-height:40px;padding:8px 10px;border:1.5px solid rgba(28,20,16,.25);border-radius:10px;background:#fff;font:inherit;font-weight:700;color:var(--ink)}
+.shop-empty{padding:40px 20px;text-align:center;border:2px dashed var(--line);border-radius:18px;color:rgba(28,20,16,.6);font-weight:700;margin-top:24px}
+/* cart drawer */
+.drawer-back{position:fixed;inset:0;z-index:90;background:rgba(28,20,16,.55);opacity:0;pointer-events:none;transition:opacity .2s}
+.drawer-back.open{opacity:1;pointer-events:auto}
+.cart-drawer{position:fixed;z-index:95;left:0;right:0;bottom:0;max-height:86vh;max-height:86dvh;display:flex;flex-direction:column;background:var(--ink);color:#fff;border-radius:22px 22px 0 0;transform:translateY(105%);visibility:hidden;transition:transform .25s ease,visibility 0s .25s;box-shadow:0 -20px 50px rgba(0,0,0,.35)}
+.cart-drawer.open{transform:none;visibility:visible;transition:transform .25s ease}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px 8px}
+.drawer-head h2{font-family:var(--display);font-size:24px;line-height:1;text-transform:uppercase}
+.drawer-head button{width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(255,255,255,.4);background:none;color:#fff;font-size:22px;cursor:pointer;line-height:1}
+.cart-list{flex:1;overflow-y:auto;padding:4px 20px;overscroll-behavior:contain}
+.cart-row{display:grid;grid-template-columns:1fr auto;gap:10px;padding:14px 0;border-top:1px solid rgba(255,255,255,.14)}
+.cart-row:first-child{border-top:0}
 .cart-row strong{overflow-wrap:anywhere}
-.cart-controls button{width:32px;height:32px;font-size:16px}
-.cart-controls b{min-width:22px;text-align:center}
-.cart .btn:disabled{opacity:.45;cursor:not-allowed}
-.checkout-back{align-items:flex-end;padding:0}
-.checkout{width:100%;max-height:92vh;max-height:92dvh;border-radius:22px 22px 0 0;padding:22px 18px calc(22px + env(safe-area-inset-bottom,0px))}
-.checkout h2{font-size:clamp(22px,6vw,28px);padding-right:36px}
-.checkout-close{position:absolute;right:14px;top:12px;float:none;width:38px;height:38px;border-radius:50%;background:var(--cream)}
-.checkout{position:relative}
-.checkout input{border:1.5px solid rgba(28,20,16,.25);font-weight:600;min-height:46px}
-.checkout input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(251,182,20,.5)}
-.checkout-actions .btn{flex:1 1 120px}.checkout-actions .btn-red{flex:2 1 190px;white-space:nowrap}
-.checkout-status{color:var(--red)}
-/* receipt lookup form (was unstyled outside the checkout dialog) */
-#merchLookupForm{background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 12px 34px rgba(28,20,16,.08);display:grid;gap:14px}
-#merchLookupForm label{display:grid;gap:6px;font-size:13px;font-weight:800}
-#merchLookupForm input{width:100%;min-height:46px;padding:11px 14px;border:1.5px solid rgba(28,20,16,.25);border-radius:12px;background:#fff;font:inherit;font-weight:600;color:var(--ink)}
-#merchLookupForm input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(251,182,20,.5)}
-#merchLookupForm .btn{width:100%}
-#merchLookupForm .checkout-status{margin:0;min-height:20px}
-/* mobile cart bar */
+.cart-row small{display:block;color:rgba(255,255,255,.7);margin-top:3px}
+.cart-controls{display:flex;align-items:center;gap:8px;margin-top:10px}
+.cart-controls button{width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(255,255,255,.45);background:none;color:#fff;font-size:17px;font-weight:800;cursor:pointer}
+.cart-controls button:hover{background:#fff;color:var(--ink)}
+.cart-controls b{min-width:24px;text-align:center}
+.empty-cart{padding:26px 0;color:rgba(255,255,255,.7);text-align:center}
+.cart-foot{padding:14px 20px calc(18px + env(safe-area-inset-bottom,0px));border-top:1px solid rgba(255,255,255,.18)}
+.cart-total{display:flex;justify-content:space-between;gap:12px;font-weight:800;font-size:18px}
+.cart-foot .btn{width:100%;min-height:50px;margin-top:14px}
+.cart-foot .btn:disabled{opacity:.45;cursor:not-allowed}
+.cart-note{margin-top:12px;font-size:12px;line-height:1.45;color:rgba(255,255,255,.65)}
+html.drawer-open{overflow:hidden}
 .cart-bar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;align-items:center;gap:12px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--ink);color:#fff;box-shadow:0 -10px 30px rgba(28,20,16,.28)}
 .cart-bar.show{display:flex}
 .cart-bar-info{flex:1;min-width:0;line-height:1.2}
@@ -57,24 +89,50 @@
 .cart-bar-info strong{font-size:18px}
 .cart-bar .btn{flex:0 0 auto;padding:12px 20px}
 body.has-cart-bar{padding-bottom:76px}
+/* checkout dialog */
+.checkout-back{position:fixed;inset:0;z-index:100;display:none;align-items:flex-end;justify-content:center;padding:0;background:rgba(28,20,16,.7)}
+.checkout-back.active{display:flex}
+.checkout{position:relative;width:100%;max-height:92vh;max-height:92dvh;overflow:auto;border-radius:22px 22px 0 0;background:#fff;padding:22px 18px calc(22px + env(safe-area-inset-bottom,0px))}
+.checkout h2{font-family:var(--display);font-size:clamp(22px,6vw,28px);text-transform:uppercase;line-height:1;padding-right:44px}
+.checkout p{margin:10px 0 18px;color:rgba(28,20,16,.7)}
+.checkout-close{position:absolute;right:14px;top:12px;width:38px;height:38px;border-radius:50%;border:0;background:var(--cream);font-size:24px;cursor:pointer;line-height:1}
+.checkout-grid{display:grid;gap:14px;grid-template-columns:1fr}
+.checkout label{display:grid;gap:6px;font-size:13px;font-weight:800}
+.checkout input,#merchLookupForm input{width:100%;min-height:46px;padding:11px 14px;border:1.5px solid rgba(28,20,16,.25);border-radius:12px;background:#fff;font:600 16px var(--body);color:var(--ink)}
+.checkout input:focus,#merchLookupForm input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(251,182,20,.5)}
+.checkout-summary{margin:18px 0;padding:16px;background:var(--cream);border-radius:14px;font-size:14px;white-space:pre-line}
+.checkout-actions{display:flex;gap:10px;flex-wrap:wrap}
+.checkout-actions .btn{flex:1 1 120px;min-height:48px}.checkout-actions .btn-red{flex:2 1 190px;white-space:nowrap}
+.checkout-status{min-height:20px;margin-top:12px;font-size:13px;font-weight:700;color:var(--red)}
+.checkout-success{display:none;text-align:center;padding:22px 0}.checkout-success.show{display:block}.checkout-form.hide{display:none}
+#receipt .sec-head{text-align:center}#receipt .sec-head p{margin-top:10px;color:rgba(28,20,16,.7)}
+#merchLookupForm{background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 12px 34px rgba(28,20,16,.08);display:grid;gap:14px;margin-top:24px}
+#merchLookupForm label{display:grid;gap:6px;font-size:13px;font-weight:800}
+#merchLookupForm .btn{width:100%;min-height:50px}
+#merchLookupForm .checkout-status{margin:0}
+@media(min-width:600px){.shop-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.checkout-grid{grid-template-columns:1fr 1fr}.checkout label.full{grid-column:1/-1}}
 @media(min-width:760px){
-  .shop-hero{padding:72px 0 56px}
-  .shop-hero-grid{gap:30px}
-  .shop-sticker{width:min(250px,28vw);box-shadow:0 18px 0 var(--ink);margin-bottom:0}
-  .shop-sticker span{font-size:13px}
-  .shop-tabs{flex-wrap:wrap;overflow:visible;margin:0 0 28px;padding:0}
+  .shop-hero{padding:76px 0 84px}
+  .shop-hero:before{width:460px;height:460px;right:-120px;top:-180px}
+  .shop-sticker{display:grid;place-items:center;position:absolute;right:5%;bottom:-18px;width:150px;height:150px;border-radius:50%;background:var(--red);color:#fff;text-align:center;transform:rotate(10deg);box-shadow:0 10px 0 rgba(0,0,0,.35);z-index:1;padding:12px}
+  .shop-sticker[hidden]{display:none}
+  .shop-sticker strong{display:block;font-family:var(--display);text-transform:uppercase;font-size:20px;line-height:1.05}
+  .shop-sticker span{display:block;margin-top:6px;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .shop-bar{margin:0 -24px 8px;padding:12px 24px}
+  .shop-cart-btn{padding:8px 20px}
+  .cart-bar{display:none!important}body.has-cart-bar{padding-bottom:0}
+  .cart-drawer{left:auto;top:0;right:0;bottom:0;width:min(420px,100%);max-height:none;border-radius:22px 0 0 22px;transform:translateX(105%)}
+  .cart-drawer.open{transform:none}
   .checkout-back{align-items:center;padding:20px}
   .checkout{width:min(100%,620px);border-radius:22px;padding:28px}
-  .cart-bar{display:none!important}
-  body.has-cart-bar{padding-bottom:0}
-  .shop-hero .btn-row .btn{flex:0 0 auto}
+  #merchLookupForm{padding:30px}#merchLookupForm .btn{width:auto;min-width:200px;justify-self:start}
 }
-@media(min-width:760px) and (max-width:1000px){.shop-layout{grid-template-columns:minmax(0,1fr) 260px}.shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:759px){.shop-grid{gap:12px}.shop-card h3{font-size:clamp(14px,4vw,18px)}.shop-card p{font-size:12.5px}.shop-price{font-size:17px}.wrap{padding-left:18px;padding-right:18px}.shop-tabs{margin-left:-18px;margin-right:-18px;padding-inline:18px}}
+@media(min-width:1000px){.shop-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:340px){.shop-grid{grid-template-columns:1fr}}
-@media(prefers-reduced-motion:reduce){.shop-tab,.btn{transition:none}}
-</style></head>
-<body data-page="merch">
+@media(prefers-reduced-motion:reduce){.cart-drawer,.drawer-back,.shop-card{transition:none}}
+</style>
+</head>
+<body data-page="merch" class="merch">
 <nav class="nav" aria-label="Main">
   <div class="wrap nav-in">
     <a class="brand" href="/" aria-label="Game Tribe home"><img src="/assets/logo.png" alt="Game Tribe"></a>
@@ -113,8 +171,56 @@ body.has-cart-bar{padding-bottom:76px}
     </div>
   </div>
 </nav>
-<main><section class="shop-hero"><div class="wrap shop-hero-grid"><div><span class="pill pill-yellow">🧢 Game Tribe Drop 01</span><h1 class="display">Wear the vibe. <span>Own the moment.</span></h1><p class="shop-copy">Shop the Game Tribe collection online, pay securely, then pick your order up at Game Tribe Fest.</p><div class="btn-row" style="margin-top:24px"><a class="btn btn-red" href="#collection">Shop the collection</a><a class="btn btn-outline" href="/?tickets=1">Get festival tickets</a></div></div><div class="shop-sticker"><div><strong>Game<br>Tribe<br>Drop 01</strong><span>Festival pickup</span></div></div></div></section><section class="sec white" id="collection"><div class="wrap"><div class="sec-head"><span class="kicker r">Pick your piece</span><h2 class="display h2">The collection</h2><p>Pay online with Paystack. Bring your confirmation email and collect at the festival.</p></div><div class="shop-layout"><div><div class="shop-tabs" id="shopTabs" role="group" aria-label="Filter the collection"></div><div class="shop-grid" id="shopGrid" aria-live="polite"><div class="shop-empty">Loading the collection…</div></div></div><aside class="cart" aria-label="Your merch cart"><h2>Your cart</h2><div id="cartList" class="cart-list"><p class="empty-cart">Your cart is ready when you are.</p></div><div class="cart-total"><span>Total</span><span id="cartTotal">₦0</span></div><button class="btn btn-yellow" type="button" id="checkoutButton" disabled>Checkout for pickup</button><p class="cart-note">Pickup only at Game Tribe Fest. Items are held for 15 minutes once checkout begins.</p></aside></div></div></section></main>
-<div class="cart-bar" id="cartBar" role="region" aria-label="Cart summary"><div class="cart-bar-info"><small id="cartBarCount">0 items</small><strong id="cartBarTotal">₦0</strong></div><button class="btn btn-yellow" type="button" id="cartBarBtn">Checkout</button></div><div class="checkout-back" id="checkoutOverlay" aria-hidden="true"><section class="checkout" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle"><button class="checkout-close" type="button" id="checkoutClose" aria-label="Close checkout">×</button><div class="checkout-form" id="checkoutForm"><h2 id="checkoutTitle">Festival pickup</h2><p>Use an email address you can access. We will keep your paid order ready for pickup at Game Tribe Fest.</p><form id="merchCheckoutForm"><div class="checkout-grid"><label>Full name<input name="name" required maxlength="80"></label><label>Email address<input name="email" type="email" required maxlength="120"></label><label class="full">Phone number<input name="phone" type="tel" required maxlength="40"></label></div><div class="checkout-summary" id="checkoutSummary"></div><div class="checkout-actions"><button class="btn btn-red" type="submit">Pay with Paystack</button><button class="btn btn-outline" type="button" id="checkoutCancel">Cancel</button></div><div class="checkout-status" id="checkoutStatus" aria-live="polite"></div></form></div><div class="checkout-success" id="checkoutSuccess"><span class="pill pill-yellow">Payment confirmed</span><h2 style="margin-top:18px">Your pickup is set.</h2><p id="successCopy"></p><button class="btn btn-red" type="button" id="successClose">Back to the shop</button></div></section></div><section class="sec cream"><div class="wrap" style="max-width:640px"><div class="sec-head"><span class="kicker r">Already ordered?</span><h2 class="display h2">Find your pickup receipt</h2><p>Enter the same email address and order reference from your Paystack receipt. We will email your pickup details again.</p></div><form id="merchLookupForm" class="checkout-grid"><label>Email address<input name="email" type="email" required maxlength="120"></label><label>Order reference<input name="reference" required maxlength="100" placeholder="GTM-..."></label><div class="checkout-actions"><button class="btn btn-red" type="submit">Email my receipt</button></div><p id="merchLookupStatus" class="checkout-status" aria-live="polite"></p></form></div></section>
+
+<main>
+  <section class="shop-hero">
+    <div class="wrap">
+      <span class="shop-pill">🧢 Game Tribe Drop 01</span>
+      <h1 class="display">Wear the vibe. <span>Own the moment.</span></h1>
+      <p class="shop-copy">Shop the Game Tribe collection online, pay securely, then pick your order up at Game Tribe Fest.</p>
+      <p class="shop-note" id="merchHeroNote">Pre-order online, skip the queue, collect with a QR code.</p>
+      <div class="shop-jump"><a href="#collection">🛍️ Shop the collection</a><a href="#receipt">🧾 Find my receipt</a><a href="/?tickets=1">🎟️ Festival tickets</a></div>
+    </div>
+    <div class="shop-sticker" aria-hidden="true"><div><strong>Game<br>Tribe<br>Drop 01</strong><span>Festival pickup</span></div></div>
+  </section>
+
+  <section class="shop-main" id="collection">
+    <div class="wrap">
+      <div class="shop-head"><span class="shop-kicker">Pick your piece</span><h2 class="shop-heading">The collection</h2><p class="shop-intro">Pay online with Paystack. Bring your confirmation email and collect at the festival.</p></div>
+      <div class="shop-bar">
+        <div class="shop-tabs" id="shopTabs" role="group" aria-label="Filter the collection"></div>
+        <button class="shop-cart-btn" type="button" id="cartToggle" aria-controls="cartDrawer" aria-expanded="false">🛍️ Cart <b id="cartCount" hidden>0</b></button>
+      </div>
+      <div id="shopGrid" aria-live="polite"><div class="shop-empty">Loading the collection…</div></div>
+    </div>
+  </section>
+
+  <section class="sec cream" id="receipt">
+    <div class="wrap" style="max-width:640px">
+      <div class="sec-head"><span class="shop-kicker">Already ordered?</span><h2 class="display h2">Find your pickup receipt</h2><p>Enter the same email address and order reference from your Paystack receipt. We will email your pickup details again.</p></div>
+      <form id="merchLookupForm">
+        <label>Email address<input name="email" type="email" required maxlength="120" autocomplete="email"></label>
+        <label>Order reference<input name="reference" required maxlength="100" placeholder="GTM-…"></label>
+        <button class="btn btn-red" type="submit">Email my receipt</button>
+        <p id="merchLookupStatus" class="checkout-status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<div class="drawer-back" id="drawerBack"></div>
+<aside class="cart-drawer" id="cartDrawer" aria-hidden="true" aria-label="Your merch cart">
+  <div class="drawer-head"><h2 id="cartHeading">Your cart</h2><button type="button" id="cartClose" aria-label="Close cart">×</button></div>
+  <div id="cartList" class="cart-list"><p class="empty-cart">Your cart is ready when you are.</p></div>
+  <div class="cart-foot">
+    <div class="cart-total"><span>Total</span><span id="cartTotal">₦0</span></div>
+    <button class="btn btn-yellow" type="button" id="checkoutButton" disabled>Checkout for pickup</button>
+    <p class="cart-note" id="cartNote">Pickup only at Game Tribe Fest. Items are held for 15 minutes once checkout begins.</p>
+  </div>
+</aside>
+<div class="cart-bar" id="cartBar" role="region" aria-label="Cart summary"><div class="cart-bar-info"><small id="cartBarCount">0 items</small><strong id="cartBarTotal">₦0</strong></div><button class="btn btn-yellow" type="button" id="cartBarBtn">View cart</button></div>
+<div class="checkout-back" id="checkoutOverlay" aria-hidden="true"><section class="checkout" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle"><button class="checkout-close" type="button" id="checkoutClose" aria-label="Close checkout">×</button><div class="checkout-form" id="checkoutForm"><h2 id="checkoutTitle">Festival pickup</h2><p>Use an email address you can access. We will keep your paid order ready for pickup at Game Tribe Fest.</p><form id="merchCheckoutForm"><div class="checkout-grid"><label>Full name<input name="name" required maxlength="80"></label><label>Email address<input name="email" type="email" required maxlength="120"></label><label class="full">Phone number<input name="phone" type="tel" required maxlength="40"></label></div><div class="checkout-summary" id="checkoutSummary"></div><div class="checkout-actions"><button class="btn btn-red" type="submit">Pay with Paystack</button><button class="btn btn-outline" type="button" id="checkoutCancel">Cancel</button></div><div class="checkout-status" id="checkoutStatus" aria-live="polite"></div></form></div><div class="checkout-success" id="checkoutSuccess"><span class="pill pill-yellow">Payment confirmed</span><h2 style="margin-top:18px">Your pickup is set.</h2><p id="successCopy"></p><button class="btn btn-red" type="button" id="successClose">Back to the shop</button></div></section></div>
+
 <footer class="foot" id="footer">
   <div class="wrap">
     <div class="foot-grid">
@@ -164,6 +270,9 @@ body.has-cart-bar{padding-bottom:76px}
     </div>
   </div>
 </footer>
-<script src="/assets/page.js"></script><script>
-(function(){var products=[],cart={},active='All',publicKey='';var money=function(v){return '₦'+Number(v||0).toLocaleString('en-NG');},escapeHtml=function(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});};var picked=function(){return products.filter(function(p){return cart[p.id]>0;}).map(function(p){return{id:p.id,quantity:cart[p.id]};});},total=function(){return products.reduce(function(n,p){return n+p.price*(cart[p.id]||0);},0);};function call(action,opt){return fetch('/api/merch?action='+action,opt).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.message||'Something went wrong.');return d;});});}function draw(){var cats=['All'].concat(products.map(function(p){return p.category;}).filter(function(v,i,a){return a.indexOf(v)===i;}));document.getElementById('shopTabs').innerHTML=cats.map(function(c){return '<button class="shop-tab" type="button" data-cat="'+escapeHtml(c)+'" aria-pressed="'+(c===active)+'">'+escapeHtml(c)+'</button>';}).join('');var view=products.filter(function(p){return active==='All'||p.category===active;});document.getElementById('shopGrid').innerHTML=view.length?view.map(function(p,i){var art=p.image?'<div class="shop-art"><img src="'+escapeHtml(p.image)+'" alt="'+escapeHtml(p.name)+'"></div>':'<div class="shop-art '+['red','ink','gold','orange'][i%4]+'"><span class="art-word">'+escapeHtml(p.name)+'</span></div>';return '<article class="shop-card">'+art+'<div class="shop-card-body"><span class="shop-kind">'+escapeHtml(p.category)+'</span><h3>'+escapeHtml(p.name)+'</h3><p>'+escapeHtml(p.description)+'</p><strong class="shop-price">'+money(p.price)+'</strong><button class="btn btn-outline" type="button" data-add="'+escapeHtml(p.id)+'">Add to cart</button></div></article>';}).join(''):'<div class="shop-empty">Nothing in this category right now.</div>';var chosen=picked();document.getElementById('cartList').innerHTML=chosen.length?chosen.map(function(item){var p=products.filter(function(x){return x.id===item.id;})[0];return '<div class="cart-row"><div><strong>'+escapeHtml(p.name)+'</strong><small>'+money(p.price)+' each</small><div class="cart-controls"><button type="button" data-id="'+escapeHtml(p.id)+'" data-delta="-1">−</button><b>'+item.quantity+'</b><button type="button" data-id="'+escapeHtml(p.id)+'" data-delta="1">+</button></div></div><strong>'+money(p.price*item.quantity)+'</strong></div>';}).join(''):'<p class="empty-cart">Your cart is ready when you are.</p>';document.getElementById('cartTotal').textContent=money(total());document.getElementById('checkoutButton').disabled=!chosen.length;}function open(){document.getElementById('checkoutSummary').textContent=picked().map(function(item){var p=products.filter(function(x){return x.id===item.id;})[0];return item.quantity+' × '+p.name+' — '+money(p.price*item.quantity);}).join('\n')+'\n\nTotal: '+money(total())+'\nPickup: Game Tribe Fest';document.getElementById('checkoutOverlay').classList.add('active');}function close(){document.getElementById('checkoutOverlay').classList.remove('active');}document.getElementById('shopTabs').addEventListener('click',function(e){var b=e.target.closest('button[data-cat]');if(b){active=b.dataset.cat;draw();}});document.getElementById('shopGrid').addEventListener('click',function(e){var b=e.target.closest('button[data-add]');if(!b)return;var p=products.filter(function(x){return x.id===b.dataset.add;})[0];cart[p.id]=Math.min(p.stock,(cart[p.id]||0)+1);draw();});document.getElementById('cartList').addEventListener('click',function(e){var b=e.target.closest('button[data-id]');if(!b)return;var p=products.filter(function(x){return x.id===b.dataset.id;})[0];cart[p.id]=Math.max(0,Math.min(p.stock,(cart[p.id]||0)+Number(b.dataset.delta)));draw();});document.getElementById('checkoutButton').onclick=open;document.getElementById('checkoutClose').onclick=close;document.getElementById('checkoutCancel').onclick=close;document.getElementById('successClose').onclick=function(){close();document.getElementById('checkoutSuccess').classList.remove('show');document.getElementById('checkoutForm').classList.remove('hide');};document.getElementById('merchCheckoutForm').addEventListener('submit',function(e){e.preventDefault();var form=e.currentTarget,button=form.querySelector('[type=submit]'),status=document.getElementById('checkoutStatus'),fd=new FormData(form);button.disabled=true;button.textContent='Holding your items…';status.textContent='';call('checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fd.get('name'),email:fd.get('email'),phone:fd.get('phone'),items:picked()})}).then(function(order){if(typeof PaystackPop==='undefined')throw new Error('Paystack could not load. Check your connection and try again.');button.textContent='Opening Paystack…';new PaystackPop().newTransaction({key:order.paystackPublicKey||publicKey,email:fd.get('email'),amount:order.amount*100,currency:'NGN',firstName:String(fd.get('name')).split(' ')[0],lastName:String(fd.get('name')).split(' ').slice(1).join(' '),phone:fd.get('phone'),reference:order.reference,metadata:{order_kind:'merch',merch_reference:order.reference},onSuccess:function(tx){button.textContent='Confirming payment…';call('confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reference:tx.reference})}).then(function(result){cart={};draw();document.getElementById('checkoutForm').classList.add('hide');document.getElementById('checkoutSuccess').classList.add('show');document.getElementById('successCopy').textContent='Your payment of '+money(result.order.amount)+' is confirmed. Your pickup details are linked to '+result.order.email+'. Keep your Paystack reference: '+result.order.reference+'.';}).catch(function(error){status.textContent=error.message+' Keep your Paystack reference and contact Game Tribe.';button.disabled=false;button.textContent='Pay with Paystack';});},onCancel:function(){call('cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reference:order.reference})});button.disabled=false;button.textContent='Pay with Paystack';status.textContent='Checkout cancelled. Your items were released.';}});}).catch(function(error){status.textContent=error.message;button.disabled=false;button.textContent='Pay with Paystack';});});call('catalog').then(function(data){products=data.products||[];publicKey=data.paystackPublicKey||'';draw();}).catch(function(error){document.getElementById('shopGrid').innerHTML='<div class="shop-empty">'+escapeHtml(error.message)+' Please check back shortly.</div>';});}());
-</script><script>(function(){var bar=document.getElementById('cartBar'),list=document.getElementById('cartList'),total=document.getElementById('cartTotal'),btn=document.getElementById('checkoutButton');if(!bar||!list||!total||!btn)return;function sync(){var n=0;list.querySelectorAll('.cart-controls b').forEach(function(b){n+=Number(b.textContent)||0;});document.getElementById('cartBarCount').textContent=n+(n===1?' item':' items');document.getElementById('cartBarTotal').textContent=total.textContent;bar.classList.toggle('show',n>0);document.body.classList.toggle('has-cart-bar',n>0);}new MutationObserver(sync).observe(list,{childList:true,subtree:true});new MutationObserver(sync).observe(total,{childList:true,characterData:true,subtree:true});document.getElementById('cartBarBtn').addEventListener('click',function(){if(!btn.disabled)btn.click();});sync();})();</script><script>(function(){var f=document.getElementById('merchLookupForm');if(!f)return;f.addEventListener('submit',function(e){e.preventDefault();var b=f.querySelector('button'),s=document.getElementById('merchLookupStatus'),d=new FormData(f);b.disabled=true;b.textContent='Sending…';s.textContent='';fetch('/api/merch?action=lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:d.get('email'),reference:d.get('reference')})}).then(function(r){return r.json().then(function(x){if(!r.ok)throw new Error(x.message||'Could not find that order.');return x;});}).then(function(x){s.textContent=x.message;b.textContent='Receipt sent ✓';}).catch(function(x){s.textContent=x.message;b.disabled=false;b.textContent='Email my receipt';});});}());</script></body></html>
+
+<script src="/assets/page.js"></script>
+<script>(function(){var bar=document.getElementById('cartBar'),list=document.getElementById('cartList'),total=document.getElementById('cartTotal');if(!bar||!list||!total)return;function sync(){var n=0;list.querySelectorAll('.cart-controls b').forEach(function(b){n+=Number(b.textContent)||0;});document.getElementById('cartBarCount').textContent=n+(n===1?' item':' items');document.getElementById('cartBarTotal').textContent=total.textContent;bar.classList.toggle('show',n>0);document.body.classList.toggle('has-cart-bar',n>0);}new MutationObserver(sync).observe(list,{childList:true,subtree:true});new MutationObserver(sync).observe(total,{childList:true,characterData:true,subtree:true});sync();})();</script>
+<script>(function(){var f=document.getElementById('merchLookupForm');if(!f)return;f.addEventListener('submit',function(e){e.preventDefault();var b=f.querySelector('button'),s=document.getElementById('merchLookupStatus'),d=new FormData(f);b.disabled=true;b.textContent='Sending…';s.textContent='';fetch('/api/merch?action=lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:d.get('email'),reference:d.get('reference')})}).then(function(r){return r.json().then(function(x){if(!r.ok)throw new Error(x.message||'Could not find that order.');return x;});}).then(function(x){s.textContent=x.message;b.textContent='Receipt sent ✓';}).catch(function(x){s.textContent=x.message;b.disabled=false;b.textContent='Email my receipt';});});}());</script>
+</body>
+</html>

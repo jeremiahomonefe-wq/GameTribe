@@ -171,6 +171,94 @@ tr.row-used td{background:#FBF4F3}
 .rc-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:800}
 .rc-meta{font-size:12px;color:var(--muted);font-weight:600;margin-top:3px;word-break:break-word}
 .rc-note{font-size:13px;font-weight:700;margin-top:8px;line-height:1.45}
+
+/* ---- responsive + UI polish ---- */
+.content{max-width:1120px;overflow-x:clip}
+.top .btn{flex:0 0 auto}
+.table-wrap{-webkit-overflow-scrolling:touch}
+.card>h3{font-size:16px}
+.item{transition:border-color .15s}
+.item:hover{border-color:#D6CCB8}
+.toast{max-width:calc(100vw - 32px);text-align:center;white-space:normal}
+@media(max-width:900px){
+  .top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 8px;padding:10px 14px}
+  .top h2{flex:1 1 calc(100% - 56px);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:17px}
+  .top .who{order:3;flex:1 1 100%;text-align:center}
+  .top .status{order:3;flex:1 1 100%;font-size:12px}
+  .top .status:empty{display:none}
+  .top>.btn{order:4;min-height:38px}
+  .top>.btn-ghost{padding:8px 10px}
+  .top>#checkBtn{margin-left:0}
+  #saveBtn:disabled{display:none}
+  #saveBtn:not(:disabled){position:fixed;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:45;width:auto;min-height:50px;font-size:15px;box-shadow:0 12px 30px rgba(232,52,42,.4)}
+  .content{padding-bottom:110px}
+  .toolbar{gap:8px}
+  .toolbar input,.toolbar select{max-width:none;flex:1 1 100%}
+  .toolbar .btn{flex:1 1 auto;min-height:42px}
+  input[type=text],input[type=email],input[type=password],input[type=number],input[type=datetime-local],input[type=search],textarea,select{font-size:16px;min-height:46px}
+  .btn.sm{min-height:38px;padding:8px 14px}
+  .card{padding:16px;border-radius:18px}
+  .item{padding:12px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi b{font-size:22px;overflow-wrap:anywhere}
+  .media{flex-direction:column}
+  .media .thumb{flex:none;width:100%;height:120px}
+  .modal-back{align-items:end;padding:0}
+  .modal,.modal.wide{max-width:none;max-height:92vh;max-height:92dvh;border-radius:22px 22px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .bulk{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .login-card{padding:26px 20px}
+}
+@media(min-width:901px){.top{padding:14px 32px}.content{padding:28px 32px 80px}}
+@media(max-width:380px){.kpis{grid-template-columns:1fr}.kv{grid-template-columns:1fr}}
+
+.scan-view{position:relative;background:#000;border-radius:16px;overflow:hidden;min-height:200px;aspect-ratio:4/3;max-height:52vh}
+.scan-view video{width:100%;height:100%;object-fit:cover;display:block}
+.scan-frame{position:absolute;inset:18% 18%;border:3px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.35);pointer-events:none}
+
+/* ---- admin polish v2: consistent controls, tables, headers, modals ---- */
+input:not([type]),input[type=url],input[type=tel],input[type=date],input[type=time]{width:100%;padding:10px 12px;border:1.5px solid #D6CCB8;border-radius:12px;background:#fff;font-weight:600}
+input:not([type]):focus,input[type=url]:focus,input[type=tel]:focus{border-color:var(--ink);outline:none;box-shadow:0 0 0 3px rgba(251,182,20,.45)}
+input::placeholder,textarea::placeholder{color:#A39A8C;font-weight:500}
+select{appearance:none;-webkit-appearance:none;padding-right:38px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%231C1410' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 13px center}
+input[type=checkbox],input[type=radio]{accent-color:var(--red)}
+input:disabled,select:disabled,textarea:disabled{background:#F1ECE0;color:var(--muted);cursor:not-allowed}
+input[readonly]{background:#F8F4EA}
+.btn{min-height:42px;transition:background .15s,color .15s,border-color .15s,box-shadow .15s,transform .1s}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn.sm{min-height:36px}
+.item-head{flex-wrap:wrap;gap:8px 12px;justify-content:space-between}
+.item-head h3{flex:1 1 150px;min-width:0;margin:0}
+.item-head>span{display:inline-flex;flex-wrap:wrap;gap:8px;align-items:center}
+.modal .item-head{margin-bottom:6px;flex-wrap:nowrap}
+.modal .item-head h3{flex:1 1 auto}
+.modal .item-head .btn{flex:0 0 auto}
+.modal-back{background:rgba(28,20,16,.62);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.modal{overscroll-behavior:contain}
+.modal .row .btn{min-height:44px}
+.table-wrap{border-radius:14px}
+table{min-width:640px}
+td,th{overflow-wrap:break-word;word-break:normal}
+td{line-height:1.4}
+tbody tr:hover td{background:#FFFBF2}
+tbody tr:first-child td{border-top:0}
+td .small{color:var(--muted);font-size:12px}
+.empty{padding:28px 16px;text-align:center;color:var(--muted);font-weight:700}
+.kpi{transition:box-shadow .2s}
+.card{box-shadow:0 1px 0 rgba(28,20,16,.04)}
+.nav button{min-height:42px}
+.nav button:focus-visible{outline-offset:-2px}
+@media(max-width:900px){
+  .card .table-wrap{margin:0 -16px;border-radius:0;border-left:0;border-right:0}
+  td,th{padding:10px 12px}
+  .item-head h3{flex-basis:100%}
+  .item-head>span{width:100%}
+  .item-head>span .btn{flex:1 1 auto}
+  .modal .item-head h3{flex-basis:auto}
+  .modal .row{display:grid;grid-template-columns:1fr 1fr}
+  .modal .row .btn-red,.modal .row .btn:only-child{grid-column:1/-1}
+  .grid.two{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -343,20 +431,46 @@ var SECTIONS=[
  {id:'reports',icon:'chart',title:'Sales reports',custom:'reports'},
  {id:'feedback',icon:'chat',title:'Event feedback',custom:'feedback'},
  {id:'p_merch',icon:'bag',title:'Merch page',blocks:[
-  {title:'Merch page heading',fields:[
-   {path:'pages.merch.pill',label:'Small tag',type:T},{path:'pages.merch.title',label:'Main heading',type:T},{path:'pages.merch.highlight',label:'Highlighted heading',type:T},
-   {path:'pages.merch.intro',label:'Intro sentence',type:TA,full:true}]},
-  {title:'Sticker and collection',fields:[
-   {path:'pages.merch.stickerTitle',label:'Round sticker text (use a new line for each word)',type:TA},{path:'pages.merch.stickerSubtitle',label:'Sticker subtitle',type:T},
-   {path:'pages.merch.collectionKicker',label:'Collection small tag',type:T},{path:'pages.merch.collectionTitle',label:'Collection heading',type:T},{path:'pages.merch.collectionIntro',label:'Collection sentence',type:TA,full:true}]}]},
+  {title:'Top banner',help:'The dark banner at the top of the public Merch page.',fields:[
+   {path:'pages.merch.pill',label:'Small tag',type:T},{path:'pages.merch.title',label:'Main heading',type:T},{path:'pages.merch.highlight',label:'Highlighted heading (yellow)',type:T},
+   {path:'pages.merch.intro',label:'Intro sentence',type:TA,full:true},{path:'pages.merch.heroNote',label:'Line under the intro',type:T,full:true},
+   {path:'pages.merch.heroImage',label:'Banner background picture (optional)',type:IMG,full:true},
+   {path:'pages.merch.stickerTitle',label:'Round sticker text (new line per word, leave empty to hide)',type:TA},{path:'pages.merch.stickerSubtitle',label:'Sticker subtitle',type:T}]},
+  {title:'Shop heading',fields:[
+   {path:'pages.merch.collectionKicker',label:'Small tag',type:T},{path:'pages.merch.collectionTitle',label:'Heading',type:T},{path:'pages.merch.collectionIntro',label:'Sentence below',type:TA,full:true}]},
+  {title:'Product categories',help:'Each category becomes a titled section on the shop page. Use the exact category name you typed on the product (for example Wearables). Categories that are not listed here still show, with a plain heading.',list:{path:'pages.merch.categories',itemLabel:'Category',blank:{name:'',emoji:'🛍️',description:''},fields:[
+   {key:'name',label:'Category name (must match the product)',type:T},{key:'emoji',label:'Emoji',type:T},{key:'description',label:'Short description',type:T,full:true}]}},
+  {title:'Product labels and cart',help:'Products are marked Sold out automatically when stock reaches 0, and Selling fast when stock reaches the low-stock alert level you set on the product.',fields:[
+   {path:'pages.merch.sellingFastText',label:'“Selling fast” label',type:T},{path:'pages.merch.soldOutText',label:'“Sold out” label',type:T},
+   {path:'pages.merch.emptyText',label:'Empty category message',type:T,full:true},
+   {path:'pages.merch.cartTitle',label:'Cart heading',type:T},{path:'pages.merch.cartEmpty',label:'Empty cart message',type:T},
+   {path:'pages.merch.cartNote',label:'Note under the checkout button',type:TA,full:true},
+   {path:'pages.merch.pickupTitle',label:'Checkout window heading',type:T},{path:'pages.merch.pickupText',label:'Checkout window sentence',type:TA,full:true}]},
+  {title:'Find my receipt section',fields:[
+   {path:'pages.merch.lookupKicker',label:'Small tag',type:T},{path:'pages.merch.lookupTitle',label:'Heading',type:T},{path:'pages.merch.lookupIntro',label:'Sentence below',type:TA,full:true}]}]},
  {id:'merch',icon:'bag',title:'Merch products & orders',custom:'merch'},
  {id:'p_advertise',icon:'megaphone',title:'Advertise page',blocks:[
-  {title:'Advertise page heading',fields:[
-   {path:'pages.advertise.pill',label:'Small tag',type:T},{path:'pages.advertise.title',label:'Main heading',type:T},{path:'pages.advertise.highlight',label:'Highlighted heading',type:T},
-   {path:'pages.advertise.intro',label:'Intro sentence',type:TA,full:true}]},
-  {title:'Enquiry form section',fields:[
+  {title:'Top section',help:'The dark section at the top with the heading, the picture and the enquiry form.',fields:[
+   {path:'pages.advertise.pill',label:'Small tag',type:T},{path:'pages.advertise.title',label:'Main heading',type:T},{path:'pages.advertise.highlight',label:'Highlighted heading (yellow)',type:T},
+   {path:'pages.advertise.intro',label:'Intro sentence',type:TA,full:true},{path:'pages.advertise.subline',label:'Line under the intro (yellow)',type:T,full:true},
+   {path:'pages.advertise.heroImage',label:'Poster / picture beside the heading',type:IMG,full:true}]},
+  {title:'Event detail chips',help:'Small labels under the intro, such as the date and venue.',list:{path:'pages.advertise.chips',itemLabel:'Chip',blank:{text:''},fields:[{key:'text',label:'Text',type:T,full:true}]}},
+  {title:'Quick facts',help:'Three short highlights shown under the intro.',list:{path:'pages.advertise.stats',itemLabel:'Fact',blank:{value:'',label:''},fields:[{key:'value',label:'Big text',type:T},{key:'label',label:'Small text',type:T}]}},
+  {title:'Enquiry form',fields:[
    {path:'pages.advertise.formPill',label:'Small tag',type:T},{path:'pages.advertise.formTitle',label:'Heading',type:T},{path:'pages.advertise.formIntro',label:'Intro sentence',type:TA,full:true},
-   {path:'pages.advertise.formNote',label:'Form note',type:TA,full:true},{path:'pages.advertise.formButton',label:'Button text',type:T}]}]},
+   {path:'pages.advertise.formNote',label:'Note under the form',type:TA,full:true},{path:'pages.advertise.formButton',label:'Button text',type:T}]},
+  {title:'Packages heading',fields:[
+   {path:'pages.advertise.packagesKicker',label:'Small tag',type:T},{path:'pages.advertise.packagesTitle',label:'Heading',type:T},{path:'pages.advertise.packagesIntro',label:'Sentence below',type:TA,full:true}]},
+  {title:'Advertising packages',help:'These appear as cards and in the “Choose your package” list on the form. Leave the price empty to show “Custom quote”. Write one benefit per line.',list:{path:'pages.advertise.packages',itemLabel:'Package',blank:{name:'',price:'',description:'',features:'',button:'Ask about this',featured:'',badge:''},fields:[
+   {key:'name',label:'Package name',type:T},{key:'price',label:'Price (for example ₦750,000)',type:T},
+   {key:'description',label:'Short description',type:TA,full:true},{key:'features',label:'What is included (one per line)',type:TA,full:true},
+   {key:'button',label:'Button text',type:T},{key:'featured',label:'Highlight this package?',type:'select',options:[['','No'],['yes','Yes, show a badge']]},{key:'badge',label:'Badge text',type:T}]}},
+  {title:'Brand moment section',fields:[
+   {path:'pages.advertise.momentsKicker',label:'Small tag',type:T},{path:'pages.advertise.momentsTitle',label:'Heading',type:T}]},
+  {title:'Brand moment cards',list:{path:'pages.advertise.moments',itemLabel:'Card',blank:{title:'',text:''},fields:[{key:'title',label:'Title',type:T},{key:'text',label:'Text',type:TA,full:true}]}},
+  {title:'Scrolling strip',help:'Short messages that scroll across the page above the requirements.',list:{path:'pages.advertise.ticker',strings:true,itemLabel:'Message',blank:''}},
+  {title:'Requirements section',fields:[{path:'pages.advertise.requirementsTitle',label:'Heading',type:T},{path:'pages.advertise.enquiryText',label:'Text before the email',type:T},{path:'pages.advertise.enquiryEmail',label:'Enquiry email address',type:T}]},
+  {title:'Requirements list',list:{path:'pages.advertise.requirements',itemLabel:'Requirement',blank:{title:'',text:''},fields:[{key:'title',label:'Title',type:T},{key:'text',label:'Text',type:TA,full:true}]}}]},
  {id:'leads',icon:'megaphone',title:'Advertising leads',custom:'leads'},
  {id:'announce',icon:'megaphone',title:'Announcements',custom:'announce'},
  {id:'team',icon:'users',title:'Team & access',custom:'team'},
@@ -700,6 +814,10 @@ function canCheckin(){return state.role==='owner'||state.role==='tickets'||state
 function openModal(html,cls){$('#modalHost').innerHTML='<div class="modal-back"><div class="modal'+(cls?' '+cls:'')+'" role="dialog" aria-modal="true">'+html+'</div></div>';}
 function closeModal(){if(typeof scanStop==='function')scanStop();$('#modalHost').innerHTML='';}
 
+function modalDirty(){var h=document.getElementById('modalHost');if(!h)return false;var f=h.querySelectorAll('input,textarea,select'),i;for(i=0;i<f.length;i++){var e=f[i];if(e.type==='checkbox'||e.type==='radio'){if(e.checked!==e.defaultChecked)return true;}else if(e.tagName==='SELECT'){if(e.selectedIndex!==Array.prototype.findIndex.call(e.options,function(o){return o.defaultSelected;})&&e.selectedIndex>0)return true;}else if(e.value!==e.defaultValue)return true;}return false;}
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){var h=document.getElementById('modalHost');if(h&&h.innerHTML&&!modalDirty()){if(typeof scanStop==='function')state.scanMode=false;closeModal();}}});
+document.addEventListener('mousedown',function(e){var t=e.target;if(t&&t.classList&&t.classList.contains('modal-back')&&!modalDirty()){state.scanMode=false;closeModal();}});
+
 /* ---------- sales view (with gate check-in) ---------- */
 function naira(n){return '₦'+Number(n||0).toLocaleString('en-NG');}
 function saleTotal(r){return Number(r.admits_total)||1;}
@@ -928,14 +1046,15 @@ function rcImportAll(btn){
 }
 
 /* ---------- gate scanner (camera) ---------- */
-var scan={stream:null,timer:0,detector:null,busy:false,last:'',lastAt:0,canvas:null};
-function scanMsg(t,bad){var m=$('#scanMsg');if(m){m.textContent=t;m.style.color=bad?'var(--red)':'';}}
+var scan={stream:null,timer:0,detector:null,busy:false,last:'',lastAt:0,canvas:null,handler:null};
+function scanMsg(t,bad,good){var m=$('#scanMsg');if(m){m.textContent=t;m.style.color=bad?'var(--red)':(good?'var(--green,#17803d)':'');}}
 function scanOpen(){
-  state.scanMode=true;
+  state.scanMode=true;scan.handler=null;
   openModal('<h3>Scan a ticket</h3><div style="background:#000;border-radius:14px;overflow:hidden;min-height:160px"><video id="scanVideo" playsinline muted autoplay style="width:100%;display:block"></video></div><p class="rc-note" id="scanMsg">Starting the camera…</p><div class="row"><button class="btn btn-line" type="button" data-act="scan-close">Close</button></div>');
   scanStart();
 }
 function scanStop(){
+  scan.handler=null;
   if(scan.timer){clearInterval(scan.timer);scan.timer=0;}
   if(scan.stream){try{scan.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}scan.stream=null;}
   scan.busy=false;
@@ -976,7 +1095,9 @@ function scanTick(){
 function scanHandle(text){
   var now=Date.now();
   if(text===scan.last&&now-scan.lastAt<3000)return;
-  scan.last=text;scan.lastAt=now;scan.busy=true;scanMsg('Checking ticket…');
+  scan.last=text;scan.lastAt=now;scan.busy=true;
+  if(scan.handler){scan.handler(text);return;}
+  scanMsg('Checking ticket…');
   api('ticket-scan&code='+encodeURIComponent(text)).then(function(res){
     scanStop();
     if(navigator.vibrate){try{navigator.vibrate(60);}catch(e){}}
@@ -1341,9 +1462,16 @@ function reportsHtml(){
 function feedbackHtml(){
   if(!state.feedback)return '<div class="empty">Loading feedback…</div>';
   var rows=state.feedback.feedback||[],rated=rows.filter(function(x){return x.rating;}),avg=rated.length?(rated.reduce(function(n,x){return n+Number(x.rating);},0)/rated.length).toFixed(1):'—';
-  var h='<div class="notice">Send a one-time feedback link to every ticket holder after the event. Completed responses appear here.</div><div class="kpis"><div class="kpi"><b>'+rated.length+'</b><span>Responses</span></div><div class="kpi"><b>'+avg+'</b><span>Average rating</span></div><div class="kpi"><b>'+rated.filter(function(x){return x.recommend;}).length+'</b><span>Would recommend</span></div></div><section class="card"><div class="item-head"><h3>Attendee feedback</h3><span><button class="btn btn-line sm" type="button" data-act="feedback-refresh">Refresh</button>'+((state.role==='owner'||state.role==='communications')?' <button class="btn btn-red sm" type="button" data-act="feedback-send">Send feedback request</button>':'')+'</span></div>';
+  var h='<div class="notice">Send a one-time feedback link to every ticket holder after the event. Use <b>Send test email</b> first to see exactly what they will receive. Completed responses appear here.</div><div class="kpis"><div class="kpi"><b>'+rated.length+'</b><span>Responses</span></div><div class="kpi"><b>'+avg+'</b><span>Average rating</span></div><div class="kpi"><b>'+rated.filter(function(x){return x.recommend;}).length+'</b><span>Would recommend</span></div></div><section class="card"><div class="item-head"><h3>Attendee feedback</h3><span><button class="btn btn-line sm" type="button" data-act="feedback-refresh">Refresh</button>'+((state.role==='owner'||state.role==='communications')?' <button class="btn btn-line sm" type="button" data-act="feedback-test">Send test email</button> <button class="btn btn-red sm" type="button" data-act="feedback-send">Send feedback request</button>':'')+'</span></div>';
   if(!rated.length)return h+'<div class="empty">No completed feedback yet.</div></section>';
   return h+'<div class="table-wrap"><table><thead><tr><th>When</th><th>Rating</th><th>Favourite part</th><th>Could improve</th><th>Recommend</th></tr></thead><tbody>'+rated.map(function(row){return '<tr><td>'+esc(timeShort(row.submitted_at))+'</td><td>'+esc(row.rating)+'/5</td><td>'+esc(row.favourite||'—')+'</td><td>'+esc(row.improvements||'—')+'</td><td>'+esc(row.recommend?'Yes':'No')+'</td></tr>';}).join('')+'</tbody></table></div></section>';
+}
+function feedbackTestModal(){
+  var me=(state.me&&state.me.email)||'';
+  openModal('<div class="item-head"><h3>Send a test email</h3><button type="button" class="btn btn-ghost sm" data-act="mclose">Close</button></div><p class="help">We will send the real feedback-request email to the address below, marked [TEST]. The link opens a preview of the feedback form. Nothing is saved and no ticket holder is emailed.</p><form id="fbTestForm"><div class="field"><label for="fbTestTo">Send the test to</label><input id="fbTestTo" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="'+esc(me)+'" required></div><div class="row"><button class="btn btn-red" type="submit" id="fbTestGo">Send test email</button><button class="btn btn-line" type="button" data-act="mclose">Cancel</button></div><p class="msg" id="fbTestMsg" role="status"></p></form>');
+  var form=$('#fbTestForm'),msg=$('#fbTestMsg'),input=$('#fbTestTo');setTimeout(function(){if(input)input.focus();},0);
+  form.addEventListener('submit',function(e){e.preventDefault();var b=$('#fbTestGo');b.disabled=true;b.textContent='Sending…';msg.textContent='';msg.className='msg';
+    api('feedback-test',{body:{to:input.value.trim()}}).then(function(r){msg.className='msg ok';msg.textContent='Test email sent to '+r.to+'. It can take a minute to arrive; check spam too.';b.disabled=false;b.textContent='Send again';}).catch(function(err){if(err.status===401)return showLogin();msg.className='msg err';msg.textContent=err.message;b.disabled=false;b.textContent='Send test email';});});
 }
 function loadReports(){state.reports=null;render();api('reports').then(function(d){state.reports=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function loadFeedback(){state.feedback=null;render();api('feedback-list').then(function(d){state.feedback=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
@@ -1382,9 +1510,34 @@ function leadsHtml(){
 }
 function loadMerch(){state.merch=null;render();Promise.all([api('merch-products'),api('merch-orders')]).then(function(r){state.merch={products:r[0].products||[],orders:r[1].orders||[],financial:Boolean(r[1].financial)};render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function merchPickupModal(){
-  openModal('<div class="item-head"><h3>Merch pickup</h3><button type="button" class="btn btn-ghost sm" data-act="mclose">Close</button></div><p class="help">Scan the QR code from the buyer’s email, or type their pickup code/order reference. A USB or phone scanner can type into this box.</p><form id="merchPickupForm"><div class="field"><label for="merchPickupCode">QR, pickup code or order reference</label><input id="merchPickupCode" autocomplete="off" autofocus placeholder="Scan or paste code" required></div><button class="btn btn-red" type="submit" id="merchPickupGo">Confirm collection</button><p class="msg" id="merchPickupResult"></p></form>');
-  var input=$('#merchPickupCode'),form=$('#merchPickupForm'),result=$('#merchPickupResult');setTimeout(function(){input.focus();},0);
-  form.addEventListener('submit',function(event){event.preventDefault();var button=$('#merchPickupGo');button.disabled=true;button.textContent='Checking…';result.textContent='';api('merch-pickup-scan',{body:{code:input.value}}).then(function(data){result.className='msg ok';result.textContent='Collected: '+data.order.name+(state.role==='owner'?' — '+naira(data.order.amount):'');button.textContent='Collected ✓';loadMerch();}).catch(function(error){result.className='msg err';result.textContent=error.message;button.disabled=false;button.textContent='Confirm collection';});});
+  openModal('<div class="item-head"><h3>Merch pickup</h3><button type="button" class="btn btn-ghost sm" data-act="mclose">Close</button></div><p class="help">Scan the QR code from the buyer’s email with the camera, or type their pickup code or order reference. A USB or phone scanner can also type into the box.</p>'+
+    '<div id="pickCam" hidden><div class="scan-view"><video id="scanVideo" playsinline muted autoplay></video><span class="scan-frame" aria-hidden="true"></span></div><p class="rc-note" id="scanMsg" role="status">Starting the camera…</p></div>'+
+    '<div class="row" style="margin-bottom:14px"><button class="btn btn-red" type="button" id="pickCamBtn">📷 Scan with camera</button></div>'+
+    '<form id="merchPickupForm"><div class="field"><label for="merchPickupCode">QR, pickup code or order reference</label><input id="merchPickupCode" autocomplete="off" placeholder="Scan or paste code" required></div><button class="btn btn-line" type="submit" id="merchPickupGo">Confirm collection</button><p class="msg" id="merchPickupResult" role="status"></p></form>');
+  var input=$('#merchPickupCode'),form=$('#merchPickupForm'),result=$('#merchPickupResult'),camBtn=$('#pickCamBtn'),cam=$('#pickCam');
+  function collect(code,fromCamera){
+    return api('merch-pickup-scan',{body:{code:code}}).then(function(data){
+      var line='Collected: '+data.order.name+(state.role==='owner'?' — '+naira(data.order.amount):'');
+      result.className='msg ok';result.textContent=line;
+      if(fromCamera){scanMsg('✓ '+line+'. Point the camera at the next code…',false,true);}
+      if(navigator.vibrate){try{navigator.vibrate(60);}catch(e){}}
+      loadMerch();return true;
+    }).catch(function(error){
+      if(error.status===401){scanStop();showLogin();return false;}
+      result.className='msg err';result.textContent=error.message;
+      if(fromCamera){scanMsg(error.message,true);}
+      if(navigator.vibrate){try{navigator.vibrate([80,60,80]);}catch(e){}}
+      return false;
+    });
+  }
+  setTimeout(function(){if(input)input.focus();},0);
+  camBtn.addEventListener('click',function(){
+    if(scan.stream){scanStop();cam.hidden=true;camBtn.textContent='📷 Scan with camera';return;}
+    cam.hidden=false;camBtn.textContent='Stop camera';scanMsg('Starting the camera…');
+    scan.handler=function(text){if(scan.okCode===text&&Date.now()-scan.okAt<12000){scan.busy=false;return;}scan.busy=true;scanMsg('Checking order…');collect(text,true).then(function(ok){if(ok){scan.okCode=text;scan.okAt=Date.now();}setTimeout(function(){scan.busy=false;},1200);});};
+    scanStart();
+  });
+  form.addEventListener('submit',function(event){event.preventDefault();var button=$('#merchPickupGo');button.disabled=true;button.textContent='Checking…';result.textContent='';collect(input.value,false).then(function(ok){button.disabled=false;button.textContent=ok?'Collected ✓':'Confirm collection';if(ok){input.value='';input.focus();}});});
 }
 function loadLeads(){state.leads=null;render();api('advertising-leads').then(function(r){state.leads=r;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function productEditor(id){
@@ -1492,6 +1645,7 @@ function handleAct(t){
   if(a==='merch-refresh'){loadMerch();return;}
   if(a==='reports-refresh'){loadReports();return;}
   if(a==='feedback-refresh'){loadFeedback();return;}
+  if(a==='feedback-test'){feedbackTestModal();return;}
   if(a==='feedback-send'){if(!confirm('Email every ticket holder a one-time feedback link now?'))return;t.disabled=true;t.textContent='Sending…';api('feedback-send',{body:{confirm:'SEND'}}).then(function(r){toast('Feedback request sent to '+r.sent+' people ✓');loadFeedback();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);t.disabled=false;t.textContent='Send feedback request';});return;}
   if(a==='coupons-refresh'){loadCoupons();return;}
   if(a==='coupon-add'){couponEditor('');return;}

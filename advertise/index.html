@@ -13,54 +13,83 @@
 <link rel="stylesheet" href="/assets/site.css">
 <script defer src="/assets/icons.js"></script>
 <style>
-.adv-hero{position:relative;overflow:hidden;background:var(--ink);color:#fff;padding:76px 0 88px}.adv-hero:before,.adv-hero:after{content:"";position:absolute;border-radius:50%;filter:blur(4px);opacity:.9}.adv-hero:before{width:400px;height:400px;right:-140px;top:-170px;background:var(--red)}.adv-hero:after{width:270px;height:270px;left:-110px;bottom:-145px;background:var(--gold)}.adv-hero .wrap{position:relative;z-index:1}.adv-eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:var(--ink);border-radius:999px;padding:9px 15px;font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.adv-hero-grid{display:grid;gap:42px;align-items:end}.adv-hero h1{font-size:clamp(48px,9vw,100px);max-width:800px;margin-top:20px}.adv-hero h1 span{color:var(--gold)}.adv-intro{max-width:610px;margin-top:18px;color:rgba(255,255,255,.84);font-size:clamp(17px,2vw,21px);font-weight:600}.adv-hero .btn-row{margin-top:28px}.adv-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.adv-quick div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:15px 12px}.adv-quick strong{display:block;color:var(--gold);font-family:var(--display);font-size:22px;line-height:1}.adv-quick span{display:block;margin-top:5px;font-size:12px;font-weight:700;line-height:1.2;color:rgba(255,255,255,.75)}.adv-kicker{text-align:center;font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:var(--red)}.adv-packages{display:grid;gap:18px;margin-top:38px}.adv-card{position:relative;background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px;box-shadow:0 8px 30px rgba(28,20,16,.06)}.adv-card.featured{border:2px solid var(--red);transform:translateY(-6px)}.adv-badge{position:absolute;right:18px;top:-13px;background:var(--red);color:#fff;padding:6px 11px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.adv-card h3{font-family:var(--display);font-size:25px;line-height:1.05;text-transform:uppercase}.adv-card p{margin-top:10px;color:rgba(28,20,16,.72);font-size:15px}.adv-card ul{list-style:none;padding:0;margin:18px 0}.adv-card li{position:relative;padding:8px 0 8px 28px;border-top:1px solid var(--line);font-size:14px;font-weight:700}.adv-card li:before{content:"✓";position:absolute;left:3px;color:var(--red);font-weight:800}.adv-card .btn{width:100%}.adv-proof{display:grid;gap:18px}.adv-proof-item{background:var(--cream-dark);border-radius:18px;padding:24px}.adv-proof-item strong{display:block;color:var(--red);font-family:var(--display);font-size:28px;line-height:1}.adv-proof-item p{margin-top:8px;font-size:14px;font-weight:700;color:rgba(28,20,16,.75)}.adv-form{max-width:760px;margin:36px auto 0;background:#fff;border-radius:24px;padding:24px;box-shadow:0 16px 44px rgba(28,20,16,.12)}.adv-fields{display:grid;gap:16px}.adv-field{display:grid;gap:6px}.adv-field label{font-size:13px;font-weight:800}.adv-field input,.adv-field select,.adv-field textarea{width:100%;font:inherit;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fff}.adv-field textarea{min-height:132px;resize:vertical}.adv-form-note{margin:14px 0 18px;color:rgba(28,20,16,.68);font-size:13px}.adv-contact{margin-top:12px;text-align:center;font-size:14px;font-weight:700}.adv-contact a{color:var(--red)}@media(min-width:700px){.adv-hero-grid{grid-template-columns:minmax(0,1.4fr) minmax(300px,.75fr)}.adv-packages{grid-template-columns:repeat(3,1fr)}.adv-proof{grid-template-columns:repeat(3,1fr)}.adv-fields{grid-template-columns:repeat(2,1fr)}.adv-field.full{grid-column:1/-1}.adv-form{padding:34px}}
-.adv-form,.adv-form label{color:var(--ink)}.adv-form select option{color:var(--ink);background:#fff}
-
-/* ---- UI + responsive polish ---- */
-.adv-hero{padding:56px 0 64px}
-.adv-hero:before{width:300px;height:300px;right:-120px;top:-130px}
-.adv-hero:after{width:200px;height:200px;left:-100px;bottom:-110px;opacity:.55}
-.adv-hero h1{font-size:clamp(38px,10.5vw,100px);overflow-wrap:break-word}
-.adv-hero-grid{gap:30px}
-.adv-hero .btn-row .btn{flex:1 1 auto}
-.adv-quick{gap:8px}
-.adv-quick div{padding:13px 10px;min-width:0;backdrop-filter:blur(4px)}
-.adv-quick strong{font-size:clamp(18px,5vw,24px)}
-.adv-quick span{overflow-wrap:break-word}
-.adv-packages{align-items:stretch;gap:16px}
-.adv-card{display:flex;flex-direction:column;padding:24px 22px}
-.adv-card.featured{transform:none;box-shadow:0 14px 40px rgba(232,52,42,.18)}
-.adv-card h3{font-size:clamp(21px,5.4vw,25px);overflow-wrap:break-word}
-.adv-card ul{flex:1}
-.adv-card .btn{min-height:46px}
-.adv-badge{right:16px}
-.adv-card.featured{order:-1}
-.adv-proof{gap:14px}
-.adv-proof-item{padding:20px}
-.adv-form{padding:22px 18px;margin-top:28px;border-radius:22px}
-.adv-field input,.adv-field select,.adv-field textarea{min-height:48px;border:1.5px solid rgba(28,20,16,.25);font-weight:600;transition:border-color .15s,box-shadow .15s}
-.adv-field textarea{min-height:132px}
+.adv-hero{position:relative;overflow:hidden;background:var(--ink);color:#fff;padding:36px 0 56px}
+.adv-hero:before,.adv-hero:after{content:"";position:absolute;border-radius:50%;filter:blur(2px);pointer-events:none}
+.adv-hero:before{width:340px;height:340px;right:-140px;top:-150px;background:var(--red);opacity:.85}
+.adv-hero:after{width:240px;height:240px;left:-110px;bottom:-120px;background:var(--gold);opacity:.55}
+.adv-hero-grid{position:relative;z-index:1;display:grid;gap:26px;grid-template-areas:"text" "form" "media"}
+.adv-text{grid-area:text}.adv-media{grid-area:media}.adv-formcard{grid-area:form}
+.adv-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--gold);color:var(--ink);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;max-width:100%}
+.adv-hero h1{font-size:clamp(34px,9.5vw,76px);line-height:1;color:#fff;overflow-wrap:break-word}
+.adv-hero h1 span{color:var(--gold)}
+.adv-intro{margin-top:16px;font-size:clamp(15px,2vw,18px);color:rgba(255,255,255,.82);max-width:560px}
+.adv-subline{margin-top:12px;font-weight:800;color:var(--gold);font-size:clamp(15px,2vw,18px)}
+.adv-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;padding:0;list-style:none}
+.adv-chips li{padding:6px 12px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;font-weight:700}
+.adv-poster{margin:0;border-radius:22px;overflow:hidden;border:3px solid rgba(255,255,255,.14);box-shadow:0 22px 60px rgba(0,0,0,.45);background:#000}
+.adv-poster img{width:100%;height:auto;max-height:560px;object-fit:cover}
+.adv-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}
+.adv-quick div{padding:12px 10px;border:1px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(255,255,255,.08);min-width:0}
+.adv-quick strong{display:block;font-family:var(--display);font-size:clamp(17px,4.6vw,24px);color:var(--gold);line-height:1.1}
+.adv-quick span{display:block;font-size:11.5px;font-weight:700;color:rgba(255,255,255,.8);margin-top:4px;overflow-wrap:break-word}
+.adv-formcard{background:#fff;color:var(--ink);border-radius:24px;padding:22px 18px;box-shadow:0 26px 70px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.2);scroll-margin-top:90px;align-self:start}
+.adv-formcard h2{font-family:var(--display);text-transform:uppercase;font-size:clamp(22px,5.5vw,30px);line-height:1.05}
+.adv-formcard .adv-formintro{margin:8px 0 16px;color:rgba(28,20,16,.7);font-size:14px}
+.adv-fields{display:grid;gap:14px;grid-template-columns:1fr}
+.adv-field{display:grid;gap:6px;min-width:0}.adv-field.full{grid-column:1/-1}
+.adv-field label{font-size:12.5px;font-weight:800}
+.adv-field input,.adv-field select,.adv-field textarea{width:100%;min-height:46px;padding:11px 14px;border:1.5px solid rgba(28,20,16,.22);border-radius:12px;background:#fff;font:600 16px var(--body);color:var(--ink);transition:border-color .15s,box-shadow .15s}
+.adv-field textarea{min-height:120px;resize:vertical}
+.adv-field input::placeholder,.adv-field textarea::placeholder{color:rgba(28,20,16,.4);font-weight:500}
 .adv-field input:focus,.adv-field select:focus,.adv-field textarea:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(251,182,20,.55)}
-.adv-field select{appearance:none;-webkit-appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%231C1410' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 14px center;padding-right:40px}
-.adv-form .btn{width:100%;min-height:50px;font-size:15px}
-.adv-form-note{margin:4px 0 16px}
-.wrap{padding-left:18px;padding-right:18px}
-@media(min-width:700px){
-  .adv-hero{padding:76px 0 88px}
-  .adv-hero:before{width:400px;height:400px;right:-140px;top:-170px}
-  .adv-hero:after{width:270px;height:270px;left:-110px;bottom:-145px;opacity:.9}
-  .adv-hero-grid{gap:42px}
-  .adv-hero .btn-row .btn{flex:0 0 auto}
-  .adv-packages{gap:20px;margin-top:44px}
+.adv-field select{appearance:none;-webkit-appearance:none;padding-right:40px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%231C1410' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 14px center}
+.adv-form-note{font-size:12px;color:rgba(28,20,16,.62);margin:14px 0}
+.adv-formcard .btn{width:100%;min-height:50px;font-size:15px}
+.adv-status{min-height:22px;margin-top:12px;font-weight:800;font-size:14px;text-align:center}
+.adv-status.ok{color:#17803d}.adv-status.bad{color:var(--red)}
+.adv-contact{margin-top:12px;text-align:center;font-weight:700;font-size:14px}.adv-contact a{color:var(--red)}
+.adv-strip{background:var(--gold);color:var(--ink);overflow:hidden;border-block:2px solid var(--ink)}
+.adv-strip-track{display:flex;width:max-content;animation:advscroll 32s linear infinite}
+.adv-strip-track span{display:inline-flex;align-items:center;padding:12px 22px;font-family:var(--display);text-transform:uppercase;font-size:14px;letter-spacing:.03em;white-space:nowrap}
+.adv-strip-track span:after{content:"●";margin-left:44px;font-size:9px}
+@keyframes advscroll{to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){.adv-strip-track{animation:none}}
+.adv-kicker{display:block;color:var(--red);font-size:12px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;margin-bottom:12px}
+.sec-head{text-align:center;max-width:680px;margin:0 auto}
+.sec-head p{margin-top:12px;color:rgba(28,20,16,.7)}
+.adv-packages{display:grid;gap:16px;margin-top:34px;grid-template-columns:1fr}
+.adv-card{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:22px;padding:24px 22px;box-shadow:0 10px 30px rgba(28,20,16,.07)}
+.adv-card.featured{border:2px solid var(--red);box-shadow:0 14px 40px rgba(232,52,42,.18);order:-1}
+.adv-badge{position:absolute;right:16px;top:-12px;background:var(--red);color:#fff;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.adv-card h3{font-family:var(--display);text-transform:uppercase;font-size:clamp(20px,5vw,24px);line-height:1.1;overflow-wrap:break-word}
+.adv-price{margin-top:8px;font-weight:800;color:var(--red);font-size:18px}
+.adv-card>p{margin-top:8px;color:rgba(28,20,16,.7);font-size:14px}
+.adv-card ul{flex:1;list-style:none;margin:16px 0 20px;padding:0}
+.adv-card li{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px;font-weight:700}
+.adv-card li:before{content:"✓";color:var(--red);font-weight:900}
+.adv-card .btn{min-height:46px;width:100%}
+.adv-proof{display:grid;gap:14px;margin-top:30px;grid-template-columns:1fr}
+.adv-proof-item{padding:22px;border-radius:20px;background:var(--cream-dark)}
+.adv-proof-item strong{display:block;font-family:var(--display);text-transform:uppercase;font-size:20px;color:var(--red);margin-bottom:8px}
+.adv-proof-item p{font-size:14px;font-weight:700;color:rgba(28,20,16,.78)}
+.adv-req{max-width:860px;margin:30px auto 0;padding:8px 22px;background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 30px rgba(28,20,16,.06)}
+.adv-req-item{display:flex;gap:14px;padding:16px 0;border-top:1px solid var(--line)}
+.adv-req-item:first-child{border-top:0}
+.adv-req-ico{flex:0 0 34px;height:34px;border-radius:10px;background:var(--cream-dark);display:grid;place-items:center;color:var(--red);font-weight:900}
+.adv-req-item b{display:block;margin-bottom:2px}.adv-req-item p{font-size:14px;color:rgba(28,20,16,.75)}
+.adv-enq{margin-top:20px;text-align:center;font-weight:700;font-size:14px}.adv-enq a{color:var(--red);font-weight:800;overflow-wrap:anywhere}
+@media(min-width:640px){.adv-fields{grid-template-columns:1fr 1fr}.adv-fields.three{grid-template-columns:repeat(3,1fr)}.adv-formcard{padding:30px}}
+@media(min-width:700px) and (max-width:979px){.adv-packages{grid-template-columns:repeat(2,minmax(0,1fr))}.adv-card.featured{grid-column:1/-1}.adv-proof{grid-template-columns:repeat(3,1fr)}.adv-quick{max-width:520px}}
+@media(min-width:980px){
+  .adv-hero{padding:56px 0 76px}
+  .adv-hero:before{width:460px;height:460px;right:-160px;top:-190px}
+  .adv-hero-grid{gap:30px 48px;grid-template-columns:minmax(0,1fr) minmax(0,520px);grid-template-areas:"text form" "media form";align-items:start}
+  .adv-packages{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
   .adv-card.featured{order:0;transform:translateY(-8px)}
-  .adv-form{padding:34px}
-  .adv-form .btn{width:auto;min-width:200px}
-  .wrap{padding-left:24px;padding-right:24px}
+  .adv-proof{grid-template-columns:repeat(3,1fr)}
+  .adv-formcard{position:sticky;top:92px}
 }
-@media(min-width:700px){.adv-hero-grid{grid-template-columns:1fr}.adv-quick{max-width:520px}}
-@media(min-width:980px){.adv-hero-grid{grid-template-columns:minmax(0,1.4fr) minmax(300px,.75fr)}.adv-quick{max-width:none}}
-@media(min-width:700px) and (max-width:899px){.adv-packages{grid-template-columns:repeat(2,minmax(0,1fr))}.adv-card.featured{transform:none;order:-1;grid-column:1/-1}}
-@media(max-width:380px){.adv-quick{grid-template-columns:1fr}.adv-quick div{display:flex;align-items:baseline;gap:10px}.adv-quick span{margin:0}}
+@media(max-width:380px){.adv-quick{grid-template-columns:1fr}.adv-fields.three{grid-template-columns:1fr}}
 </style>
 </head>
 <body data-page="advertise">
@@ -106,56 +135,66 @@
 <main>
   <section class="adv-hero">
     <div class="wrap adv-hero-grid">
-      <div>
+      <div class="adv-text">
         <span class="adv-eyebrow">📣 Advertise with Game Tribe</span>
         <h1 class="display">Put your brand <span>in the game.</span></h1>
         <p class="adv-intro">Show up where gamers, creators, students and culture lovers come to play, connect and make memories in Abraka.</p>
-        <div class="btn-row"><a class="btn btn-yellow" href="#enquiry">Build your moment</a><a class="btn btn-light" href="/partner">See partnership options</a></div>
+        <p class="adv-subline" id="advSubline">Advertising packages for Game Tribe Fest 2026.</p>
+        <ul class="adv-chips" id="advChips"><li>27 Nov 2026</li><li>Ojeta Primary School, Abraka</li></ul>
       </div>
-      <div class="adv-quick" aria-label="Why advertise with Game Tribe">
-        <div><strong>01</strong><span>Festival day energy</span></div>
-        <div><strong>IRL</strong><span>Real community moments</span></div>
-        <div><strong>360°</strong><span>On-ground &amp; social visibility</span></div>
+      <div class="adv-media">
+        <figure class="adv-poster" id="advPoster" hidden><img id="advPosterImg" alt="Game Tribe Fest advertising" loading="lazy"></figure>
+        <div class="adv-quick" id="advStats" aria-label="Why advertise with Game Tribe"><div><strong>01</strong><span>Festival day of energy</span></div><div><strong>IRL</strong><span>Real community moments</span></div><div><strong>360°</strong><span>On-ground &amp; social visibility</span></div></div>
+      </div>
+      <div class="adv-formcard" id="enquiry">
+        <span class="pill pill-yellow" id="advFormPill">Let’s make a play</span>
+        <h2 style="margin-top:14px" id="advFormTitle">Tell us about your brand.</h2>
+        <p class="adv-formintro" id="advFormIntro">Send a quick brief and the Game Tribe partnerships team will get back to you.</p>
+        <form id="advertiseForm" novalidate>
+          <div class="adv-fields">
+            <div class="adv-field full"><label for="package">Choose your package</label><select id="package" name="package"><option value="">Select a package</option><option>Community Shoutout</option><option>Play Zone Partner</option><option>Main Event Partner</option><option>Something custom</option></select></div>
+            <div class="adv-field"><label for="brand">Brand or organisation</label><input id="brand" name="brand" required maxlength="120" autocomplete="organization" placeholder="Your business or brand"></div>
+            <div class="adv-field"><label for="name">Contact name</label><input id="name" name="name" required maxlength="80" autocomplete="name" placeholder="Full name"></div>
+            <div class="adv-field"><label for="email">Email address</label><input id="email" name="email" type="email" required maxlength="120" autocomplete="email" placeholder="you@email.com"></div>
+            <div class="adv-field"><label for="phone">Phone number</label><input id="phone" name="phone" type="tel" maxlength="40" autocomplete="tel" placeholder="+234…"></div>
+          </div>
+          <div class="adv-fields three" style="margin-top:14px">
+            <div class="adv-field"><label for="siteUrl">Website</label><input id="siteUrl" name="siteUrl" maxlength="200" placeholder="https://…" inputmode="url"></div>
+            <div class="adv-field"><label for="instagram">Instagram</label><input id="instagram" name="instagram" maxlength="100" placeholder="@handle"></div>
+            <div class="adv-field"><label for="facebook">Facebook</label><input id="facebook" name="facebook" maxlength="200" placeholder="Page or link"></div>
+          </div>
+          <div class="adv-fields" style="margin-top:14px"><div class="adv-field full"><label for="brief">Tell us about your advert</label><textarea id="brief" name="brief" required minlength="10" maxlength="3500" placeholder="What would you like to promote, the message, target audience…"></textarea></div></div>
+          <input name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+          <p class="adv-form-note" id="advFormNote">Your brief goes straight to the Game Tribe partnerships dashboard. No files or payments are required at this stage.</p>
+          <button class="btn btn-red" type="submit" id="advSubmit">Send your brief</button>
+          <p class="adv-status" id="advertiseStatus" role="status" aria-live="polite"></p>
+          <p class="adv-contact">Prefer to chat first? <a href="/contact">Contact the team</a>.</p>
+        </form>
       </div>
     </div>
   </section>
 
+  <div class="adv-strip" aria-hidden="true"><div class="adv-strip-track" id="advTicker"><span>🔥 Game Tribe Fest 2026</span><span>27 November 2026</span><span>Abraka, Delta State</span><span>Games • Banters • Hangout • Connect</span><span>🔥 Game Tribe Fest 2026</span><span>27 November 2026</span><span>Abraka, Delta State</span><span>Games • Banters • Hangout • Connect</span></div></div>
+
   <section class="sec cream" id="packages">
     <div class="wrap">
-      <div class="sec-head"><span class="adv-kicker">Choose your play</span><h2 class="display h2">Ways to show up</h2><p>We can tailor a presence that feels natural to your brand and useful to the tribe.</p></div>
-      <div class="adv-packages">
-        <article class="adv-card"><h3>Community shoutout</h3><p>A simple, social-first way to get your name into the conversation.</p><ul><li>Brand mention in selected event content</li><li>Inclusion in a community update</li><li>Partnership team support</li></ul><a class="btn btn-outline" href="#enquiry">Ask about this</a></article>
-        <article class="adv-card featured"><span class="adv-badge">Most flexible</span><h3>Play zone partner</h3><p>Own a memorable part of the festival experience and make it yours.</p><ul><li>Branded festival activation</li><li>On-ground audience engagement</li><li>Selected social media support</li></ul><a class="btn btn-red" href="#enquiry">Build this package</a></article>
-        <article class="adv-card"><h3>Main event partner</h3><p>Bring your brand to the centre of the day with a custom collaboration.</p><ul><li>Tailored brand integration</li><li>Premium visibility opportunities</li><li>Dedicated partnership planning</li></ul><a class="btn btn-outline" href="#enquiry">Start the conversation</a></article>
-      </div>
+      <div class="sec-head"><span class="adv-kicker" id="advPkgKicker">Choose your play</span><h2 class="display h2" id="advPkgTitle">Ways to show up</h2><p id="advPkgIntro">We can tailor a presence that feels natural to your brand and useful to the tribe.</p></div>
+      <div class="adv-packages" id="advPackages"></div>
     </div>
   </section>
 
   <section class="sec white">
     <div class="wrap">
-      <div class="sec-head"><span class="adv-kicker">Make it memorable</span><h2 class="display h2">A brand moment, not just a logo.</h2></div>
-      <div class="adv-proof"><article class="adv-proof-item"><strong>Be useful</strong><p>Give festival-goers something to enjoy, play, try or take home.</p></article><article class="adv-proof-item"><strong>Be seen</strong><p>Bring your story to the spaces where the tribe is already gathering.</p></article><article class="adv-proof-item"><strong>Be remembered</strong><p>Create the kind of real-life interaction that outlasts the event day.</p></article></div>
+      <div class="sec-head"><span class="adv-kicker" id="advMomKicker">Make it memorable</span><h2 class="display h2" id="advMomTitle">A brand moment, not just a logo.</h2></div>
+      <div class="adv-proof" id="advMoments"></div>
     </div>
   </section>
 
-  <section class="sec redsec" id="enquiry">
+  <section class="sec cream" id="requirements">
     <div class="wrap">
-      <div class="sec-head"><span class="pill pill-glass">Let’s make a play</span><h2 class="display h2" style="margin-top:18px">Tell us about your brand.</h2><p>Send a quick brief and the Game Tribe partnerships team will get back to you.</p></div>
-      <form class="adv-form" id="advertiseForm">
-        <div class="adv-fields">
-          <div class="adv-field"><label for="brand">Brand or organisation</label><input id="brand" name="brand" required></div>
-          <div class="adv-field"><label for="name">Your name</label><input id="name" name="name" required></div>
-          <div class="adv-field"><label for="email">Email address</label><input id="email" name="email" type="email" required></div>
-          <div class="adv-field"><label for="phone">Phone number</label><input id="phone" name="phone" type="tel"></div>
-          <div class="adv-field full"><label for="package">What are you interested in?</label><select id="package" name="package"><option>Community shoutout</option><option>Play zone partner</option><option>Main event partner</option><option>Something custom</option></select></div>
-          <div class="adv-field full"><label for="brief">Tell us about the moment you want to create</label><textarea id="brief" name="brief" placeholder="Your goals, audience, idea or a helpful link."></textarea></div>
-        </div>
-        <input name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
-        <p class="adv-form-note">Your brief goes straight to the Game Tribe partnerships dashboard. No files or payments are required at this stage.</p>
-        <button class="btn btn-red" type="submit">Send your brief</button>
-        <p class="adv-contact" id="advertiseStatus" aria-live="polite"></p>
-        <p class="adv-contact">Prefer to chat first? <a href="/contact">Contact the team</a>.</p>
-      </form>
+      <div class="sec-head"><h2 class="display h2" id="advReqTitle">Content &amp; registration requirements</h2></div>
+      <div class="adv-req" id="advReq"></div>
+      <p class="adv-enq" id="advEnq">For enquiries: <a href="mailto:gametribe001@gmail.com">gametribe001@gmail.com</a></p>
     </div>
   </section>
 </main>
@@ -209,19 +248,26 @@
     </div>
   </div>
 </footer>
+
 <script src="/assets/page.js"></script>
 <script>
-document.getElementById('advertiseForm').addEventListener('submit', function (event) {
-  event.preventDefault();
-  var data = new FormData(event.currentTarget);
-  var form = event.currentTarget, button = form.querySelector('button[type="submit"]'), status = document.getElementById('advertiseStatus');
-  button.disabled = true; button.textContent = 'Sending…'; status.textContent = '';
-  fetch('/api/advertising', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(data.entries())) })
-    .then(function (response) { return response.json().then(function (body) { if (!response.ok) throw new Error(body.message || 'Could not send your brief.'); return body; }); })
-    .then(function (result) { form.reset(); status.textContent = result.message; })
-    .catch(function (error) { status.textContent = error.message + ' You can also contact us directly.'; })
-    .then(function () { button.disabled = false; button.textContent = 'Send your brief'; });
-});
+(function(){
+  var form=document.getElementById('advertiseForm');if(!form)return;
+  var status=document.getElementById('advertiseStatus'),button=document.getElementById('advSubmit'),label=button.textContent;
+  function say(t,ok){status.textContent=t;status.className='adv-status '+(ok?'ok':'bad');}
+  form.addEventListener('submit',function(event){
+    event.preventDefault();
+    if(!form.reportValidity())return;
+    var data=Object.fromEntries(new FormData(form).entries());
+    label=button.dataset.label||label;
+    button.disabled=true;button.textContent='Sending…';say('',true);
+    fetch('/api/advertising',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+      .then(function(r){return r.json().catch(function(){return {};}).then(function(b){if(!r.ok)throw new Error(b.message||'Could not send your brief.');return b;});})
+      .then(function(res){form.reset();say(res.message||'Thanks, we will be in touch.',true);})
+      .catch(function(e){say(e.message+' You can also contact us directly.',false);})
+      .then(function(){button.disabled=false;button.textContent=label;});
+  });
+})();
 </script>
 </body>
 </html>

@@ -376,11 +376,43 @@ export const DEFAULT_CONTENT = {
       title: 'Put your brand',
       highlight: 'in the game.',
       intro: 'Show up where gamers, creators, students and culture lovers come to play, connect and make memories in Abraka.',
+      subline: 'Advertising packages for Game Tribe Fest 2026.',
+      chips: [{ text: '27 Nov 2026' }, { text: 'Ojeta Primary School, Abraka' }],
+      heroImage: '',
+      stats: [
+        { value: '01', label: 'Festival day of energy' },
+        { value: 'IRL', label: 'Real community moments' },
+        { value: '360°', label: 'On-ground & social visibility' }
+      ],
       formPill: 'Let’s make a play',
       formTitle: 'Tell us about your brand.',
       formIntro: 'Send a quick brief and the Game Tribe partnerships team will get back to you.',
       formNote: 'Your brief goes straight to the Game Tribe partnerships dashboard. No files or payments are required at this stage.',
-      formButton: 'Send your brief'
+      formButton: 'Send your brief',
+      packagesKicker: 'Choose your play',
+      packagesTitle: 'Ways to show up',
+      packagesIntro: 'We can tailor a presence that feels natural to your brand and useful to the tribe.',
+      packages: [
+        { name: 'Community Shoutout', price: '', description: 'A simple, social-first way to get your name into the conversation.', features: 'Brand mention in selected event content\nInclusion in a community update\nPartnership team support', button: 'Ask about this', featured: '', badge: '' },
+        { name: 'Play Zone Partner', price: '', description: 'Own a memorable part of the festival experience and make it yours.', features: 'Branded festival activation\nOn-ground audience engagement\nSelected social media support', button: 'Build this package', featured: 'yes', badge: 'Most flexible' },
+        { name: 'Main Event Partner', price: '', description: 'Bring your brand to the centre of the day with a custom collaboration.', features: 'Tailored brand integration\nPremium visibility opportunities\nDedicated partnership planning', button: 'Start the conversation', featured: '', badge: '' }
+      ],
+      momentsKicker: 'Make it memorable',
+      momentsTitle: 'A brand moment, not just a logo.',
+      moments: [
+        { title: 'Be useful', text: 'Give festival-goers something to enjoy, play, try or take home.' },
+        { title: 'Be seen', text: 'Bring your story to the spaces where the tribe is already gathering.' },
+        { title: 'Be remembered', text: 'Create the kind of real-life interaction that outlasts the event day.' }
+      ],
+      ticker: ['🔥 Game Tribe Fest 2026', '27 November 2026', 'Abraka, Delta State', 'Games • Banters • Hangout • Connect'],
+      requirementsTitle: 'Content & registration requirements',
+      requirements: [
+        { title: 'Content submission', text: 'All brand content must be shared with the Game Tribe team for review and approval before it is displayed.' },
+        { title: 'Content guidelines', text: 'Content should clearly feature your brand identity: logo, key products or services and your main message.' },
+        { title: 'Deadline', text: 'Once your package is confirmed, send your approved materials within 72 hours to guarantee inclusion.' }
+      ],
+      enquiryText: 'For enquiries:',
+      enquiryEmail: 'gametribe001@gmail.com'
     },
 
     merch: {
@@ -388,11 +420,28 @@ export const DEFAULT_CONTENT = {
       title: 'Wear the vibe.',
       highlight: 'Own the moment.',
       intro: 'Shop the Game Tribe collection online, pay securely, then pick your order up at Game Tribe Fest.',
+      heroNote: 'Pre-order online, skip the queue, collect with a QR code.',
+      heroImage: '',
       stickerTitle: 'Game\nTribe\nDrop 01',
       stickerSubtitle: 'Festival pickup',
       collectionKicker: 'Pick your piece',
       collectionTitle: 'The collection',
-      collectionIntro: 'Pay online with Paystack. Bring your confirmation email and collect at the festival.'
+      collectionIntro: 'Pay online with Paystack. Bring your confirmation email and collect at the festival.',
+      categories: [
+        { name: 'Wearables', emoji: '👕', description: 'Tees, hoodies, caps and more.' },
+        { name: 'Accessories', emoji: '🎒', description: 'Totes, stickers and small things that make the outfit.' }
+      ],
+      sellingFastText: 'Selling fast',
+      soldOutText: 'Sold out',
+      emptyText: 'Nothing here right now. Please check back soon.',
+      cartTitle: 'Your cart',
+      cartEmpty: 'Your cart is ready when you are.',
+      cartNote: 'Pickup only at Game Tribe Fest. Items are held for 15 minutes once checkout begins.',
+      pickupTitle: 'Festival pickup',
+      pickupText: 'Use an email address you can access. We will keep your paid order ready for pickup at Game Tribe Fest.',
+      lookupKicker: 'Already ordered?',
+      lookupTitle: 'Find your pickup receipt',
+      lookupIntro: 'Enter the same email address and order reference from your Paystack receipt. We will email your pickup details again.'
     }
   },
 

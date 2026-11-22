@@ -12,8 +12,12 @@ export default async function handler(req, res) {
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
   body = body || {};
   if (body.website) return res.status(200).json({ ok: true });
-  const brand = clean(body.brand, 120), contactName = clean(body.name, 80), email = clean(body.email, 120), phone = clean(body.phone, 40), packageInterest = clean(body.package, 80), brief = clean(body.brief, 4000);
-  if (brand.length < 2 || contactName.length < 2 || !emailOk(email) || brief.length < 10) return res.status(400).json({ message: 'Please complete your brand, name, email and a short brief.' });
+  const brand = clean(body.brand, 120), contactName = clean(body.name, 80), email = clean(body.email, 120), phone = clean(body.phone, 40), packageInterest = clean(body.package, 80);
+  /* Extra details are kept inside the brief so no database change is needed. */
+  const extras = [['Website', clean(body.siteUrl, 200)], ['Instagram', clean(body.instagram, 100)], ['Facebook', clean(body.facebook, 200)]].filter((x) => x[1]).map((x) => x[0] + ': ' + x[1]);
+  const message = clean(body.brief, 3500);
+  const brief = (message + (extras.length ? '\n\n' + extras.join('\n') : '')).slice(0, 4000);
+  if (brand.length < 2 || contactName.length < 2 || !emailOk(email) || message.length < 10) return res.status(400).json({ message: 'Please complete your brand, name, email and a short brief.' });
   const ip = clientIp(req);
   if (!(await allow('advertising-lead', ip, 5, 15 * 60 * 1000))) return res.status(429).json({ message: 'Too many requests. Please try again shortly.' });
   if (turnstileOn() && !(await verifyTurnstile(body.turnstile, ip))) return res.status(400).json({ message: 'Please complete the check and try again.' });
