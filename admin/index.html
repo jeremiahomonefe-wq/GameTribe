@@ -259,6 +259,9 @@ td .small{color:var(--muted);font-size:12px}
   .modal .row .btn-red,.modal .row .btn:only-child{grid-column:1/-1}
   .grid.two{grid-template-columns:1fr}
 }
+
+.thumb.embed{position:relative;background:#1C1410 center/cover no-repeat}
+.embed-tag{position:absolute;left:6px;bottom:6px;padding:3px 8px;border-radius:6px;background:rgba(28,20,16,.85);color:#fff;font-size:11px;font-weight:800}
 </style>
 </head>
 <body>
@@ -707,7 +710,7 @@ function fieldHtml(f,value,bind){
   if(f.type===IMG||f.type===VID||f.type==='pdf'){
     var isImg=f.type===IMG,s=srcUrl(value);
     var th=isImg&&s?'<div class="thumb'+(f.contain?' contain':'')+'" data-src="'+esc(s)+'" style="background-image:url(\''+esc(s).replace(/'/g,'%27')+'\')"></div>'
-      :(f.type===VID&&s?'<div class="thumb"><video src="'+esc(s)+'" muted preload="metadata"></video></div>':'<div class="thumb">'+(f.type==='pdf'?'PDF':(value?'':'None'))+'</div>');
+      :(f.type===VID&&embedOf(value)?embedThumbHtml(embedOf(value)):f.type===VID&&s?'<div class="thumb"><video src="'+esc(s)+'" muted preload="metadata"></video></div>':'<div class="thumb">'+(f.type==='pdf'?'PDF':(value?'':'None'))+'</div>');
     var accept=isImg?'image/jpeg,image/png,image/webp,image/gif':(f.type===VID?'video/mp4,video/webm,video/quicktime':'application/pdf');
     return '<div class="'+cls+'">'+lab+'<div class="media">'+th+'<div class="media-body"><input id="'+id+'" type="text" placeholder="'+(f.type===VID?'Upload, or paste a YouTube / Vimeo / .mp4 link':'Upload a file or paste a link')+'" value="'+esc(value)+'"'+b+'>'+
       '<div class="media-actions"><button class="btn btn-line sm" type="button" data-upload="'+accept+'" data-kind="'+f.type+'">Upload</button>'+
@@ -1600,6 +1603,11 @@ function doInvite(){
 }
 
 /* ---------- main render ---------- */
+function embedOf(u){u=String(u||'').trim();var m;
+  if((m=u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/))([\w-]{11})/i)))return {kind:'YouTube',thumb:'https://i.ytimg.com/vi/'+m[1]+'/hqdefault.jpg'};
+  if(/vimeo\.com\/(?:video\/)?\d+/i.test(u))return {kind:'Vimeo',thumb:''};
+  return null;}
+function embedThumbHtml(e){return e.thumb?'<div class="thumb embed" style="background-image:url(\''+esc(e.thumb)+'\')"><span class="embed-tag">▶ '+e.kind+'</span></div>':'<div class="thumb embed"><span class="embed-tag">▶ '+e.kind+' link</span></div>';}
 function warnThumb(th){
   var f=th&&th.closest('.field'),m=f&&f.querySelector('.msg');
   if(m){m.textContent='⚠ This file cannot be opened from its link. If you uploaded it, the Supabase bucket "site-media" must be Public. Click “Check connection” at the top.';m.className='msg err';}
@@ -1609,6 +1617,16 @@ function refreshThumb(input){
   var f=input.closest('.field'),th=f&&f.querySelector('.thumb'),m=f&&f.querySelector('.msg');
   if(m){m.textContent='';m.className='msg';}
   if(!th)return;
+  var isVideo=input.getAttribute('data-type')==='video';
+  if(isVideo){
+    var em=embedOf(input.value);
+    if(em){th.className='thumb embed';th.style.backgroundImage=em.thumb?"url('"+em.thumb+"')":'';th.innerHTML='<span class="embed-tag">▶ '+em.kind+(em.thumb?'':' link')+'</span>';th.removeAttribute('data-src');return;}
+    th.className='thumb';th.style.backgroundImage='';
+    var vu=srcUrl(input.value);
+    if(!vu){th.textContent='None';return;}
+    th.innerHTML='';var vd=document.createElement('video');vd.muted=true;vd.preload='metadata';vd.src=vu;vd.addEventListener('error',function(){warnThumb(th);});th.appendChild(vd);
+    return;
+  }
   var u=srcUrl(input.value);th.setAttribute('data-src',u);
   th.style.backgroundImage=u?"url('"+u.replace(/'/g,'%27')+"')":'';
   if(u){var im=new Image();im.onerror=function(){warnThumb(th);};im.src=u;}
@@ -1807,7 +1825,7 @@ document.addEventListener('change',function(e){
     var mt=/^(.*)\.(\d+)\.([^.]+)$/.exec(el.dataset.bind),sp=mt&&REG[regKey(mt[1])];
     if(sp&&sp.titleKey===mt[3]){var cd=el.closest('section.card'),hd=cd&&cd.querySelector('.item-head h3');if(hd)hd.textContent=el.value||'Untitled';}
   }
-  if(el.dataset.type==='image')refreshThumb(el);
+  if(el.dataset.type==='image'||el.dataset.type==='video')refreshThumb(el);
 });
 
 /* ---------- bulk upload (many photos / videos at once) ---------- */
