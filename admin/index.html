@@ -376,6 +376,17 @@ var SECTIONS=[
    {path:'hero.photos.3',label:'Photo 4',type:IMG},{path:'hero.photos.4',label:'Photo 5',type:IMG},{path:'hero.photos.5',label:'Photo 6',type:IMG}]},
   {title:'Scrolling yellow strip',help:'Short messages that scroll across the page.',list:{path:'marquee',strings:true,itemLabel:'Message',blank:''}}]},
 
+ {id:'events',icon:'calendar',title:'Upcoming & past events',blocks:[
+  {title:'Section headings',help:'The home page shows an Upcoming events section and a Past events section. Events move to Past automatically about 8 hours after their start time.',fields:[
+   {path:'events.upcomingTitle',label:'Upcoming events heading',type:T},{path:'events.upcomingIntro',label:'Upcoming events sentence',type:T,full:true},
+   {path:'events.pastTitle',label:'Past events heading',type:T},{path:'events.pastIntro',label:'Past events sentence',type:T,full:true}]},
+  {title:'Events',help:'Add every event here, upcoming or finished. Upcoming events show a Buy tickets button. Past events link to the Memories page (or to the link you choose). Remove an event with its Delete button.',list:{path:'events.items',itemLabel:'Event',blank:{title:'',category:'',date:'',location:'',price:'',image:'',ticketUrl:'',buttonText:'Buy tickets',photos:'',link:'/memories'},fields:[
+   {key:'title',label:'Event title',type:T},{key:'category',label:'Category (for example Music, Games)',type:T},
+   {key:'date',label:'Date and start time (Nigeria time)',type:DT,full:true},{key:'location',label:'Location',type:T,full:true},
+   {key:'price',label:'Ticket price (optional, for example ₦5,000)',type:T},{key:'buttonText',label:'Button text',type:T},
+   {key:'image',label:'Event poster or photo',type:IMG,full:true},
+   {key:'ticketUrl',label:'Ticket link (leave empty to open the Game Tribe ticket form on the home page)',type:T,full:true},
+   {key:'photos',label:'Number of photos shown on a past event (optional)',type:NUM},{key:'link',label:'Past event opens (default /memories)',type:T}]}}]},
  {id:'intro',icon:'video',title:'Intro & highlight video',blocks:[
   {title:'Intro text',fields:[
    {path:'intro.pill',label:'Yellow tag',type:T},
@@ -452,47 +463,7 @@ var SECTIONS=[
  {id:'reports',icon:'chart',title:'Sales reports',custom:'reports'},
  {id:'feedback',icon:'chat',title:'Event feedback',custom:'feedback'},
  {id:'photos',icon:'images',title:'Attendee photos',custom:'photos'},
- {id:'p_merch',icon:'bag',title:'Merch page',blocks:[
-  {title:'Top banner',help:'The dark banner at the top of the public Merch page.',fields:[
-   {path:'pages.merch.pill',label:'Small tag',type:T},{path:'pages.merch.title',label:'Main heading',type:T},{path:'pages.merch.highlight',label:'Highlighted heading (yellow)',type:T},
-   {path:'pages.merch.intro',label:'Intro sentence',type:TA,full:true},{path:'pages.merch.heroNote',label:'Line under the intro',type:T,full:true},
-   {path:'pages.merch.heroImage',label:'Banner background picture (optional)',type:IMG,full:true},
-   {path:'pages.merch.stickerTitle',label:'Round sticker text (new line per word, leave empty to hide)',type:TA},{path:'pages.merch.stickerSubtitle',label:'Sticker subtitle',type:T}]},
-  {title:'Shop heading',fields:[
-   {path:'pages.merch.collectionKicker',label:'Small tag',type:T},{path:'pages.merch.collectionTitle',label:'Heading',type:T},{path:'pages.merch.collectionIntro',label:'Sentence below',type:TA,full:true}]},
-  {title:'Product categories',help:'Each category becomes a titled section on the shop page. Use the exact category name you typed on the product (for example Wearables). Categories that are not listed here still show, with a plain heading.',list:{path:'pages.merch.categories',itemLabel:'Category',blank:{name:'',emoji:'🛍️',description:''},fields:[
-   {key:'name',label:'Category name (must match the product)',type:T},{key:'emoji',label:'Emoji',type:T},{key:'description',label:'Short description',type:T,full:true}]}},
-  {title:'Product labels and cart',help:'Products are marked Sold out automatically when stock reaches 0, and Selling fast when stock reaches the low-stock alert level you set on the product.',fields:[
-   {path:'pages.merch.sellingFastText',label:'“Selling fast” label',type:T},{path:'pages.merch.soldOutText',label:'“Sold out” label',type:T},
-   {path:'pages.merch.emptyText',label:'Empty category message',type:T,full:true},
-   {path:'pages.merch.cartTitle',label:'Cart heading',type:T},{path:'pages.merch.cartEmpty',label:'Empty cart message',type:T},
-   {path:'pages.merch.cartNote',label:'Note under the checkout button',type:TA,full:true},
-   {path:'pages.merch.pickupTitle',label:'Checkout window heading',type:T},{path:'pages.merch.pickupText',label:'Checkout window sentence',type:TA,full:true}]},
-  {title:'Find my receipt section',fields:[
-   {path:'pages.merch.lookupKicker',label:'Small tag',type:T},{path:'pages.merch.lookupTitle',label:'Heading',type:T},{path:'pages.merch.lookupIntro',label:'Sentence below',type:TA,full:true}]}]},
  {id:'merch',icon:'bag',title:'Merch products & orders',custom:'merch'},
- {id:'p_advertise',icon:'megaphone',title:'Advertise page',blocks:[
-  {title:'Top section',help:'The dark section at the top with the heading, the picture and the enquiry form.',fields:[
-   {path:'pages.advertise.pill',label:'Small tag',type:T},{path:'pages.advertise.title',label:'Main heading',type:T},{path:'pages.advertise.highlight',label:'Highlighted heading (yellow)',type:T},
-   {path:'pages.advertise.intro',label:'Intro sentence',type:TA,full:true},{path:'pages.advertise.subline',label:'Line under the intro (yellow)',type:T,full:true},
-   {path:'pages.advertise.heroImage',label:'Poster / picture beside the heading',type:IMG,full:true}]},
-  {title:'Event detail chips',help:'Small labels under the intro, such as the date and venue.',list:{path:'pages.advertise.chips',itemLabel:'Chip',blank:{text:''},fields:[{key:'text',label:'Text',type:T,full:true}]}},
-  {title:'Quick facts',help:'Three short highlights shown under the intro.',list:{path:'pages.advertise.stats',itemLabel:'Fact',blank:{value:'',label:''},fields:[{key:'value',label:'Big text',type:T},{key:'label',label:'Small text',type:T}]}},
-  {title:'Enquiry form',fields:[
-   {path:'pages.advertise.formPill',label:'Small tag',type:T},{path:'pages.advertise.formTitle',label:'Heading',type:T},{path:'pages.advertise.formIntro',label:'Intro sentence',type:TA,full:true},
-   {path:'pages.advertise.formNote',label:'Note under the form',type:TA,full:true},{path:'pages.advertise.formButton',label:'Button text',type:T}]},
-  {title:'Packages heading',fields:[
-   {path:'pages.advertise.packagesKicker',label:'Small tag',type:T},{path:'pages.advertise.packagesTitle',label:'Heading',type:T},{path:'pages.advertise.packagesIntro',label:'Sentence below',type:TA,full:true}]},
-  {title:'Advertising packages',help:'These appear as cards and in the “Choose your package” list on the form. Leave the price empty to show “Custom quote”. Write one benefit per line.',list:{path:'pages.advertise.packages',itemLabel:'Package',blank:{name:'',price:'',description:'',features:'',button:'Ask about this',featured:'',badge:''},fields:[
-   {key:'name',label:'Package name',type:T},{key:'price',label:'Price (for example ₦750,000)',type:T},
-   {key:'description',label:'Short description',type:TA,full:true},{key:'features',label:'What is included (one per line)',type:TA,full:true},
-   {key:'button',label:'Button text',type:T},{key:'featured',label:'Highlight this package?',type:'select',options:[['','No'],['yes','Yes, show a badge']]},{key:'badge',label:'Badge text',type:T}]}},
-  {title:'Brand moment section',fields:[
-   {path:'pages.advertise.momentsKicker',label:'Small tag',type:T},{path:'pages.advertise.momentsTitle',label:'Heading',type:T}]},
-  {title:'Brand moment cards',list:{path:'pages.advertise.moments',itemLabel:'Card',blank:{title:'',text:''},fields:[{key:'title',label:'Title',type:T},{key:'text',label:'Text',type:TA,full:true}]}},
-  {title:'Scrolling strip',help:'Short messages that scroll across the page above the requirements.',list:{path:'pages.advertise.ticker',strings:true,itemLabel:'Message',blank:''}},
-  {title:'Requirements section',fields:[{path:'pages.advertise.requirementsTitle',label:'Heading',type:T},{path:'pages.advertise.enquiryText',label:'Text before the email',type:T},{path:'pages.advertise.enquiryEmail',label:'Enquiry email address',type:T}]},
-  {title:'Requirements list',list:{path:'pages.advertise.requirements',itemLabel:'Requirement',blank:{title:'',text:''},fields:[{key:'title',label:'Title',type:T},{key:'text',label:'Text',type:TA,full:true}]}}]},
  {id:'leads',icon:'megaphone',title:'Advertising leads',custom:'leads'},
  {id:'announce',icon:'megaphone',title:'Announcements',custom:'announce'},
  {id:'team',icon:'users',title:'Team & access',custom:'team'},
@@ -607,7 +578,47 @@ var SECTIONS=[
     nested:[{key:'features',title:'What’s included',itemLabel:'Item',strings:true,blank:''}]}},
   {title:'How it works',fields:[{path:'pages.partner.stepsTitle',label:'Heading',type:T},{path:'pages.partner.note',label:'Red line under the steps',type:T}]},
   {title:'Steps',list:{path:'pages.partner.steps',itemLabel:'Step',max:6,blank:{title:'',text:''},fields:[{key:'title',label:'Title',type:T},{key:'text',label:'Text',type:T,full:true}]}},
-  {title:'Brands section',help:'Shows your logo categories (from “Partners & sponsors”). Hidden when there are no logos.',fields:[{path:'pages.partner.logosTitle',label:'Heading',type:T,full:true}]}]}
+  {title:'Brands section',help:'Shows your logo categories (from “Partners & sponsors”). Hidden when there are no logos.',fields:[{path:'pages.partner.logosTitle',label:'Heading',type:T,full:true}]}]},
+ {id:'p_merch',icon:'bag',title:'Merch page',blocks:[
+  {title:'Top banner',help:'The dark banner at the top of the public Merch page.',fields:[
+   {path:'pages.merch.pill',label:'Small tag',type:T},{path:'pages.merch.title',label:'Main heading',type:T},{path:'pages.merch.highlight',label:'Highlighted heading (yellow)',type:T},
+   {path:'pages.merch.intro',label:'Intro sentence',type:TA,full:true},{path:'pages.merch.heroNote',label:'Line under the intro',type:T,full:true},
+   {path:'pages.merch.heroImage',label:'Banner background picture (optional)',type:IMG,full:true},
+   {path:'pages.merch.stickerTitle',label:'Round sticker text (new line per word, leave empty to hide)',type:TA},{path:'pages.merch.stickerSubtitle',label:'Sticker subtitle',type:T}]},
+  {title:'Shop heading',fields:[
+   {path:'pages.merch.collectionKicker',label:'Small tag',type:T},{path:'pages.merch.collectionTitle',label:'Heading',type:T},{path:'pages.merch.collectionIntro',label:'Sentence below',type:TA,full:true}]},
+  {title:'Product categories',help:'Each category becomes a titled section on the shop page. Use the exact category name you typed on the product (for example Wearables). Categories that are not listed here still show, with a plain heading.',list:{path:'pages.merch.categories',itemLabel:'Category',blank:{name:'',emoji:'🛍️',description:''},fields:[
+   {key:'name',label:'Category name (must match the product)',type:T},{key:'emoji',label:'Emoji',type:T},{key:'description',label:'Short description',type:T,full:true}]}},
+  {title:'Product labels and cart',help:'Products are marked Sold out automatically when stock reaches 0, and Selling fast when stock reaches the low-stock alert level you set on the product.',fields:[
+   {path:'pages.merch.sellingFastText',label:'“Selling fast” label',type:T},{path:'pages.merch.soldOutText',label:'“Sold out” label',type:T},
+   {path:'pages.merch.emptyText',label:'Empty category message',type:T,full:true},
+   {path:'pages.merch.cartTitle',label:'Cart heading',type:T},{path:'pages.merch.cartEmpty',label:'Empty cart message',type:T},
+   {path:'pages.merch.cartNote',label:'Note under the checkout button',type:TA,full:true},
+   {path:'pages.merch.pickupTitle',label:'Checkout window heading',type:T},{path:'pages.merch.pickupText',label:'Checkout window sentence',type:TA,full:true}]},
+  {title:'Find my receipt section',fields:[
+   {path:'pages.merch.lookupKicker',label:'Small tag',type:T},{path:'pages.merch.lookupTitle',label:'Heading',type:T},{path:'pages.merch.lookupIntro',label:'Sentence below',type:TA,full:true}]}]},
+ {id:'p_advertise',icon:'megaphone',title:'Advertise page',blocks:[
+  {title:'Top section',help:'The dark section at the top with the heading, the picture and the enquiry form.',fields:[
+   {path:'pages.advertise.pill',label:'Small tag',type:T},{path:'pages.advertise.title',label:'Main heading',type:T},{path:'pages.advertise.highlight',label:'Highlighted heading (yellow)',type:T},
+   {path:'pages.advertise.intro',label:'Intro sentence',type:TA,full:true},{path:'pages.advertise.subline',label:'Line under the intro (yellow)',type:T,full:true},
+   {path:'pages.advertise.heroImage',label:'Poster / picture beside the heading',type:IMG,full:true}]},
+  {title:'Event detail chips',help:'Small labels under the intro, such as the date and venue.',list:{path:'pages.advertise.chips',itemLabel:'Chip',blank:{text:''},fields:[{key:'text',label:'Text',type:T,full:true}]}},
+  {title:'Quick facts',help:'Three short highlights shown under the intro.',list:{path:'pages.advertise.stats',itemLabel:'Fact',blank:{value:'',label:''},fields:[{key:'value',label:'Big text',type:T},{key:'label',label:'Small text',type:T}]}},
+  {title:'Enquiry form',fields:[
+   {path:'pages.advertise.formPill',label:'Small tag',type:T},{path:'pages.advertise.formTitle',label:'Heading',type:T},{path:'pages.advertise.formIntro',label:'Intro sentence',type:TA,full:true},
+   {path:'pages.advertise.formNote',label:'Note under the form',type:TA,full:true},{path:'pages.advertise.formButton',label:'Button text',type:T}]},
+  {title:'Packages heading',fields:[
+   {path:'pages.advertise.packagesKicker',label:'Small tag',type:T},{path:'pages.advertise.packagesTitle',label:'Heading',type:T},{path:'pages.advertise.packagesIntro',label:'Sentence below',type:TA,full:true}]},
+  {title:'Advertising packages',help:'These appear as cards and in the “Choose your package” list on the form. Leave the price empty to show “Custom quote”. Write one benefit per line.',list:{path:'pages.advertise.packages',itemLabel:'Package',blank:{name:'',price:'',description:'',features:'',button:'Ask about this',featured:'',badge:''},fields:[
+   {key:'name',label:'Package name',type:T},{key:'price',label:'Price (for example ₦750,000)',type:T},
+   {key:'description',label:'Short description',type:TA,full:true},{key:'features',label:'What is included (one per line)',type:TA,full:true},
+   {key:'button',label:'Button text',type:T},{key:'featured',label:'Highlight this package?',type:'select',options:[['','No'],['yes','Yes, show a badge']]},{key:'badge',label:'Badge text',type:T}]}},
+  {title:'Brand moment section',fields:[
+   {path:'pages.advertise.momentsKicker',label:'Small tag',type:T},{path:'pages.advertise.momentsTitle',label:'Heading',type:T}]},
+  {title:'Brand moment cards',list:{path:'pages.advertise.moments',itemLabel:'Card',blank:{title:'',text:''},fields:[{key:'title',label:'Title',type:T},{key:'text',label:'Text',type:TA,full:true}]}},
+  {title:'Scrolling strip',help:'Short messages that scroll across the page above the requirements.',list:{path:'pages.advertise.ticker',strings:true,itemLabel:'Message',blank:''}},
+  {title:'Requirements section',fields:[{path:'pages.advertise.requirementsTitle',label:'Heading',type:T},{path:'pages.advertise.enquiryText',label:'Text before the email',type:T},{path:'pages.advertise.enquiryEmail',label:'Enquiry email address',type:T}]},
+  {title:'Requirements list',list:{path:'pages.advertise.requirements',itemLabel:'Requirement',blank:{title:'',text:''},fields:[{key:'title',label:'Title',type:T},{key:'text',label:'Text',type:TA,full:true}]}}]},
 ];
 
 /* ============================================================ */

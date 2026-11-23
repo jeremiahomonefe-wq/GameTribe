@@ -403,6 +403,41 @@ a{color:inherit}
 .testi footer{margin-top:14px;font-size:13px;color:rgba(28,20,16,.6);font-weight:700}
 @media(min-width:700px){.testi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(min-width:1000px){.testi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* upcoming + past events */
+.ev-h{color:var(--gold)}
+.ev-sub{margin-top:10px;color:rgba(255,255,255,.72)}
+.ev-rail{display:grid;grid-auto-flow:column;grid-auto-columns:min(80%,310px);gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;margin:28px -18px 0;padding:6px 18px 16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ev-rail::-webkit-scrollbar{display:none}
+.ev-card{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;aspect-ratio:3/4.4;border-radius:22px;overflow:hidden;background:linear-gradient(160deg,var(--red),var(--ink));color:#fff;scroll-snap-align:start;box-shadow:0 18px 40px rgba(0,0,0,.35)}
+.ev-card>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+.ev-card:after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(28,20,16,0) 28%,rgba(28,20,16,.88) 70%,rgba(28,20,16,.97))}
+.ev-body{padding:18px}
+.ev-cat{display:block;color:var(--gold);font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+.ev-title{margin:4px 0 12px;font-family:var(--display);font-size:clamp(20px,5.4vw,26px);line-height:1.08;overflow-wrap:anywhere}
+.ev-meta{display:grid;gap:7px;margin:0;padding:0;list-style:none;font-size:13px;font-weight:700}
+.ev-meta li{display:flex;gap:9px;align-items:flex-start;overflow-wrap:anywhere}
+.ev-meta svg{flex:0 0 16px;width:16px;height:16px;margin-top:2px;color:var(--gold)}
+.ev-price{color:var(--gold)}
+.ev-actions{display:flex;gap:10px;align-items:center;margin-top:16px}
+.ev-actions .btn{flex:1 1 auto;min-height:46px;white-space:nowrap}
+.ev-arrow{flex:0 0 46px;width:46px;height:46px;border-radius:50%;border:1.5px solid rgba(255,255,255,.55);background:rgba(0,0,0,.5);color:#fff;display:grid;place-items:center;cursor:pointer;text-decoration:none;transition:background .15s,color .15s}
+.ev-arrow:hover,.ev-arrow:focus-visible{background:#fff;color:var(--ink)}
+.ev-past-grid{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:28px}
+.ev-past{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;aspect-ratio:4/4.6;border-radius:18px;overflow:hidden;background:linear-gradient(160deg,var(--ink),#3a2a22);color:#fff;text-decoration:none;box-shadow:0 12px 28px rgba(28,20,16,.18);transition:transform .2s}
+.ev-past:hover,.ev-past:focus-visible{transform:translateY(-3px)}
+.ev-past>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+.ev-past:after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(28,20,16,.05) 35%,rgba(28,20,16,.9))}
+.ev-past .ev-body{padding:14px}
+.ev-past .ev-title{font-size:clamp(15px,3.8vw,19px);margin:3px 0 6px}
+.ev-past small{display:block;font-size:12px;font-weight:700;color:rgba(255,255,255,.72)}
+.ev-photos{position:absolute;right:10px;top:10px;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:rgba(28,20,16,.65);font-size:12px;font-weight:800}
+.ev-photos svg{width:13px;height:13px}
+.ev-open{position:absolute;right:12px;bottom:12px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.22);display:grid;place-items:center}
+.ev-past .ev-body{padding-right:54px}
+@media(min-width:700px){.ev-past-grid{grid-template-columns:repeat(auto-fit,minmax(210px,270px));justify-content:center;gap:18px}}
+@media(min-width:900px){.ev-rail{grid-auto-flow:row;grid-auto-columns:unset;grid-template-columns:repeat(auto-fit,minmax(260px,330px));justify-content:center;overflow:visible;margin:32px 0 0;padding:6px 0 0;gap:22px}.ev-card{scroll-snap-align:none}}
+@media(prefers-reduced-motion:reduce){.ev-past{transition:none}}
 </style>
 
 <meta property="og:site_name" content="Game Tribe Fest"><meta property="og:type" content="website"><meta property="og:title" content="Game Tribe Fest — Abraka"><meta property="og:description" content="Abraka, your next big play date is here. Games, banters, hangout, connect."><meta property="og:url" content="https://www.gametribeng.com/"><meta property="og:image" content="https://www.gametribeng.com/assets/og-image.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="Game Tribe Fest 2026, 27 November, Abraka"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Game Tribe Fest — Abraka"><meta name="twitter:description" content="Abraka, your next big play date is here. Games, banters, hangout, connect."><meta name="twitter:image" content="https://www.gametribeng.com/assets/og-image.jpg"><link rel="canonical" href="https://www.gametribeng.com/">
@@ -617,7 +652,19 @@ a{color:inherit}
   </section>
 
   <!-- VENDOR BAND -->
-  <section class="sec redsec" id="vendors">
+  <section class="sec dark" id="events" hidden>
+  <div class="wrap">
+    <div class="sec-head" style="text-align:center;max-width:640px;margin:0 auto"><h2 class="display h2 ev-h" id="evUpTitle">Upcoming events</h2><p class="ev-sub" id="evUpIntro">Don’t miss any of the action</p></div>
+    <div class="ev-rail" id="evUpcoming"></div>
+  </div>
+</section>
+<section class="sec cream" id="pastEvents" hidden>
+  <div class="wrap">
+    <div class="sec-head" style="text-align:center;max-width:640px;margin:0 auto"><h2 class="display h2" id="evPastTitle">Past events</h2><p style="margin-top:10px;color:rgba(28,20,16,.7)" id="evPastIntro">Open any event to see the photos and videos</p></div>
+    <div class="ev-past-grid" id="evPast"></div>
+  </div>
+</section>
+<section class="sec redsec" id="vendors">
     <div class="blob b-gold2 b-tr"></div><div class="blob b-black b-bl"></div>
     <div class="wrap">
       <div class="split">
@@ -1789,6 +1836,32 @@ document.querySelectorAll('.video-card').forEach(function(card){
     }
   }
 
+  /* ---------- upcoming and past events ---------- */
+  var EV_ICON={cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>',clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',tick:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3h18v-3a2 2 0 0 1 0-6V6H3z"/><path d="M13 6v12" stroke-dasharray="2 2"/></svg>',arrow:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',up:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M8 7h9v9"/></svg>',cam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13" r="4"/></svg>'};
+  function evWhen(d){return {date:d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'Africa/Lagos'}),time:d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'Africa/Lagos'})};}
+  function evSafeLink(u){u=String(u||'').trim();return /^(https?:\/\/|\/|#)/i.test(u)?u:'';}
+  function renderEvents(c){
+    var e=c.events||{},items=(e.items||[]).filter(function(i){return i&&String(i.title||'').trim();}),now=Date.now(),up=[],past=[];
+    items.forEach(function(i){var d=new Date(i.date||''),t=isNaN(d.getTime())?null:d.getTime();i._d=t===null?null:d;if(t!==null&&t+8*3600*1000<now)past.push(i);else up.push(i);});
+    up.sort(function(a,b){return (a._d?a._d.getTime():9e15)-(b._d?b._d.getTime():9e15);});
+    past.sort(function(a,b){return b._d.getTime()-a._d.getTime();});
+    var upSec=document.getElementById('events'),pastSec=document.getElementById('pastEvents');
+    if(!upSec||!pastSec)return;
+    var set=function(id,v){var el=document.getElementById(id);if(el&&v)el.textContent=v;};
+    set('evUpTitle',e.upcomingTitle);set('evUpIntro',e.upcomingIntro);set('evPastTitle',e.pastTitle);set('evPastIntro',e.pastIntro);
+    document.getElementById('evUpcoming').innerHTML=up.map(function(i,n){
+      var w=i._d?evWhen(i._d):null,img=i.image?url(i.image):'',link=evSafeLink(i.ticketUrl),label=esc(i.buttonText||'Buy tickets');
+      var go=link?'<a class="btn btn-red" href="'+esc(link)+'" target="_blank" rel="noopener">'+label+'</a><a class="ev-arrow" href="'+esc(link)+'" target="_blank" rel="noopener" aria-label="Open ticket page for '+esc(i.title)+'">'+EV_ICON.arrow+'</a>':'<button class="btn btn-red" type="button" data-ev-ticket>'+label+'</button><button class="ev-arrow" type="button" data-ev-ticket aria-label="Buy tickets for '+esc(i.title)+'">'+EV_ICON.arrow+'</button>';
+      return '<article class="ev-card'+(img?'':' noimg')+'">'+(img?'<img src="'+esc(img)+'" alt="" loading="lazy" decoding="async">':'')+'<div class="ev-body">'+(i.category?'<span class="ev-cat">'+esc(i.category)+'</span>':'')+'<h3 class="ev-title">'+esc(i.title)+'</h3><ul class="ev-meta">'+(w?'<li>'+EV_ICON.cal+'<span>'+esc(w.date)+'</span></li><li>'+EV_ICON.clock+'<span>'+esc(w.time)+'</span></li>':'')+(i.location?'<li>'+EV_ICON.pin+'<span>'+esc(i.location)+'</span></li>':'')+(i.price?'<li class="ev-price">'+EV_ICON.tick+'<span>'+esc(i.price)+'</span></li>':'')+'</ul><div class="ev-actions">'+go+'</div></div></article>';
+    }).join('');
+    document.getElementById('evPast').innerHTML=past.map(function(i){
+      var w=i._d?evWhen(i._d):null,img=i.image?url(i.image):'',link=evSafeLink(i.link)||'/memories',has=String(i.photos==null?'':i.photos).trim()!=='';
+      return '<a class="ev-past" href="'+esc(link)+'" aria-label="'+esc(i.title)+' — see the memories">'+(img?'<img src="'+esc(img)+'" alt="" loading="lazy" decoding="async">':'')+(has?'<span class="ev-photos">'+EV_ICON.cam+esc(i.photos)+'</span>':'')+'<div class="ev-body">'+(i.category?'<span class="ev-cat">'+esc(i.category)+'</span>':'')+'<h3 class="ev-title">'+esc(i.title)+'</h3>'+(w?'<small>'+esc(w.date)+'</small>':'')+'</div><span class="ev-open">'+EV_ICON.up+'</span></a>';
+    }).join('');
+    upSec.hidden=!up.length;pastSec.hidden=!past.length;
+  }
+  document.addEventListener('click',function(ev){var b=ev.target.closest&&ev.target.closest('[data-ev-ticket]');if(!b)return;ev.preventDefault();if(typeof window.openTicketModal==='function')window.openTicketModal();});
+
   function renderTestimonials(c){
     var t=c.testimonials||{},items=(t.items||[]).filter(function(x){return x&&String(x.quote||'').trim();}),sec=document.getElementById('testimonials');
     if(!sec)return;
@@ -1801,6 +1874,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
 
   function apply(c){
     try{renderTestimonials(c);}catch(e){}
+    try{renderEvents(c);}catch(e){console.error('events',e);}
     /* plain text + images */
     document.querySelectorAll('[data-c]').forEach(function(el){
       var v=get(c,el.getAttribute('data-c'));

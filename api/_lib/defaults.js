@@ -194,6 +194,15 @@ export const DEFAULT_CONTENT = {
   ticketing: { maxQuantity: 50, capacityTotal: 0, showLeftBelow: 30 },
 
   /* ---------- Other pages (About, Memories, FAQs, Contact, Partner) ---------- */
+  events: {
+    upcomingTitle: 'Upcoming events',
+    upcomingIntro: 'Don’t miss any of the action',
+    pastTitle: 'Past events',
+    pastIntro: 'Open any event to see the photos and videos',
+    items: [
+      { title: 'Game Tribe Fest 2026', category: 'Games & Culture', date: '2026-11-27T17:00:00+01:00', location: 'Ojeta Primary School, Abraka', price: '', image: '', ticketUrl: '', buttonText: 'Buy tickets', photos: '', link: '/memories' }
+    ]
+  },
   testimonials: { kicker: 'Kind words', title: 'What the tribe says', items: [] },
   pages: {
     about: {
