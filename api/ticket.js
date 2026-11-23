@@ -5,12 +5,13 @@
  * The token is only ever sent to the buyer's email, and it is signed, so it
  * cannot  be guessed or edited.
  */
-import { supabaseConfigured } from './_lib/supabase.js';
+import crypto from 'node:crypto';
+import { sb, supabaseConfigured } from './_lib/supabase.js';
 import { getSale } from './_lib/checkin.js';
 import { allow, clientIp, turnstileOn, verifyTurnstile } from './_lib/security.js';
 import { referenceFromToken, ticketToken, ticketQrPng } from './_lib/qr.js';
 import { ticketNumberFor, sendTicketsEmail, itemFromSale, siteOrigin } from './_lib/tickets.js';
-import { getAvailability, getContent, getCouponByCode, listSales, markQrSent } from './_lib/store.js';
+import { getAvailability, getContent, getCouponByCode, listSales, markQrSent, createSignedUpload } from './_lib/store.js';
 import { normEmail, validEmail } from './_lib/team.js';
 import { reportError } from './_lib/monitor.js';
 
@@ -96,9 +97,41 @@ async function validateCoupon(req, res) {
   }
 }
 
+/* A ticket holder asks permission to upload up to 3 photos at a time (6 in total).
+   The ticket link itself is the proof of attendance. Photos wait for admin approval. */
+const MAX_PHOTOS_PER_TICKET = 6;
+async function photoSign(req, res) {
+  const body = typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })() : (req.body || {});
+  const reference = referenceFromToken(body.t);
+  if (!reference) return res.status(404).json({ message: 'This ticket link is not valid.' });
+  if (!supabaseConfigured()) return res.status(503).json({ message: 'Photo sharing is not available right now.' });
+  if (!(await allow('photo-sign', clientIp(req), 12, 60 * 60 * 1000))) return res.status(429).json({ message: 'Too many uploads. Please try again later.' });
+  let sale = null;
+  try { sale = await getSale(reference); } catch { return res.status(503).json({ message: 'Please try again shortly.' }); }
+  if (!sale) return res.status(404).json({ message: 'We could not find this ticket.' });
+  const count = Math.max(1, Math.min(3, Number(body.count) || 1));
+  let existing;
+  try { existing = (await sb('/rest/v1/photo_submissions?reference=eq.' + encodeURIComponent(reference) + '&status=neq.rejected&select=id&limit=20')) || []; }
+  catch { return res.status(503).json({ message: 'Photo sharing is not switched on yet.' }); }
+  if (existing.length + count > MAX_PHOTOS_PER_TICKET) return res.status(429).json({ message: 'You can share up to ' + MAX_PHOTOS_PER_TICKET + ' photos per ticket. You have ' + Math.max(0, MAX_PHOTOS_PER_TICKET - existing.length) + ' left.' });
+  const clean = (v, n) => String(v || '').replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, n);
+  const name = clean(body.name, 60) || shortName(sale.name);
+  const caption = clean(body.caption, 140);
+  const items = [], rows = [];
+  for (let i = 0; i < count; i++) {
+    const id = crypto.randomUUID();
+    const signed = await createSignedUpload('images/community-' + id.replace(/-/g, '') + '.webp');
+    items.push({ id, path: signed.path, uploadUrl: signed.uploadUrl });
+    rows.push({ id, path: signed.path, caption: caption || null, uploader_name: name, reference, status: 'pending' });
+  }
+  await sb('/rest/v1/photo_submissions', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: rows });
+  return res.status(200).json({ items, anonKey: process.env.SUPABASE_ANON_KEY || '' });
+}
+
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     res.setHeader('Cache-Control', 'no-store');
+    if (req.query && req.query.photo) return photoSign(req, res);
     return req.query && (req.query.action === 'coupon' || req.query.availability) ? validateCoupon(req, res) : findTicket(req, res);
   }
   if (req.method !== 'GET') {

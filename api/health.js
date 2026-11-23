@@ -2,6 +2,9 @@ import { sb } from './_lib/supabase.js';
 import { reportBrowserError, runHealthChecks, tokenMatches, checkOvercapacity, checkInventoryAlerts } from './_lib/monitor.js';
 import * as ann from './_lib/announce.js';
 import { getAvailability } from './_lib/store.js';
+import { bumpEvent, EVENTS } from './_lib/events.js';
+import { sendBackup } from './_lib/backup.js';
+import { allow, clientIp } from './_lib/security.js';
 
 const readBody = async (req) => {
   if (req.body && typeof req.body === 'object') return req.body;
@@ -65,12 +68,20 @@ export default async function handler(req, res) {
     await reportBrowserError({ area: 'browser', message: csp['violated-directive'] || payload.message, source: payload.source, line: payload.line, page: csp['document-uri'] || payload.page }, req);
     return res.status(204).end();
   }
+  if (req.method === 'POST' && req.query && req.query.event) {
+    const name = String(req.query.event);
+    if (EVENTS.has(name) && (await allow('beacon', clientIp(req), 120, 60 * 1000))) await bumpEvent(name);
+    return res.status(204).end();
+  }
   if (cronAuthorised(req)) {
     try {
       const campaigns = await advanceScheduledCampaigns();
       const waitlist = await notifyWaitlistWhenOpen();
       await Promise.all([checkOvercapacity(), checkInventoryAlerts()]);
-      return res.status(200).json({ ok: true, campaigns, waitlist, at: new Date().toISOString() });
+      /* every Monday (Nigeria time) the owner gets a safety copy of the records by email */
+      let backup = null;
+      if (new Date(Date.now() + 3600 * 1000).getUTCDay() === 1) { try { backup = await sendBackup({ reason: 'weekly' }); } catch (error) { backup = { ok: false, message: error.message }; } }
+      return res.status(200).json({ ok: true, campaigns, waitlist, backup: backup && backup.ok ? 'sent' : (backup ? backup.message : 'not due'), at: new Date().toISOString() });
     } catch (error) { return res.status(500).json({ ok: false, message: error.message || 'Scheduled work failed.' }); }
   }
   if (req.query && req.query.deep) {

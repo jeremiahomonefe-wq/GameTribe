@@ -7,9 +7,6 @@
 <title>Game Tribe Fest — Abraka</title>
 <meta name="description" content="Game Tribe Fest, Abraka: a full-day playground for gamers, creators, students and music lovers. Pick your game, meet your people and enjoy the tribe.">
 <meta name="theme-color" content="#E8342A">
-<meta property="og:title" content="Game Tribe Fest — Abraka">
-<meta property="og:description" content="Abraka, your next big play date is here. Games, banters, hangout, connect.">
-<meta property="og:type" content="website">
 <link rel="icon" href="/assets/logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -397,7 +394,18 @@ a{color:inherit}
 .mv-embed,.video-embed iframe{position:relative}
 .mv-embed{aspect-ratio:16/9;background:#000}
 .mv-embed iframe,.video-embed iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+#testimonials .kicker{display:block;color:var(--red);font-size:12px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;margin-bottom:10px}
+.testi-grid{display:grid;gap:14px;grid-template-columns:1fr;margin-top:28px}
+.testi{position:relative;background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px 22px 20px;box-shadow:0 10px 28px rgba(28,20,16,.07)}
+.testi:before{content:"“";position:absolute;left:18px;top:2px;font-family:var(--display);font-size:56px;line-height:1;color:var(--red)}
+.testi p{margin:14px 0 0;font-weight:700;font-size:15px;white-space:pre-line;overflow-wrap:anywhere}
+.testi footer{margin-top:14px;font-size:13px;color:rgba(28,20,16,.6);font-weight:700}
+@media(min-width:700px){.testi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1000px){.testi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
+
+<meta property="og:site_name" content="Game Tribe Fest"><meta property="og:type" content="website"><meta property="og:title" content="Game Tribe Fest — Abraka"><meta property="og:description" content="Abraka, your next big play date is here. Games, banters, hangout, connect."><meta property="og:url" content="https://www.gametribeng.com/"><meta property="og:image" content="https://www.gametribeng.com/assets/og-image.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="Game Tribe Fest 2026, 27 November, Abraka"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Game Tribe Fest — Abraka"><meta name="twitter:description" content="Abraka, your next big play date is here. Games, banters, hangout, connect."><meta name="twitter:image" content="https://www.gametribeng.com/assets/og-image.jpg"><link rel="canonical" href="https://www.gametribeng.com/">
 </head>
 <body>
 <script defer src="/assets/icons.js"></script>
@@ -708,7 +716,8 @@ a{color:inherit}
   </section>
 
   <!-- GALLERY -->
-  <section class="sec white" id="gallery">
+  <section class="sec cream" id="testimonials" hidden><div class="wrap"><div class="sec-head" style="text-align:center;max-width:640px;margin:0 auto"><span class="kicker" id="testiKicker">Kind words</span><h2 class="display h2" id="testiTitle">What the tribe says</h2></div><div class="testi-grid" id="testiGrid"></div></div></section>
+<section class="sec white" id="gallery">
     <div class="wrap">
       <div class="gal-head">
         <div>
@@ -1763,6 +1772,14 @@ document.querySelectorAll('.video-card').forEach(function(card){
   /* links from other pages: /?tickets=1  /?vendor=1  /?attending=1  /?proposal=1 */
   function openFromQuery(){
     var q=new URLSearchParams(location.search),map={tickets:'openTicketModal',vendor:'openVendorModal',attending:'openFlyerModal',proposal:'openPdfModal'};
+    /* promoter links: /?ref=CODE opens ticket checkout with the code already applied */
+    var ref=String(q.get('ref')||q.get('promo')||'').trim().toUpperCase();
+    if(/^[A-Z0-9_-]{2,32}$/.test(ref)&&typeof window.openTicketModal==='function'){
+      try{window.openTicketModal();}catch(e){}
+      setTimeout(function(){var i=document.getElementById('ticketCoupon'),b=document.getElementById('ticketCouponApply');if(i&&b){i.value=ref;b.click();}},500);
+      try{history.replaceState(null,'',location.pathname+location.hash);}catch(e){}
+      return;
+    }
     for(var k in map){
       if(q.get(k)&&typeof window[map[k]]==='function'){
         try{window[map[k]]();}catch(e){}
@@ -1772,7 +1789,18 @@ document.querySelectorAll('.video-card').forEach(function(card){
     }
   }
 
+  function renderTestimonials(c){
+    var t=c.testimonials||{},items=(t.items||[]).filter(function(x){return x&&String(x.quote||'').trim();}),sec=document.getElementById('testimonials');
+    if(!sec)return;
+    if(!items.length){sec.hidden=true;return;}
+    if(t.kicker)document.getElementById('testiKicker').textContent=t.kicker;
+    if(t.title)document.getElementById('testiTitle').textContent=t.title;
+    document.getElementById('testiGrid').innerHTML=items.slice(0,12).map(function(x){var who=[x.name,x.role].filter(function(v){return v&&String(v).trim();}).join(' · ');return '<blockquote class="testi"><p>'+esc(String(x.quote).slice(0,400))+'</p>'+(who?'<footer>'+esc(who)+'</footer>':'')+'</blockquote>';}).join('');
+    sec.hidden=false;
+  }
+
   function apply(c){
+    try{renderTestimonials(c);}catch(e){}
     /* plain text + images */
     document.querySelectorAll('[data-c]').forEach(function(el){
       var v=get(c,el.getAttribute('data-c'));
@@ -1907,5 +1935,6 @@ document.querySelectorAll('.video-card').forEach(function(card){
 })();
 </script>
 
+<script>(function(){try{if(navigator.doNotTrack==='1')return;var send=function(e){try{if(navigator.sendBeacon)navigator.sendBeacon('/api/health?event='+e);else fetch('/api/health?event='+e,{method:'POST',keepalive:true});}catch(x){}};send('view');if(!sessionStorage.getItem('gt_s')){sessionStorage.setItem('gt_s','1');send('session');}}catch(e){}})();</script>
 </body>
 </html>

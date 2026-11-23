@@ -1,3 +1,4 @@
+import { sb, supabaseConfigured } from './_lib/supabase.js';
 import { getContent } from './_lib/store.js';
 
 /* Public endpoint: the website reads its content from here. */
@@ -25,7 +26,8 @@ async function proxyImage(req, res, rawPath) {
       return res.redirect(302, origin);
     }
     res.setHeader('Content-Type', upstream.headers.get('content-type') || 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable');
+    /* attendee photos can be removed by the admin, so they are only kept for an hour */
+    res.setHeader('Cache-Control', /^site-media\/images\/community-/.test(path) ? 'public, max-age=3600, s-maxage=3600' : 'public, max-age=31536000, s-maxage=31536000, immutable');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     return res.status(200).send(body);
   } catch (error) {
@@ -39,6 +41,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method not allowed' });
   }
   if (req.query && req.query.m !== undefined) return proxyImage(req, res, req.query.m);
+  if (req.query && req.query.photos) {
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    if (!supabaseConfigured()) return res.status(200).json({ enabled: false, photos: [] });
+    try {
+      const rows = (await sb('/rest/v1/photo_submissions?status=eq.approved&select=path,caption,uploader_name&order=reviewed_at.desc&limit=60')) || [];
+      return res.status(200).json({ enabled: true, photos: rows.map((r) => ({ src: '/m/site-media/' + r.path, caption: r.caption || '', name: r.uploader_name || '' })) });
+    } catch { return res.status(200).json({ enabled: false, photos: [] }); }
+  }
   if (req.method !== 'GET') return res.status(405).json({ message: 'Method not allowed' });
   const content = { ...(await getContent({ cache: true })) };
   /* Never let saved content decide this; it only comes from server settings. */

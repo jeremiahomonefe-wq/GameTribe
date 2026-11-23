@@ -7,15 +7,15 @@
 <meta name="description" content="Your Game Tribe Fest ticket and QR code.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#E8342A">
-<meta property="og:title" content="Your ticket · Game Tribe Fest">
-<meta property="og:description" content="Your Game Tribe Fest ticket and QR code.">
-<meta property="og:type" content="website">
 <link rel="icon" href="/assets/logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
 <script defer src="/assets/icons.js"></script>
+
+<meta property="og:site_name" content="Game Tribe Fest"><meta property="og:type" content="website"><meta property="og:title" content="Your ticket · Game Tribe Fest"><meta property="og:description" content="Your Game Tribe Fest ticket and QR code."><meta property="og:url" content="https://www.gametribeng.com/ticket"><meta property="og:image" content="https://www.gametribeng.com/assets/og-image.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="Game Tribe Fest 2026, 27 November, Abraka"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Your ticket · Game Tribe Fest"><meta name="twitter:description" content="Your Game Tribe Fest ticket and QR code."><meta name="twitter:image" content="https://www.gametribeng.com/assets/og-image.jpg"><link rel="canonical" href="https://www.gametribeng.com/ticket">
+<style>.pf-l{display:grid;gap:6px;margin:0 0 14px;font-size:13px;font-weight:800}.pf-l input{width:100%;min-height:46px;padding:11px 14px;border:1.5px solid rgba(28,20,16,.25);border-radius:12px;background:#fff;font:600 16px var(--body)}.pf-l input[type=file]{padding:10px;min-height:0}.pf-l input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(251,182,20,.5)}.pf-prev{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 14px}.pf-prev img{width:76px;height:76px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}#pfMsg.ok{color:#17803d}#pfMsg.bad{color:var(--red)}</style>
 </head>
 <body data-page="ticket">
 <nav class="nav" aria-label="Main">
@@ -69,7 +69,19 @@
   <section class="sec white" style="padding-top:32px">
     <div class="wrap narrow">
       <div class="cform" id="tkCard" style="text-align:center"><p>One moment…</p></div>
-      <p style="text-align:center;margin-top:18px;font-size:14px">Lost the link? <a href="/find-ticket" style="color:var(--red);font-weight:800">Find my ticket</a></p>
+<section class="cform" id="photoShare" hidden style="margin-top:22px;text-align:left">
+        <h2 class="display" style="font-size:clamp(22px,5vw,30px);text-transform:uppercase;text-align:center">Share your photos</h2>
+        <p style="text-align:center;margin:8px 0 16px;color:rgba(28,20,16,.7)">Went to Game Tribe Fest? Share up to 3 photos at a time. We check every photo before it appears on the Memories page.</p>
+        <form id="photoForm" novalidate>
+          <label class="pf-l">Choose photos<input id="pfFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple></label>
+          <div id="pfPreview" class="pf-prev"></div>
+          <label class="pf-l">Your name (optional)<input id="pfName" maxlength="60" autocomplete="name" placeholder="How should we credit you?"></label>
+          <label class="pf-l">Caption (optional)<input id="pfCaption" maxlength="140" placeholder="What was happening?"></label>
+          <button class="btn btn-red" type="submit" id="pfGo" style="width:100%;min-height:50px">Send my photos</button>
+          <p id="pfMsg" role="status" aria-live="polite" style="min-height:22px;margin-top:12px;font-weight:800;text-align:center"></p>
+        </form>
+      </section>
+            <p style="text-align:center;margin-top:18px;font-size:14px">Lost the link? <a href="/find-ticket" style="color:var(--red);font-weight:800">Find my ticket</a></p>
     </div>
   </section>
 </main>
@@ -147,6 +159,31 @@
   fetch('/api/ticket?t='+encodeURIComponent(t)).then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
     .then(function(x){if(!x.ok){fail(x.d.message||'We could not load this ticket.');return;}render(x.d);})
     .catch(function(){fail('We could not load your ticket. Check your connection and try again.');});
+})();</script>
+<script>(function(){
+  var sec=document.getElementById('photoShare');if(!sec)return;
+  var token=new URLSearchParams(location.search).get('t');if(!token)return;
+  var form=document.getElementById('photoForm'),files=document.getElementById('pfFiles'),prev=document.getElementById('pfPreview'),msg=document.getElementById('pfMsg'),go=document.getElementById('pfGo');
+  function say(t,ok){msg.textContent=t;msg.className=ok?'ok':'bad';}
+  fetch('/api/content?photos=1').then(function(r){return r.json();}).then(function(d){if(d&&d.enabled)sec.hidden=false;}).catch(function(){});
+  files.addEventListener('change',function(){prev.innerHTML='';[].slice.call(files.files,0,3).forEach(function(f){var i=document.createElement('img');i.alt='';i.src=URL.createObjectURL(f);prev.appendChild(i);});if(files.files.length>3)say('Only the first 3 photos will be sent. You can send more afterwards.',false);else say('',true);});
+  /* shrink the photo on the phone first: faster upload and far less data used */
+  function shrink(file){return new Promise(function(resolve,reject){var img=new Image(),u=URL.createObjectURL(file);img.onload=function(){URL.revokeObjectURL(u);var scale=Math.min(1,1400/Math.max(img.width,img.height)),w=Math.round(img.width*scale),h=Math.round(img.height*scale),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);c.toBlob(function(b){if(!b||b.type!=='image/webp')return reject(new Error('Your browser could not prepare this photo. Please try another one.'));resolve(b);},'image/webp',.8);};img.onerror=function(){reject(new Error('That file could not be read as a photo.'));};img.src=u;});}
+  function put(item,blob,anon){return new Promise(function(resolve,reject){var fd=new FormData();fd.append('cacheControl','3600');fd.append('',blob);var x=new XMLHttpRequest();x.open('PUT',item.uploadUrl);if(anon){x.setRequestHeader('apikey',anon);x.setRequestHeader('Authorization','Bearer '+anon);}x.setRequestHeader('x-upsert','false');x.onload=function(){x.status>=200&&x.status<300?resolve():reject(new Error('Upload failed ('+x.status+'). Please try again.'));};x.onerror=function(){reject(new Error('Upload failed. Check your internet connection.'));};x.send(fd);});}
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var list=[].slice.call(files.files,0,3);
+    if(!list.length){say('Choose at least one photo first.',false);return;}
+    go.disabled=true;go.textContent='Preparing…';say('',true);
+    Promise.all(list.map(shrink)).then(function(blobs){
+      go.textContent='Uploading…';
+      return fetch('/api/ticket?photo=1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:token,count:blobs.length,name:document.getElementById('pfName').value,caption:document.getElementById('pfCaption').value})})
+        .then(function(r){return r.json().catch(function(){return {};}).then(function(b){if(!r.ok)throw new Error(b.message||'Could not start the upload.');return b;});})
+        .then(function(res){return Promise.all(res.items.map(function(item,i){return put(item,blobs[i],res.anonKey);}));});
+    }).then(function(){form.reset();prev.innerHTML='';say('Thank you! Your photo'+(list.length>1?'s are':' is')+' waiting for approval and will appear on the Memories page once checked.',true);})
+    .catch(function(err){say(err.message||'Something went wrong. Please try again.',false);})
+    .then(function(){go.disabled=false;go.textContent='Send my photos';});
+  });
 })();</script>
 </body>
 </html>

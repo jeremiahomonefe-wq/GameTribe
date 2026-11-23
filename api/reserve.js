@@ -12,6 +12,7 @@ import { allow, clientIp } from './_lib/security.js';
 import { reportError } from './_lib/monitor.js';
 import { resolveCoupon, saleFields, sendTicketEmail, ticketNumberFor, cleanName, cleanPhone, siteOrigin } from './_lib/tickets.js';
 import { recordSale } from './_lib/store.js';
+import { bumpEvent } from './_lib/events.js';
 import { normEmail, validEmail } from './_lib/team.js';
 
 const newRef = () => 'GT-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -35,6 +36,7 @@ export default async function handler(req, res) {
     if (!Number.isInteger(qty) || qty < 1 || qty > maxQty) return res.status(400).json({ message: 'Choose between 1 and ' + maxQty + ' tickets.' });
     const buyer = body.buyer || {};
     const coupon = await resolveCoupon({ amount: Number(ticket.price) }, ticket.id, body.couponCode, normEmail(buyer.email));
+    await bumpEvent('checkout_start');
     if (!supabaseConfigured()) return res.status(200).json({ reference: newRef(), hold: false, unitPrice: coupon.unitPrice, total: coupon.unitPrice * qty, coupon });
 
     /* A buyer who goes back and tries again gives up their earlier hold. */

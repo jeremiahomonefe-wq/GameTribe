@@ -1,3 +1,5 @@
+import { sendBackup } from './_lib/backup.js';
+import { readEvents, lagosDay } from './_lib/events.js';
 import crypto from 'crypto';
 import {
   adminConfigured, getSession, passwordMatches, sessionCookie, clearCookie
@@ -29,10 +31,10 @@ const PERMS = {
   tickets: new Set(['me', 'sales', 'checkin', 'checkin-log', 'ticket-scan', 'ticket-resend']),
   sales: new Set(['me', 'sales', 'checkin-log', 'ticket-resend']),
   gate: new Set(['me', 'sales', 'checkin', 'checkin-log', 'ticket-scan']),
-  content: new Set(['me', 'content', 'save', 'sign-upload']),
+  content: new Set(['me', 'content', 'save', 'sign-upload', 'photos-list', 'photo-review']),
   merch: new Set(['me', 'merch-products', 'merch-orders', 'merch-product-save', 'merch-product-disable', 'merch-order-status', 'merch-pickup-scan']),
   communications: new Set(['me', 'announce-list', 'announce-preview', 'announce-test', 'announce-create', 'announce-send', 'waitlist-list', 'waitlist-remove', 'feedback-list', 'feedback-send', 'feedback-test']),
-  insights: new Set(['me', 'reports', 'feedback-list'])
+  insights: new Set(['me', 'reports', 'funnel', 'feedback-list'])
 };
 function allowed(role, action) {
   const p = PERMS[role];
@@ -481,10 +483,54 @@ export default async function handler(req, res) {
       const orders = (await sb('/rest/v1/merch_orders?status=in.(paid,ready,collected)&select=amount,status,items,paid_at&limit=5000')) || [];
       const ticketRevenue = sales.reduce((sum, sale) => sum + Number(sale.amount || 0), 0);
       const merchRevenue = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+      const couponStats = Object.values(sales.reduce((out, sale) => { const code = sale.coupon_code; if (!code) return out; const row = out[code] || (out[code] = { code, orders: 0, tickets: 0, revenue: 0 }); row.orders += 1; row.tickets += Number(sale.quantity || 0); row.revenue += Number(sale.amount || 0); return out; }, {})).sort((a, b) => b.orders - a.orders).map((row) => (role === 'owner' ? row : { code: row.code, orders: row.orders, tickets: row.tickets }));
       const couponUse = sales.reduce((out, sale) => { const key = sale.coupon_code || 'No coupon'; out[key] = (out[key] || 0) + 1; return out; }, {});
       const products = {};
       orders.forEach((order) => (order.items || []).forEach((item) => { const key = item.name || item.id || 'Product'; products[key] = (products[key] || 0) + Number(item.quantity || 0); }));
-      return res.status(200).json({ financial: role === 'owner', ...(role === 'owner' ? { ticketRevenue, merchRevenue } : {}), ticketOrders: sales.length, merchOrders: orders.length, coupons: Object.entries(couponUse).map(([name, uses]) => ({ name, uses })).sort((a, b) => b.uses - a.uses), products: Object.entries(products).map(([name, quantity]) => ({ name, quantity })).sort((a, b) => b.quantity - a.quantity) });
+      return res.status(200).json({ financial: role === 'owner', ...(role === 'owner' ? { ticketRevenue, merchRevenue } : {}), ticketOrders: sales.length, merchOrders: orders.length, couponStats, coupons: Object.entries(couponUse).map(([name, uses]) => ({ name, uses })).sort((a, b) => b.uses - a.uses), products: Object.entries(products).map(([name, quantity]) => ({ name, quantity })).sort((a, b) => b.quantity - a.quantity) });
+    }
+    if (action === 'funnel' && req.method === 'GET') {
+      const events = await readEvents(30);
+      const sales = await listSales();
+      const days = {};
+      const touch = (day) => days[day] || (days[day] = { day, view: 0, session: 0, checkout_start: 0, merch_checkout: 0, paid: 0 });
+      events.rows.forEach((row) => { if (row && row.event) touch(row.day)[row.event] = Number(row.count) || 0; });
+      const since = lagosDay(Date.now() - 29 * 86400000);
+      sales.forEach((sale) => { const day = lagosDay(new Date(sale.paid_at || sale.created_at || Date.now()).getTime()); if (day >= since) touch(day).paid += 1; });
+      const list = Object.values(days).sort((a, b) => (a.day < b.day ? -1 : 1));
+      const totals = list.reduce((t, d) => { Object.keys(d).forEach((k) => { if (k !== 'day') t[k] = (t[k] || 0) + d[k]; }); return t; }, { view: 0, session: 0, checkout_start: 0, merch_checkout: 0, paid: 0 });
+      return res.status(200).json({ configured: events.configured, days: list, totals });
+    }
+    if (action === 'backup-send' && req.method === 'POST') {
+      if (!(await sec.allow('backup-send', 'owner', 6, 3600 * 1000))) return res.status(429).json({ message: 'Please wait before requesting another backup.' });
+      const body = await readBody(req);
+      const to = body.to ? team.normEmail(body.to) : '';
+      if (body.to && !team.validEmail(to)) return res.status(400).json({ message: 'Enter a valid email address.' });
+      const result = await sendBackup({ to, reason: 'manual' });
+      if (!result.ok) return res.status(503).json({ message: result.message });
+      await sec.audit(req, who.name, role, 'backup_sent', result.to);
+      return res.status(200).json({ ok: true, to: result.to, counts: result.counts });
+    }
+    if (action === 'photos-list' && req.method === 'GET') {
+      try {
+        const rows = (await sb('/rest/v1/photo_submissions?select=id,path,caption,uploader_name,status,created_at&order=created_at.desc&limit=300')) || [];
+        return res.status(200).json({ configured: true, photos: rows });
+      } catch { return res.status(200).json({ configured: false, photos: [] }); }
+    }
+    if (action === 'photo-review' && req.method === 'POST') {
+      const body = await readBody(req);
+      const id = String(body.id || '');
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ message: 'Unknown photo.' });
+      const rows = (await sb('/rest/v1/photo_submissions?id=eq.' + id + '&select=id,path&limit=1')) || [];
+      if (!rows[0]) return res.status(404).json({ message: 'That photo no longer exists.' });
+      if (body.decision === 'approve') {
+        await sb('/rest/v1/photo_submissions?id=eq.' + id, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: { status: 'approved', reviewed_at: new Date().toISOString() } });
+      } else if (body.decision === 'remove') {
+        try { await sb('/storage/v1/object/site-media/' + rows[0].path, { method: 'DELETE' }); } catch { /* the file may already be gone */ }
+        await sb('/rest/v1/photo_submissions?id=eq.' + id, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+      } else return res.status(400).json({ message: 'Choose approve or remove.' });
+      await sec.audit(req, who.name, role, 'photo_' + body.decision, id);
+      return res.status(200).json({ ok: true });
     }
     if (action === 'feedback-list' && req.method === 'GET') {
       const feedback = (await sb('/rest/v1/attendee_feedback?select=reference,rating,favourite,improvements,recommend,submitted_at,created_at&order=submitted_at.desc&limit=1000')) || [];

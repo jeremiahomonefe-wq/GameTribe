@@ -262,6 +262,20 @@ td .small{color:var(--muted);font-size:12px}
 
 .thumb.embed{position:relative;background:#1C1410 center/cover no-repeat}
 .embed-tag{position:absolute;left:6px;bottom:6px;padding:3px 8px;border-radius:6px;background:rgba(28,20,16,.85);color:#fff;font-size:11px;font-weight:800}
+
+.bar{display:block;height:10px;border-radius:6px;background:var(--red,#E8342A)}
+
+.pgrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));margin-top:10px}
+.pcard{margin:0;border:1px solid var(--line,#E6DCC8);border-radius:14px;overflow:hidden;background:#fff}
+.pimg{aspect-ratio:1/1;background:#EFE8D8 center/cover no-repeat}
+.pcard figcaption{display:grid;gap:4px;padding:10px;font-size:13px}
+.pcard figcaption span{overflow-wrap:anywhere}
+.pcard small{color:var(--muted,#675f59)}
+.prow{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+
+.chip-btn{border:1.5px solid #E0A100;background:#FFF1C9;color:#5A3E00;border-radius:999px;padding:6px 12px;font:800 12px var(--body,inherit);cursor:pointer;white-space:nowrap}
+.chip-btn.bad{border-color:var(--red,#E8342A);background:#FDE5E3;color:#8A1A12}
+.chip-btn[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -314,6 +328,7 @@ td .small{color:var(--muted);font-size:12px}
       <h2 id="pageTitle"></h2>
       <span class="who" id="who" hidden></span>
       <span class="status" id="status" aria-live="polite"></span>
+      <button class="chip-btn" id="gateChip" type="button" data-act="gate-sync-info" hidden></button>
       <button class="btn btn-ghost sm" id="checkBtn" type="button">Check connection</button>
       <a class="btn btn-line sm" href="/" target="_blank" rel="noopener">View website</a>
       <button class="btn btn-ghost sm" id="logoutBtn" type="button">Log out</button>
@@ -389,6 +404,9 @@ var SECTIONS=[
   {title:'Videos',help:'Upload phone videos (MP4 works best, up to 50 MB each).',grid:true,list:{path:'videos.items',itemLabel:'Video',bulk:'video',blank:{src:''},fields:[
    {key:'src',label:'Video',type:VID}]}}]},
 
+ {id:'testimonials',icon:'chat',title:'Testimonials',blocks:[
+  {title:'Section heading',help:'Shown on the home page once you add at least one testimonial. Leave the list empty to hide the section.',fields:[{path:'testimonials.kicker',label:'Small tag',type:T},{path:'testimonials.title',label:'Heading',type:T}]},
+  {title:'Testimonials',help:'Tip: on the Event feedback page, use “Add to website” next to a good comment to copy it here, then tidy the wording.',list:{path:'testimonials.items',itemLabel:'Testimonial',blank:{quote:'',name:'',role:'Game Tribe Fest attendee'},fields:[{key:'quote',label:'What they said',type:TA,full:true},{key:'name',label:'Name (optional)',type:T},{key:'role',label:'Label (for example “Attendee, 2026”)',type:T}]}}]},
  {id:'sponsors',icon:'handshake',title:'Partners & sponsors',blocks:[
   {title:'Heading',fields:[
    {path:'sponsors.kicker',label:'Small text above',type:T},
@@ -433,6 +451,7 @@ var SECTIONS=[
  {id:'sales',icon:'money',title:'Sales & attendees',custom:'sales'},
  {id:'reports',icon:'chart',title:'Sales reports',custom:'reports'},
  {id:'feedback',icon:'chat',title:'Event feedback',custom:'feedback'},
+ {id:'photos',icon:'images',title:'Attendee photos',custom:'photos'},
  {id:'p_merch',icon:'bag',title:'Merch page',blocks:[
   {title:'Top banner',help:'The dark banner at the top of the public Merch page.',fields:[
    {path:'pages.merch.pill',label:'Small tag',type:T},{path:'pages.merch.title',label:'Main heading',type:T},{path:'pages.merch.highlight',label:'Highlighted heading (yellow)',type:T},
@@ -812,7 +831,7 @@ function ticketsHtml(){
 /* ---------- roles ---------- */
 var ROLE_SECTIONS={
   sales:['sales'],tickets:['sales'],gate:['sales'],
-  content:SECTIONS.filter(function(s){return !s.custom;}).map(function(s){return s.id;}),
+  content:SECTIONS.filter(function(s){return !s.custom;}).map(function(s){return s.id;}).concat(['photos']),
   merch:['merch'],communications:['announce','feedback','leads'],insights:['reports','feedback']
 };
 function visibleSections(){
@@ -884,7 +903,7 @@ function salesHtml(){
   h+='<div id="salesTop">'+salesTopHtml()+'</div>';
   h+='<div class="toolbar"><input type="search" id="salesSearch" placeholder="Search name, phone, reference or ticket no."'+(canCheckin()?' autocomplete="off"':'')+'>'+
     '<select id="salesFilter" style="max-width:210px" aria-label="Filter by check-in"><option value="all">Everyone</option><option value="none">Not yet checked in</option><option value="part">Partly checked in</option><option value="full">Fully used</option></select>'+
-    '<button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button>'+(canCheckin()?'<button class="btn btn-red sm" type="button" data-act="scan-open"><span data-gt-icon="camera"></span> Scan ticket</button>':'')+(state.role==='owner'?'<button class="btn btn-ink sm" type="button" data-act="comp-open">+ Free ticket</button><button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button><button class="btn btn-red sm" type="button" data-act="rc-open">Check against Paystack</button>':'')+'</div>';
+    '<button class="btn btn-line sm" type="button" id="salesRefresh">Refresh</button>'+(canCheckin()?'<button class="btn btn-red sm" type="button" data-act="scan-open"><span data-gt-icon="camera"></span> Scan ticket</button> <span class="help" id="gateSaved" style="align-self:center">'+gateSavedText()+'</span>':'')+(state.role==='owner'?'<button class="btn btn-ink sm" type="button" data-act="comp-open">+ Free ticket</button><button class="btn btn-ink sm" type="button" id="salesCsv">Download CSV</button><button class="btn btn-red sm" type="button" data-act="rc-open">Check against Paystack</button>':'')+'</div>';
   if(canCheckin())h+='<p class="help" style="margin:-4px 0 12px;font-size:13px;color:var(--muted)">At the gate: type or paste the buyer’s reference or ticket number, press Enter, then admit them. A ticket that is already used cannot be admitted again.</p>';
   h+='<div class="table-wrap"><table><thead><tr><th>Gate</th><th>Date</th><th>Name</th><th>Phone</th><th>Ticket</th><th>Qty</th><th>People</th><th>Ticket no.</th>'+(d.financial?'<th>Paid</th>':'')+'<th>Email</th><th>Contact</th></tr></thead><tbody id="salesBody"></tbody></table></div>';
   return h;
@@ -909,7 +928,7 @@ function refreshSalesView(){
 }
 function loadSales(){
   state.sales=null;render();
-  api('sales').then(function(d){state.sales=d;followRole(d);render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
+  api('sales').then(function(d){state.sales=d;followRole(d);gateCacheSave();render();gateSync();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});
 }
 /* If the main admin changed this person's role while they were signed in, follow it. */
 function followRole(d){
@@ -1105,11 +1124,106 @@ function scanTick(){
     done(code&&code.data);
   }catch(e){scan.busy=false;}
 }
+/* ---------- offline gate mode ----------
+   The ticket list is saved on this device whenever Sales is opened. If the signal drops,
+   scanned tickets are checked against that list, admissions are queued here, and they are
+   sent to the server automatically once the connection is back. */
+var GATE_KEY='gt_gate_v1',QUEUE_KEY='gt_gate_q_v1',CONF_KEY='gt_gate_c_v1',gateSyncing=false;
+function lsGet(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v==null?d:v;}catch(e){return d;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
+function gateCached(){var g=lsGet(GATE_KEY,null);return g&&g.list?g:null;}
+function gateQueue(){return lsGet(QUEUE_KEY,[]);}
+function gateCacheSave(){
+  if(!canCheckin()||!state.sales||!state.sales.sales)return false;
+  var list={};state.sales.sales.forEach(function(r){list[r.reference]={n:r.name||'',l:r.ticket_label||r.ticket_type||'',t:saleTotal(r),a:saleAdmitted(r),k:r.ticket_number||''};});
+  var ok=lsSet(GATE_KEY,{at:Date.now(),n:Object.keys(list).length,list:list});
+  var st=$('#gateSaved');if(st)st.textContent=gateSavedText();
+  return ok;
+}
+function gateSavedText(){var g=gateCached();return g?'Offline-ready: '+g.n+' tickets saved at '+new Date(g.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'.':'Offline list not saved yet.';}
+function gateQueuedFor(ref){return gateQueue().filter(function(q){return q.ref===ref;}).reduce(function(n,q){return n+q.n;},0);}
+function gateChipUpdate(){
+  var c=$('#gateChip');if(!c)return;
+  var q=gateQueue().length,cf=lsGet(CONF_KEY,[]).length;
+  if(!q&&!cf){c.hidden=true;return;}
+  c.hidden=false;c.className='chip-btn'+(cf?' bad':'');
+  c.textContent=cf?('⚠ '+cf+' check-in'+(cf>1?'s':'')+' need review'):('⏳ '+q+' check-in'+(q>1?'s':'')+' waiting to sync');
+}
+function refFromPayload(t){t=String(t||'').trim();if(t.indexOf('GTK1:')!==0)return '';var x=t.slice(5),i=x.lastIndexOf('.');return i>2?x.slice(0,i):'';}
+function offlineScan(text){
+  var g=gateCached(),ref=refFromPayload(text);
+  scan.busy=false;
+  if(!g){scanMsg('No saved ticket list on this device. Open Sales & attendees once while online.',true);return;}
+  if(!ref||!g.list[ref]){scanMsg('Not on the saved list. Check with a supervisor.',true);return;}
+  scanStop();closeModal();offlineGateModal(ref);
+}
+function offlineGateModal(ref){
+  var g=gateCached(),r=g&&g.list[ref];if(!r)return;
+  var a=r.a+gateQueuedFor(ref),t=r.t,left=Math.max(0,t-a);
+  var when=new Date(g.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  var banner=left<=0?'<div class="banner bad">ALREADY USED — all '+t+' admitted. Do not give out another tag.</div>':a>0?'<div class="banner warn">'+a+' of '+t+' already admitted. '+left+' still to come in.</div>':'<div class="banner ok">Valid — nobody from this ticket has been admitted yet.</div>';
+  var h='<div class="banner warn" style="margin-bottom:8px">OFFLINE — checked against the list saved at '+esc(when)+'. Admissions are sent automatically when the connection returns.</div><h3>'+esc(r.n||'Ticket')+'</h3>'+banner+
+    '<dl class="kv"><dt>Ticket</dt><dd>'+esc(r.l)+'</dd><dt>People</dt><dd>'+t+' ('+a+' admitted)</dd><dt>Ticket no.</dt><dd>'+esc(r.k)+'</dd><dt>Reference</dt><dd>'+esc(ref)+'</dd></dl>';
+  if(left>0){
+    if(t>1)h+='<div class="row"><label for="offCount" style="font-weight:800;font-size:13px">People coming in now</label><input type="number" id="offCount" min="1" max="'+left+'" value="'+left+'"></div>';
+    h+='<div class="row"><button class="btn btn-red" type="button" id="offAdmit" data-act="off-admit" data-ref="'+esc(ref)+'">Admit'+(t>1?'':' this person')+'</button><button class="btn btn-line" type="button" data-act="mclose">Close</button></div>';
+  }else h+='<div class="row"><button class="btn btn-line" type="button" data-act="mclose">Close</button></div>';
+  h+='<div class="row"><button class="btn btn-line sm" type="button" data-act="scan-open">Scan next ticket</button></div>';
+  openModal(h);var c=$('#offCount');if(c){c.focus();c.select();}else{var b=$('#offAdmit');if(b)b.focus();}
+}
+function offlineAdmit(ref){
+  var g=gateCached(),r=g&&g.list[ref];if(!r)return;
+  var c=$('#offCount'),n=c?parseInt(c.value,10):1,queued=gateQueuedFor(ref),left=r.t-r.a-queued;
+  if(!(n>=1)||n>left){toast('Enter between 1 and '+left+' people.',true);return;}
+  var q=gateQueue();q.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),ref:ref,n:n,at:new Date().toISOString(),by:(state.me&&state.me.name)||'',base:r.a+queued,tried:false});
+  if(!lsSet(QUEUE_KEY,q)){toast('This device is out of storage. Do not admit offline.',true);return;}
+  closeModal();gateChipUpdate();
+  if(navigator.vibrate){try{navigator.vibrate(60);}catch(e){}}
+  toast('✓ Admitted '+n+' — '+(r.n||'')+' ('+(r.a+queued+n)+' of '+r.t+') · will sync');
+  if(state.scanMode)scanOpen();
+}
+function gateConflict(item,msg){var c=lsGet(CONF_KEY,[]),g=gateCached(),r=g&&g.list[item.ref];c.push({ref:item.ref,name:r?r.n:'',n:item.n,at:item.at,msg:msg});lsSet(CONF_KEY,c);}
+function gateSync(){
+  if(gateSyncing||navigator.onLine===false||!state.role)return;
+  if(!gateQueue().length){gateChipUpdate();return;}
+  gateSyncing=true;var done=0,salesNow=null;
+  function finish(){gateSyncing=false;gateChipUpdate();if(done){toast('✓ Synced '+done+' offline check-in'+(done>1?'s':'')+'.');if(state.sales)loadSalesQuiet();}}
+  function next(){
+    var q=gateQueue();if(!q.length)return finish();
+    var it=q[0];
+    var drop=function(){var l=gateQueue();l.shift();lsSet(QUEUE_KEY,l);};
+    var send=function(){
+      return api('checkin',{body:{reference:it.ref,count:it.n}}).then(function(){drop();done++;next();}).catch(function(e){
+        if(e.status===401){gateSyncing=false;return showLogin();}
+        if(!e.status){var l=gateQueue();if(l[0]){l[0].tried=true;lsSet(QUEUE_KEY,l);}return finish();}
+        drop();gateConflict(it,e.message||'Could not be saved');next();
+      });
+    };
+    if(!it.tried)return send();
+    /* the last attempt may have reached the server before the signal dropped: check first */
+    (salesNow?Promise.resolve(salesNow):api('sales').then(function(d){salesNow=d;return d;})).then(function(d){
+      var row=(d.sales||[]).filter(function(x){return x.reference===it.ref;})[0];
+      if(row&&saleAdmitted(row)>=it.base+it.n){drop();done++;return next();}
+      return send();
+    }).catch(function(e){if(e.status===401){gateSyncing=false;return showLogin();}return finish();});
+  }
+  next();
+}
+function loadSalesQuiet(){api('sales').then(function(d){state.sales=d;gateCacheSave();refreshSalesView();}).catch(function(){});}
+function gateReviewModal(){
+  var c=lsGet(CONF_KEY,[]),q=gateQueue();
+  openModal('<div class="item-head"><h3>Offline check-ins</h3><button type="button" class="btn btn-ghost sm" data-act="mclose">Close</button></div>'+
+    (q.length?'<p class="help">'+q.length+' check-in'+(q.length>1?'s are':' is')+' waiting to be sent. Keep this page open and connected.</p><div class="row"><button class="btn btn-line sm" type="button" data-act="gate-sync-now">Sync now</button></div>':'')+
+    (c.length?'<div class="banner bad">These could not be saved to the server. The person may already have been admitted somewhere else. Check them at the gate.</div><ul class="hist">'+c.map(function(x){return '<li><b>'+esc(x.name||x.ref)+'</b> · '+esc(x.n)+' person(s) · '+esc(timeShort(x.at))+'<br><small>'+esc(x.msg)+'</small></li>';}).join('')+'</ul><div class="row"><button class="btn btn-red sm" type="button" data-act="gate-clear-conf">I have checked these, clear the list</button></div>':'<p class="help">Nothing needs review.</p>'));
+}
+window.addEventListener('online',function(){setTimeout(gateSync,800);});
+setInterval(gateSync,30000);
 function scanHandle(text){
   var now=Date.now();
   if(text===scan.last&&now-scan.lastAt<3000)return;
   scan.last=text;scan.lastAt=now;scan.busy=true;
   if(scan.handler){scan.handler(text);return;}
+  if(navigator.onLine===false&&gateCached()){offlineScan(text);return;}
   scanMsg('Checking ticket…');
   api('ticket-scan&code='+encodeURIComponent(text)).then(function(res){
     scanStop();
@@ -1119,6 +1233,7 @@ function scanHandle(text){
     closeModal();refreshSalesView();gateModal(sale.reference);
   }).catch(function(e){
     if(e.status===401){scanStop();return showLogin();}
+    if((!e.status||e.status===502||e.status===503||e.status===504)&&gateCached()){offlineScan(text);return;}
     scan.busy=false;scanMsg(e.message,true);
     if(navigator.vibrate){try{navigator.vibrate([80,60,80]);}catch(x){}}
   });
@@ -1188,6 +1303,7 @@ function announceHtml(){
     '<p class="help" style="margin-top:12px">Free Resend plans send about 100 emails a day. If that limit is reached the send <b>pauses safely</b> and nobody is emailed twice; press Resume the next day.</p></section>';
   h+='<section class="card"><h3>Send an update by email</h3><p class="help">For venue changes, the schedule, reminders. Write <code>{name}</code> to add each person’s first name. Replies go to your contact inbox. Always send yourself a test first. Note: free Resend accounts allow about 100 emails a day, so a large send may need a paid plan.</p>'+
     '<div class="field"><label for="anAud">Who should get it?</label><select id="anAud">'+Object.keys(d.audiences).map(function(k){return '<option value="'+k+'"'+(dr.audience===k?' selected':'')+'>'+esc(d.audiences[k])+'</option>';}).join('')+'</select><p class="help" id="anCount">'+annCountText()+'</p></div>'+
+    '<div class="field"><label>Start from a template</label><div class="row"><button class="btn btn-line sm" type="button" data-act="an-template" data-t="day">Day-before reminder</button> <button class="btn btn-line sm" type="button" data-act="an-template" data-t="morning">Event-day morning reminder</button></div><p class="help">Fills in the subject, message, group and send time from your Event settings. Read it through, send yourself a test, then press Send.</p></div>'+
     '<div class="field"><label for="anSub">Subject</label><input type="text" id="anSub" maxlength="150" value="'+esc(dr.subject)+'" placeholder="e.g. Doors open at 3pm, venue update"></div>'+
     '<div class="field"><label for="anBody">Message</label><textarea id="anBody" rows="8" maxlength="5000" placeholder="Hi {name},&#10;&#10;...">'+esc(dr.body)+'</textarea></div>'+
     '<div class="field"><label for="anTo">Send a test to</label><input type="email" id="anTo" value="'+esc(dr.to)+'" placeholder="your email (empty = the security-alert address)"></div><div class="field"><label for="anSchedule">Schedule for later (optional)</label><input type="datetime-local" id="anSchedule" value="'+esc(dr.scheduledFor||'')+'"><p class="help">Leave empty to send now. On the Vercel Hobby plan, scheduled campaigns start during the next daily 8:00 AM Nigeria-time run after this time.</p></div>'+
@@ -1269,6 +1385,27 @@ function annPreviewRefresh(){
     state.annDraft.preview=res;var el=$('#anCount');if(el)el.textContent=annCountText();
     var b=$('#anSend');if(b)b.textContent=res.count?'Send to '+res.count+(res.count===1?' person':' people'):'Send to everyone';
   }).catch(function(){});
+}
+function annTemplate(kind){
+  var ev=(state.content&&state.content.event)||{},start=new Date(ev.date||'');
+  if(isNaN(start.getTime())){toast('Set the event start time in Event & countdown first.',true);return;}
+  var tz='Africa/Lagos',lagosDate=function(d){return d.toLocaleDateString('en-CA',{timeZone:tz});};
+  var when=start.toLocaleString('en-NG',{weekday:'long',day:'numeric',month:'long',hour:'numeric',minute:'2-digit',timeZone:tz});
+  var where=(ev.address&&String(ev.address).trim())||'the venue';
+  var maps=(ev.mapLat&&ev.mapLng)?'\nMap: https://www.google.com/maps?q='+ev.mapLat+','+ev.mapLng:'';
+  var day=lagosDate(start),dayBefore=lagosDate(new Date(start.getTime()-86400000));
+  var d=state.annDraft;
+  if(kind==='day'){
+    d.audience='tickets_all';d.subject='Tomorrow: Game Tribe Fest 2026';
+    d.body='Hi {name},\n\nGame Tribe Fest is tomorrow!\n\nWhen: '+when+'\nWhere: '+where+maps+'\n\nPlease have your ticket QR code ready at the entrance. Open your ticket email, or find it any time at the “Find my ticket” page on our website.\n\nSee you there,\nThe Game Tribe team';
+    d.scheduledFor=dayBefore+'T07:00';
+  }else{
+    d.audience='tickets_not_in';d.subject='Today: Game Tribe Fest 2026';
+    d.body='Hi {name},\n\nIt is happening today!\n\nWhen: '+when+'\nWhere: '+where+maps+'\n\nHave your ticket QR code ready at the entrance.\n\nSee you soon,\nThe Game Tribe team';
+    d.scheduledFor=day+'T07:00';
+  }
+  render();annPreviewRefresh();
+  toast('Template filled in. The send time is set for 7:00 AM; the daily 8:00 AM run then sends it. Check it, send yourself a test, then press Send.');
 }
 function annDraftRead(){
   var d=state.annDraft;
@@ -1356,11 +1493,18 @@ var AUDIT_LABELS={login_ok:'Signed in',login_failed:'Failed sign-in',login_block
   invite_accepted:'Accepted an invite',invite_failed:'Bad invite link used',password_reset:'Team member set a new password',payment_imported:'Imported a payment from Paystack',
   checkin_undone:'Undid a check-in',sessions_revoked:'Signed everyone out','2step_enabled':'Turned ON 2-step login','2step_disabled':'Turned OFF 2-step login','2step_disable_failed':'Failed to turn off 2-step login'};
 function auditBad(a){return /failed|blocked/.test(a);}
+function backupModal(){
+  openModal('<div class="item-head"><h3>Email a backup</h3><button type="button" class="btn btn-ghost sm" data-act="mclose">Close</button></div><p class="help">The backup is sent as spreadsheet files (CSV) plus a copy of your site content. Leave the box empty to use your usual alert email address.</p><form id="backupForm"><div class="field"><label for="backupTo">Send to (optional)</label><input id="backupTo" type="email" inputmode="email" placeholder="you@example.com"></div><div class="row"><button class="btn btn-red" type="submit" id="backupGo">Send backup</button><button class="btn btn-line" type="button" data-act="mclose">Cancel</button></div><p class="msg" id="backupMsg" role="status"></p></form>');
+  var form=$('#backupForm'),msg=$('#backupMsg');
+  form.addEventListener('submit',function(e){e.preventDefault();var b=$('#backupGo');b.disabled=true;b.textContent='Sending…';msg.textContent='';msg.className='msg';
+    api('backup-send',{body:{to:$('#backupTo').value.trim()}}).then(function(r){msg.className='msg ok';msg.textContent='Backup sent to '+r.to+'. It can take a few minutes to arrive.';b.disabled=false;b.textContent='Send again';}).catch(function(err){if(err.status===401)return showLogin();msg.className='msg err';msg.textContent=err.message;b.disabled=false;b.textContent='Send backup';});});
+}
 function securityHtml(){
   var d=state.secInfo;if(!d)return '<div class="empty">Loading…</div>';
   var st=d.status,h='';
   if(!st.tablesReady)h+='<div class="notice">The security tables are not in your database yet. Run <code>supabase/upgrade.sql</code> in the Supabase SQL Editor, then reload this page.</div>';
   var row=function(label,on,onTxt,offTxt){return '<div class="sec-row"><span>'+label+'</span>'+(on?'<span class="badge ok">'+onTxt+'</span>':'<span class="badge warn">'+offTxt+'</span>')+'</div>';};
+  if(state.role==='owner')h+='<section class="card"><h3>Backups</h3><p class="help">Every Monday morning the site emails you a safety copy: ticket sales, merch orders, advertising enquiries, feedback, waitlist, coupons and your site content. You can also send one right now. The files contain personal details, so keep them private.</p><p style="margin:0"><button class="btn btn-line" type="button" data-act="backup-open">Email me a backup now</button></p></section>';
   h+='<section class="card"><h3>Protection status</h3>'+
     row('2-step login (authenticator app)',st.totpEnabled,'On','Off — strongly recommended')+
     row('Human check on the contact form',st.captcha,'On','Off (optional)')+
@@ -1462,22 +1606,49 @@ function merchHtml(){
 function couponsHtml(){
   if(!state.coupons)return '<div class="empty">Loading coupons…</div>';
   var coupons=state.coupons.coupons||[],tickets=state.content.tickets||[];
-  var h='<div class="notice">Coupons set an exact final price per ticket. They are checked again on the server before payment, so a buyer cannot alter the discount in their browser.</div><section class="card"><div class="item-head"><h3>Coupons & discounts</h3><span><button class="btn btn-line sm" type="button" data-act="coupons-refresh">Refresh</button> <button class="btn btn-red sm" type="button" data-act="coupon-add">+ Add coupon</button></span></div>';
+  var h='<div class="notice">Coupons set an exact final price per ticket. They are checked again on the server before payment, so a buyer cannot alter the discount in their browser. Use <b>Copy link</b> to give a promoter their own link; it opens ticket checkout with their code already applied.</div><section class="card"><div class="item-head"><h3>Coupons & discounts</h3><span><button class="btn btn-line sm" type="button" data-act="coupons-refresh">Refresh</button> <button class="btn btn-red sm" type="button" data-act="coupon-add">+ Add coupon</button></span></div>';
   if(!coupons.length)return h+'<div class="empty">No coupons yet. Add one for a partner, campaign or special guest.</div></section>';
-  return h+'<div class="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Final price</th><th>Tickets</th><th>Status</th><th>Uses</th><th></th></tr></thead><tbody>'+coupons.map(function(c){var types=(c.ticket_types||[]).map(function(id){var t=tickets.filter(function(x){return x.id===id;})[0];return t?t.label:id;}).join(', ')||'All tickets';return '<tr><td><code>'+esc(c.code)+'</code></td><td>'+esc(c.name)+'</td><td>'+naira(c.final_price)+'</td><td style="min-width:160px">'+esc(types)+'</td><td>'+(c.active?'<span class="badge ok">Active</span>':'<span class="badge warn">Inactive</span>')+'</td><td>'+esc(c.uses||0)+'</td><td><button class="btn btn-line sm" type="button" data-act="coupon-edit" data-code="'+esc(c.code)+'">Edit</button> <button class="btn btn-ghost sm danger" type="button" data-act="coupon-delete" data-code="'+esc(c.code)+'">Delete</button></td></tr>';}).join('')+'</tbody></table></div></section>';
+  return h+'<div class="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Final price</th><th>Tickets</th><th>Status</th><th>Uses</th><th></th></tr></thead><tbody>'+coupons.map(function(c){var types=(c.ticket_types||[]).map(function(id){var t=tickets.filter(function(x){return x.id===id;})[0];return t?t.label:id;}).join(', ')||'All tickets';return '<tr><td><code>'+esc(c.code)+'</code></td><td>'+esc(c.name)+'</td><td>'+naira(c.final_price)+'</td><td style="min-width:160px">'+esc(types)+'</td><td>'+(c.active?'<span class="badge ok">Active</span>':'<span class="badge warn">Inactive</span>')+'</td><td>'+esc(c.uses||0)+'</td><td><button class="btn btn-line sm" type="button" data-act="coupon-link" data-code="'+esc(c.code)+'" title="Copy a link that opens ticket checkout with this code already applied">Copy link</button> <button class="btn btn-line sm" type="button" data-act="coupon-edit" data-code="'+esc(c.code)+'">Edit</button> <button class="btn btn-ghost sm danger" type="button" data-act="coupon-delete" data-code="'+esc(c.code)+'">Delete</button></td></tr>';}).join('')+'</tbody></table></div></section>';
 }
 function loadCoupons(){state.coupons=null;render();api('coupon-list').then(function(data){state.coupons=data;render();}).catch(function(error){if(error.status===401)return showLogin();toast(error.message,true);});}
+function funnelHtml(){
+  var f=state.funnel;
+  if(!f)return '<section class="card"><div class="item-head"><h3>Visitors to buyers</h3></div><div class="empty">Loading…</div></section>';
+  if(f.failed||!f.configured)return '<section class="card"><div class="item-head"><h3>Visitors to buyers</h3></div><div class="notice">Visitor counting is not switched on yet. Run <b>supabase/features.sql</b> once in the Supabase SQL editor to start counting visits and checkouts. Ticket sales below still work without it.</div></section>';
+  var t=f.totals||{},pct=function(a,b){return b?Math.round(a/b*1000)/10+'%':'—';},days=(f.days||[]).slice(-14).reverse();
+  var maxS=days.reduce(function(m,d){return Math.max(m,d.session||0);},1);
+  return '<section class="card"><div class="item-head"><h3>Visitors to buyers · last 30 days</h3></div><p class="help">Anonymous counts only. A session is one visit to the site; a checkout start is someone choosing a ticket and continuing to payment.</p><div class="kpis"><div class="kpi"><b>'+esc(t.session||0)+'</b><span>Visits</span></div><div class="kpi"><b>'+esc(t.view||0)+'</b><span>Page views</span></div><div class="kpi"><b>'+esc(t.checkout_start||0)+'</b><span>Ticket checkouts started</span></div><div class="kpi"><b>'+esc(t.paid||0)+'</b><span>Ticket orders paid</span></div><div class="kpi"><b>'+pct(t.checkout_start||0,t.session||0)+'</b><span>Visits that started checkout</span></div><div class="kpi"><b>'+pct(t.paid||0,t.checkout_start||0)+'</b><span>Checkouts that paid</span></div><div class="kpi"><b>'+esc(t.merch_checkout||0)+'</b><span>Merch checkouts started</span></div></div>'+
+    (days.length?'<div class="table-wrap"><table><thead><tr><th>Day</th><th>Visits</th><th></th><th>Checkouts</th><th>Paid</th></tr></thead><tbody>'+days.map(function(d){return '<tr><td>'+esc(d.day)+'</td><td>'+esc(d.session||0)+'</td><td style="width:34%"><span class="bar" style="width:'+Math.max(2,Math.round((d.session||0)/maxS*100))+'%"></span></td><td>'+esc(d.checkout_start||0)+'</td><td>'+esc(d.paid||0)+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No visits counted yet.</div>')+'</section>';
+}
+function couponStatsHtml(d){
+  var rows=d.couponStats||[];
+  if(!rows.length)return '<section class="card"><div class="item-head"><h3>Promo code performance</h3><span><button class="btn btn-line sm" type="button" data-act="reports-refresh">Refresh</button></span></div><div class="empty">No tickets have been sold with a promo code yet. Give each promoter their own code and link from Coupons &amp; discounts.</div></section>';
+  var fin=Boolean(d.financial);
+  return '<section class="card"><div class="item-head"><h3>Promo code performance</h3><span><button class="btn btn-line sm" type="button" data-act="reports-refresh">Refresh</button></span></div><p class="help">Which promoters and campaigns actually sell tickets.</p><div class="table-wrap"><table><thead><tr><th>Code</th><th>Orders</th><th>Tickets</th>'+(fin?'<th>Revenue</th>':'')+'</tr></thead><tbody>'+rows.map(function(r){return '<tr><td><b>'+esc(r.code)+'</b></td><td>'+esc(r.orders)+'</td><td>'+esc(r.tickets)+'</td>'+(fin?'<td>'+naira(r.revenue)+'</td>':'')+'</tr>';}).join('')+'</tbody></table></div></section>';
+}
 function reportsHtml(){
   if(!state.reports)return '<div class="empty">Loading reports…</div>';
   var d=state.reports,financial=Boolean(d.financial),all=Number(d.ticketRevenue||0)+Number(d.merchRevenue||0),list=function(rows,key,label){return rows&&rows.length?'<div class="table-wrap"><table><thead><tr><th>'+label+'</th><th>Total</th></tr></thead><tbody>'+rows.slice(0,10).map(function(row){return '<tr><td>'+esc(row.name)+'</td><td>'+esc(row[key])+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No data yet.</div>';};
-  return '<div class="notice">'+(financial?'Live ticket and merch totals.':'Operational statistics only. Payment amounts and revenue are hidden from your role.')+'</div><div class="kpis">'+(financial?'<div class="kpi"><b>'+naira(all)+'</b><span>Total sales</span></div><div class="kpi"><b>'+naira(d.ticketRevenue)+'</b><span>Ticket revenue</span></div><div class="kpi"><b>'+naira(d.merchRevenue)+'</b><span>Merch revenue</span></div>':'')+'<div class="kpi"><b>'+esc(d.ticketOrders)+'</b><span>Ticket orders</span></div><div class="kpi"><b>'+esc(d.merchOrders)+'</b><span>Merch orders</span></div></div><section class="card"><div class="item-head"><h3>Coupon performance</h3><button class="btn btn-line sm" type="button" data-act="reports-refresh">Refresh</button></div>'+list(d.coupons,'uses','Coupon')+'</section><section class="card"><h3>Best-selling merch</h3>'+list(d.products,'quantity','Product')+'</section>';
+  return '<div class="notice">'+(financial?'Live ticket and merch totals.':'Operational statistics only. Payment amounts and revenue are hidden from your role.')+'</div><div class="kpis">'+(financial?'<div class="kpi"><b>'+naira(all)+'</b><span>Total sales</span></div><div class="kpi"><b>'+naira(d.ticketRevenue)+'</b><span>Ticket revenue</span></div><div class="kpi"><b>'+naira(d.merchRevenue)+'</b><span>Merch revenue</span></div>':'')+'<div class="kpi"><b>'+esc(d.ticketOrders)+'</b><span>Ticket orders</span></div><div class="kpi"><b>'+esc(d.merchOrders)+'</b><span>Merch orders</span></div></div><section class="card"><h3>Best-selling merch</h3>'+list(d.products,'quantity','Product')+'</section>'+couponStatsHtml(d)+funnelHtml();
 }
+function photosHtml(){
+  var d=state.photos;
+  if(!d)return '<div class="empty">Loading photos…</div>';
+  if(!d.configured)return '<div class="notice">Photo sharing is not switched on yet. Run <b>supabase/features.sql</b> once in the Supabase SQL editor, then reload this page.</div>';
+  var list=d.photos||[],pending=list.filter(function(p){return p.status==='pending';}),approved=list.filter(function(p){return p.status==='approved';});
+  var card=function(p,pend){return '<figure class="pcard"><div class="pimg" style="background-image:url(\'/m/site-media/'+esc(p.path)+'\')"></div><figcaption><b>'+esc(p.uploader_name||'Guest')+'</b>'+(p.caption?'<span>'+esc(p.caption)+'</span>':'')+'<small>'+esc(timeShort(p.created_at))+'</small><span class="prow">'+(pend?'<button class="btn btn-red sm" type="button" data-act="photo-approve" data-id="'+esc(p.id)+'">Approve</button> ':'')+'<button class="btn btn-ghost sm danger" type="button" data-act="photo-remove" data-id="'+esc(p.id)+'">'+(pend?'Reject':'Remove')+'</button></span></figcaption></figure>';};
+  return '<div class="notice">Ticket holders can share photos from their ticket page. Nothing appears on the Memories page until you approve it. Rejecting or removing a photo deletes it. A removed photo can take up to an hour to disappear from visitors who already saw it.</div>'+
+    '<section class="card"><div class="item-head"><h3>Waiting for approval ('+pending.length+')</h3><span><button class="btn btn-line sm" type="button" data-act="photos-refresh">Refresh</button></span></div>'+(pending.length?'<div class="pgrid">'+pending.map(function(p){return card(p,true);}).join('')+'</div>':'<div class="empty">No photos waiting.</div>')+'</section>'+
+    '<section class="card"><div class="item-head"><h3>On the website ('+approved.length+')</h3></div>'+(approved.length?'<div class="pgrid">'+approved.map(function(p){return card(p,false);}).join('')+'</div>':'<div class="empty">No approved photos yet.</div>')+'</section>';
+}
+function loadPhotos(){state.photos=null;render();api('photos-list').then(function(d){state.photos=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
+function photoReview(id,decision){api('photo-review',{body:{id:id,decision:decision}}).then(function(){toast(decision==='approve'?'Approved ✓ It will show on the Memories page within a minute.':'Removed ✓');loadPhotos();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function feedbackHtml(){
   if(!state.feedback)return '<div class="empty">Loading feedback…</div>';
   var rows=state.feedback.feedback||[],rated=rows.filter(function(x){return x.rating;}),avg=rated.length?(rated.reduce(function(n,x){return n+Number(x.rating);},0)/rated.length).toFixed(1):'—';
   var h='<div class="notice">Send a one-time feedback link to every ticket holder after the event. Use <b>Send test email</b> first to see exactly what they will receive. Completed responses appear here.</div><div class="kpis"><div class="kpi"><b>'+rated.length+'</b><span>Responses</span></div><div class="kpi"><b>'+avg+'</b><span>Average rating</span></div><div class="kpi"><b>'+rated.filter(function(x){return x.recommend;}).length+'</b><span>Would recommend</span></div></div><section class="card"><div class="item-head"><h3>Attendee feedback</h3><span><button class="btn btn-line sm" type="button" data-act="feedback-refresh">Refresh</button>'+((state.role==='owner'||state.role==='communications')?' <button class="btn btn-line sm" type="button" data-act="feedback-test">Send test email</button> <button class="btn btn-red sm" type="button" data-act="feedback-send">Send feedback request</button>':'')+'</span></div>';
   if(!rated.length)return h+'<div class="empty">No completed feedback yet.</div></section>';
-  return h+'<div class="table-wrap"><table><thead><tr><th>When</th><th>Rating</th><th>Favourite part</th><th>Could improve</th><th>Recommend</th></tr></thead><tbody>'+rated.map(function(row){return '<tr><td>'+esc(timeShort(row.submitted_at))+'</td><td>'+esc(row.rating)+'/5</td><td>'+esc(row.favourite||'—')+'</td><td>'+esc(row.improvements||'—')+'</td><td>'+esc(row.recommend?'Yes':'No')+'</td></tr>';}).join('')+'</tbody></table></div></section>';
+  return h+'<div class="table-wrap"><table><thead><tr><th>When</th><th>Rating</th><th>Favourite part</th><th>Could improve</th><th>Recommend</th><th></th></tr></thead><tbody>'+rated.map(function(row,i){return '<tr><td>'+esc(timeShort(row.submitted_at))+'</td><td>'+esc(row.rating)+'/5</td><td>'+esc(row.favourite||'—')+'</td><td>'+esc(row.improvements||'—')+'</td><td>'+esc(row.recommend?'Yes':'No')+'</td><td>'+(row.favourite&&String(row.favourite).trim().length>8?'<button class="btn btn-line sm" type="button" data-act="fb-feature" data-i="'+i+'">Add to website</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div></section>';
 }
 function feedbackTestModal(){
   var me=(state.me&&state.me.email)||'';
@@ -1486,7 +1657,7 @@ function feedbackTestModal(){
   form.addEventListener('submit',function(e){e.preventDefault();var b=$('#fbTestGo');b.disabled=true;b.textContent='Sending…';msg.textContent='';msg.className='msg';
     api('feedback-test',{body:{to:input.value.trim()}}).then(function(r){msg.className='msg ok';msg.textContent='Test email sent to '+r.to+'. It can take a minute to arrive; check spam too.';b.disabled=false;b.textContent='Send again';}).catch(function(err){if(err.status===401)return showLogin();msg.className='msg err';msg.textContent=err.message;b.disabled=false;b.textContent='Send test email';});});
 }
-function loadReports(){state.reports=null;render();api('reports').then(function(d){state.reports=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
+function loadReports(){state.reports=null;state.funnel=null;render();api('reports').then(function(d){state.reports=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});api('funnel').then(function(d){state.funnel=d;render();}).catch(function(){state.funnel={failed:true};render();});}
 function loadFeedback(){state.feedback=null;render();api('feedback-list').then(function(d){state.feedback=d;render();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);});}
 function couponEditor(code){
   var old=(state.coupons.coupons||[]).filter(function(c){return c.code===code;})[0]||{code:'',name:'',final_price:0,ticket_types:[],active:true};
@@ -1609,7 +1780,8 @@ function embedOf(u){u=String(u||'').trim();var m;
   return null;}
 function embedThumbHtml(e){return e.thumb?'<div class="thumb embed" style="background-image:url(\''+esc(e.thumb)+'\')"><span class="embed-tag">▶ '+e.kind+'</span></div>':'<div class="thumb embed"><span class="embed-tag">▶ '+e.kind+' link</span></div>';}
 function warnThumb(th){
-  var f=th&&th.closest('.field'),m=f&&f.querySelector('.msg');
+  var f=th&&th.closest('.field'),m=f&&f.querySelector('.msg'),inp=f&&f.querySelector('input[data-type="image"]');
+  if(m&&inp&&embedOf(inp.value)){m.textContent='⚠ That is a video link. This box needs a picture. Paste the video link in the “Video” box below, and upload a picture here for the cover.';m.className='msg err';return;}
   if(m){m.textContent='⚠ This file cannot be opened from its link. If you uploaded it, the Supabase bucket "site-media" must be Public. Click “Check connection” at the top.';m.className='msg err';}
 }
 function refreshThumb(input){
@@ -1627,6 +1799,7 @@ function refreshThumb(input){
     th.innerHTML='';var vd=document.createElement('video');vd.muted=true;vd.preload='metadata';vd.src=vu;vd.addEventListener('error',function(){warnThumb(th);});th.appendChild(vd);
     return;
   }
+  if(embedOf(input.value)){th.style.backgroundImage='';th.removeAttribute('data-src');if(m){m.textContent='⚠ That is a video link. This box needs a picture. Paste the video link in the “Video” box below, and upload a picture here for the cover.';m.className='msg err';}return;}
   var u=srcUrl(input.value);th.setAttribute('data-src',u);
   th.style.backgroundImage=u?"url('"+u.replace(/'/g,'%27')+"')":'';
   if(u){var im=new Image();im.onerror=function(){warnThumb(th);};im.src=u;}
@@ -1653,6 +1826,7 @@ function render(){
   else if(sec.custom==='coupons')h=couponsHtml();
   else if(sec.custom==='reports')h=reportsHtml();
   else if(sec.custom==='feedback')h=feedbackHtml();
+  else if(sec.custom==='photos')h=photosHtml();
   else if(sec.custom==='merch')h=merchHtml();
   else if(sec.custom==='leads')h=leadsHtml();
   else if(sec.custom==='team')h=teamHtml();
@@ -1673,11 +1847,16 @@ function handleAct(t){
   if(a==='merch-refresh'){loadMerch();return;}
   if(a==='reports-refresh'){loadReports();return;}
   if(a==='feedback-refresh'){loadFeedback();return;}
+  if(a==='photos-refresh'){loadPhotos();return;}
+  if(a==='photo-approve'){photoReview(t.dataset.id,'approve');return;}
+  if(a==='photo-remove'){if(confirm('Delete this photo permanently?'))photoReview(t.dataset.id,'remove');return;}
   if(a==='feedback-test'){feedbackTestModal();return;}
+  if(a==='fb-feature'){var rows=((state.feedback&&state.feedback.feedback)||[]).filter(function(x){return x.rating;}),row=rows[Number(t.dataset.i)];if(!row||!row.favourite)return;state.content.testimonials=state.content.testimonials||{kicker:'Kind words',title:'What the tribe says',items:[]};var list=state.content.testimonials.items=state.content.testimonials.items||[],q=String(row.favourite).trim();if(list.some(function(x){return x.quote===q;})){toast('That comment is already in Testimonials.');return;}list.push({quote:q,name:'',role:'Game Tribe Fest attendee'});markDirty();toast('Added to Testimonials ✓ Edit it there if you like, then click Publish changes.');return;}
   if(a==='feedback-send'){if(!confirm('Email every ticket holder a one-time feedback link now?'))return;t.disabled=true;t.textContent='Sending…';api('feedback-send',{body:{confirm:'SEND'}}).then(function(r){toast('Feedback request sent to '+r.sent+' people ✓');loadFeedback();}).catch(function(e){if(e.status===401)return showLogin();toast(e.message,true);t.disabled=false;t.textContent='Send feedback request';});return;}
   if(a==='coupons-refresh'){loadCoupons();return;}
   if(a==='coupon-add'){couponEditor('');return;}
   if(a==='coupon-edit'){couponEditor(t.dataset.code);return;}
+  if(a==='coupon-link'){var link=location.origin+'/?ref='+encodeURIComponent(t.dataset.code);var done=function(){toast('Link copied ✓ '+link);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(link).then(done,function(){window.prompt('Copy this link:',link);});}else{window.prompt('Copy this link:',link);}return;}
   if(a==='coupon-delete'){if(!confirm('Delete coupon '+t.dataset.code+'? Existing sales will keep their recorded discount.'))return;api('coupon-delete',{body:{code:t.dataset.code}}).then(function(){toast('Coupon deleted');loadCoupons();}).catch(function(error){if(error.status===401)return showLogin();toast(error.message,true);});return;}
   if(a==='merch-add'){productEditor('');return;}
   if(a==='merch-edit'){productEditor(t.dataset.id);return;}
@@ -1698,12 +1877,18 @@ function handleAct(t){
     secCall(t,'',a,{},function(){toast('Everyone else has been signed out ✓');loadSecurity();});return;
   }
   if(a==='audit-refresh'){loadSecurity(true);return;}
+  if(a==='off-admit'){offlineAdmit(t.dataset.ref);return;}
+  if(a==='gate-sync-info'){gateReviewModal();return;}
+  if(a==='gate-sync-now'){gateSync();toast('Syncing…');return;}
+  if(a==='gate-clear-conf'){lsSet(CONF_KEY,[]);gateChipUpdate();closeModal();return;}
   if(a==='scan-open'){scanOpen();return;}
   if(a==='scan-close'){state.scanMode=false;closeModal();return;}
   if(a==='comp-open'||a==='comp-again'){compOpen();return;}
   if(a==='comp-go'){compGo();return;}
   if(a==='comp-copy'){var cl=$('#cpLink');if(cl){cl.select();if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(cl.value);else document.execCommand('copy');toast('Link copied');}return;}
   if(a==='comp-delete'){compDelete(ref);return;}
+  if(a==='backup-open'){backupModal();return;}
+  if(a==='an-template'){annTemplate(t.dataset.t);return;}
   if(a==='an-test'){annTest(t);return;}
   if(a==='an-send'){annSend(t);return;}
   if(a==='qr-send'){qrSend(t);return;}
@@ -1744,7 +1929,7 @@ document.addEventListener('click',function(e){
   if(t.id==='menuBtn'){openNavDrawer();return;}
   if(t.id==='closeNavBtn'||t.id==='navBackdrop'){closeNavDrawer();return;}
   if(t.dataset.act){handleAct(t);return;}
-  if(t.dataset.sec){closeNavDrawer();state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='coupons')loadCoupons();else if(t.dataset.sec==='merch')loadMerch();else if(t.dataset.sec==='reports')loadReports();else if(t.dataset.sec==='feedback')loadFeedback();else if(t.dataset.sec==='leads')loadLeads();else if(t.dataset.sec==='team')loadTeam();else if(t.dataset.sec==='announce')loadAnnounce();else if(t.dataset.sec==='security')loadSecurity();else render();window.scrollTo(0,0);return;}
+  if(t.dataset.sec){closeNavDrawer();state.section=t.dataset.sec;if(t.dataset.sec==='sales')loadSales();else if(t.dataset.sec==='coupons')loadCoupons();else if(t.dataset.sec==='merch')loadMerch();else if(t.dataset.sec==='reports')loadReports();else if(t.dataset.sec==='feedback')loadFeedback();else if(t.dataset.sec==='photos')loadPhotos();else if(t.dataset.sec==='leads')loadLeads();else if(t.dataset.sec==='team')loadTeam();else if(t.dataset.sec==='announce')loadAnnounce();else if(t.dataset.sec==='security')loadSecurity();else render();window.scrollTo(0,0);return;}
   if(t.dataset.add){
     var L=listSpec(t.dataset.add),arr=getP(state.content,t.dataset.add),item=L.strings?'':clone(L.blank);
     if(item&&typeof item==='object'&&'id' in item)item.id=newId();
@@ -1878,6 +2063,7 @@ window.addEventListener('dragover',function(e){e.preventDefault();});  /* a miss
 window.addEventListener('drop',function(e){e.preventDefault();});
 
 /* ---------- login / boot ---------- */
+gateChipUpdate();
 function showLogin(){closeModal();$('#app').hidden=true;$('#invite').hidden=true;$('#login').hidden=false;setTimeout(function(){$('#em').focus();},50);}
 function applyRole(){
   var owner=state.role==='owner',w=$('#who');
@@ -1949,6 +2135,7 @@ $('#checkBtn').addEventListener('click',function(){
 $('#saveBtn').addEventListener('click',save);
 window.addEventListener('resize',function(){if(window.innerWidth>900)closeNavDrawer();});
 $('#logoutBtn').addEventListener('click',function(){
+  if(!gateQueue().length){try{localStorage.removeItem(GATE_KEY);localStorage.removeItem(CONF_KEY);}catch(e){}}
   if(state.dirty&&!confirm('You have unpublished changes. Log out anyway?'))return;
   state.dirty=false;api('logout',{body:{}}).then(function(){location.reload();});
 });

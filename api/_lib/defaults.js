@@ -194,6 +194,7 @@ export const DEFAULT_CONTENT = {
   ticketing: { maxQuantity: 50, capacityTotal: 0, showLeftBelow: 30 },
 
   /* ---------- Other pages (About, Memories, FAQs, Contact, Partner) ---------- */
+  testimonials: { kicker: 'Kind words', title: 'What the tribe says', items: [] },
   pages: {
     about: {
       pill: 'About Us',

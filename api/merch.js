@@ -1,3 +1,4 @@
+import { bumpEvent } from './_lib/events.js';
 import crypto from 'crypto';
 import { sb, supabaseConfigured } from './_lib/supabase.js';
 import { allow, clientIp } from './_lib/security.js';
@@ -57,6 +58,7 @@ export default async function handler(req, res) {
       const items = Array.isArray(body.items) ? body.items.slice(0, 20).map((item) => ({ id: clean(item.id, 80), colour: clean(item.colour, 40), size: clean(item.size, 20), quantity: Number(item.quantity) })) : [];
       if (name.length < 2 || !emailOk(email) || phone.length < 7) return res.status(400).json({ message: 'Enter your name, a valid email address and phone number.' });
       const order = await sb('/rest/v1/rpc/reserve_merch_order', { method: 'POST', body: { p_reference: reference(), p_name: name, p_email: email, p_phone: phone, p_items: items } });
+      await bumpEvent('merch_checkout');
       return res.status(200).json({ ...order, paystackPublicKey: PUBLIC_KEY });
     }
     if (req.method === 'POST' && action === 'confirm') {
