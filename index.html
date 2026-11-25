@@ -1461,14 +1461,19 @@ document.querySelectorAll('.video-card').forEach(function(card){
   }
   /* Asks the server to hold the tickets. Only an explicit "sold out" stops the buyer; any other problem on our side lets them carry on. */
   function reserveTickets(type,qty,couponCode,buyer){
+    /* With a promo code applied we must never fall back to the full price, so any problem is shown to the buyer. */
     return fetch('/api/reserve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticketType:type,quantity:qty,couponCode:couponCode||'',buyer:buyer||{},release:LAST_HOLD})})
       .then(function(r){
         return r.json().catch(function(){return {};}).then(function(d){
           if(r.status===409){var e=new Error(d.message||'Sorry, those tickets are no longer available.');e.soldOut=true;throw e;}
           if(r.ok&&d.reference){LAST_HOLD=d.hold?d.reference:'';return d;}
+          if(couponCode){var ce=new Error(d.message||(r.status===429?'Too many attempts. Please wait a few minutes and try again.':'We could not confirm your promo code right now. Please try again.'));ce.coupon=true;throw ce;}
           return {};
         });
-      },function(){return {};});
+      },function(){
+        if(couponCode){var ne=new Error('No connection. Please check your internet and try again.');ne.coupon=true;throw ne;}
+        return {};
+      });
   }
 
   /* ----- quantity picker ----- */
@@ -1676,6 +1681,13 @@ document.querySelectorAll('.video-card').forEach(function(card){
       if(typeof fireConfetti==='function') fireConfetti(80);
       return;
     }
+    if(ACTIVE_COUPON&&!(hold&&hold.coupon&&hold.coupon.code&&Number(hold.unitPrice)===ACTIVE_COUPON.finalUnitPrice)){
+      button.disabled=false;
+      button.textContent='Proceed to Payment';
+      showTicketStatus('We could not confirm your promo price, so nothing was charged. Please apply the code again.',true);
+      clearCoupon('');
+      return;
+    }
     if(typeof PaystackPop==='undefined'){
       button.disabled=false;
       button.textContent='Proceed to Payment';
@@ -1751,6 +1763,7 @@ document.querySelectorAll('.video-card').forEach(function(card){
       button.disabled=false;
       button.textContent='Proceed to Payment';
       showTicketStatus(err.message,true);
+      if(err.coupon&&ACTIVE_COUPON)clearCoupon(err.message);
       loadAvailability();
     });
   });

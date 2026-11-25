@@ -35,7 +35,12 @@ export default async function handler(req, res) {
     const qty = Number(body.quantity);
     if (!Number.isInteger(qty) || qty < 1 || qty > maxQty) return res.status(400).json({ message: 'Choose between 1 and ' + maxQty + ' tickets.' });
     const buyer = body.buyer || {};
-    const coupon = await resolveCoupon({ amount: Number(ticket.price) }, ticket.id, body.couponCode, normEmail(buyer.email));
+    let coupon;
+    try {
+      coupon = await resolveCoupon({ amount: Number(ticket.price) }, ticket.id, body.couponCode, normEmail(buyer.email));
+    } catch (error) {
+      return res.status(400).json({ couponError: true, message: error.message || 'This promo code cannot be used.' });
+    }
     await bumpEvent('checkout_start');
     if (!supabaseConfigured()) return res.status(200).json({ reference: newRef(), hold: false, unitPrice: coupon.unitPrice, total: coupon.unitPrice * qty, coupon });
 
